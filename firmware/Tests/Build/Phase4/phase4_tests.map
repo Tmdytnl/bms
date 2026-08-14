@@ -1,0 +1,142 @@
+Component: ARM Compiler 5.06 update 7 (build 960) Tool: armlink [4d3601]
+
+==============================================================================
+
+Memory Map of the image
+
+  Image Entry point : 0x080000ed
+
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001374, Max: 0x00010000, ABSOLUTE)
+
+    Execution Region ER_IROM1 (Base: 0x08000000, Size: 0x00001350, Max: 0x00010000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x08000000   0x000000ec   Data   RO            3    RESET               startup_stm32f10x_md.o
+    0x080000ec   0x00000008   Code   RO          122  * !!!main             c_w.l(__main.o)
+    0x080000f4   0x00000034   Code   RO          295    !!!scatter          c_w.l(__scatter.o)
+    0x08000128   0x0000001a   Code   RO          297    !!handler_copy      c_w.l(__scatter_copy.o)
+    0x08000142   0x00000002   PAD
+    0x08000144   0x0000001c   Code   RO          299    !!handler_zi        c_w.l(__scatter_zi.o)
+    0x08000160   0x00000002   Code   RO          159    .ARM.Collect$$libinit$$00000000  c_w.l(libinit.o)
+    0x08000162   0x00000000   Code   RO          170    .ARM.Collect$$libinit$$00000002  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          172    .ARM.Collect$$libinit$$00000004  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          175    .ARM.Collect$$libinit$$0000000A  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          177    .ARM.Collect$$libinit$$0000000C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          179    .ARM.Collect$$libinit$$0000000E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          182    .ARM.Collect$$libinit$$00000011  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          184    .ARM.Collect$$libinit$$00000013  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          186    .ARM.Collect$$libinit$$00000015  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          188    .ARM.Collect$$libinit$$00000017  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          190    .ARM.Collect$$libinit$$00000019  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          192    .ARM.Collect$$libinit$$0000001B  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          194    .ARM.Collect$$libinit$$0000001D  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          196    .ARM.Collect$$libinit$$0000001F  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          198    .ARM.Collect$$libinit$$00000021  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          200    .ARM.Collect$$libinit$$00000023  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          202    .ARM.Collect$$libinit$$00000025  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          206    .ARM.Collect$$libinit$$0000002C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          208    .ARM.Collect$$libinit$$0000002E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          210    .ARM.Collect$$libinit$$00000030  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          212    .ARM.Collect$$libinit$$00000032  c_w.l(libinit2.o)
+    0x08000162   0x00000002   Code   RO          213    .ARM.Collect$$libinit$$00000033  c_w.l(libinit2.o)
+    0x08000164   0x00000002   Code   RO          243    .ARM.Collect$$libshutdown$$00000000  c_w.l(libshutdown.o)
+    0x08000166   0x00000000   Code   RO          260    .ARM.Collect$$libshutdown$$00000002  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          262    .ARM.Collect$$libshutdown$$00000004  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          264    .ARM.Collect$$libshutdown$$00000006  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          267    .ARM.Collect$$libshutdown$$00000009  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          270    .ARM.Collect$$libshutdown$$0000000C  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          272    .ARM.Collect$$libshutdown$$0000000E  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          275    .ARM.Collect$$libshutdown$$00000011  c_w.l(libshutdown2.o)
+    0x08000166   0x00000002   Code   RO          276    .ARM.Collect$$libshutdown$$00000012  c_w.l(libshutdown2.o)
+    0x08000168   0x00000000   Code   RO          124    .ARM.Collect$$rtentry$$00000000  c_w.l(__rtentry.o)
+    0x08000168   0x00000000   Code   RO          130    .ARM.Collect$$rtentry$$00000002  c_w.l(__rtentry2.o)
+    0x08000168   0x00000006   Code   RO          142    .ARM.Collect$$rtentry$$00000004  c_w.l(__rtentry4.o)
+    0x0800016e   0x00000000   Code   RO          132    .ARM.Collect$$rtentry$$00000009  c_w.l(__rtentry2.o)
+    0x0800016e   0x00000004   Code   RO          133    .ARM.Collect$$rtentry$$0000000A  c_w.l(__rtentry2.o)
+    0x08000172   0x00000000   Code   RO          135    .ARM.Collect$$rtentry$$0000000C  c_w.l(__rtentry2.o)
+    0x08000172   0x00000008   Code   RO          136    .ARM.Collect$$rtentry$$0000000D  c_w.l(__rtentry2.o)
+    0x0800017a   0x00000002   Code   RO          163    .ARM.Collect$$rtexit$$00000000  c_w.l(rtexit.o)
+    0x0800017c   0x00000000   Code   RO          215    .ARM.Collect$$rtexit$$00000002  c_w.l(rtexit2.o)
+    0x0800017c   0x00000004   Code   RO          216    .ARM.Collect$$rtexit$$00000003  c_w.l(rtexit2.o)
+    0x08000180   0x00000006   Code   RO          217    .ARM.Collect$$rtexit$$00000004  c_w.l(rtexit2.o)
+    0x08000186   0x00000002   PAD
+    0x08000188   0x00000040   Code   RO            4    .text               startup_stm32f10x_md.o
+    0x080001c8   0x00000048   Code   RO          116    .text               c_w.l(llsdiv.o)
+    0x08000210   0x0000008a   Code   RO          118    .text               c_w.l(rt_memcpy_v6.o)
+    0x0800029a   0x00000006   Code   RO          120    .text               c_w.l(heapauxi.o)
+    0x080002a0   0x000000ee   Code   RO          125    .text               c_w.l(lludivv7m.o)
+    0x0800038e   0x00000064   Code   RO          127    .text               c_w.l(rt_memcpy_w.o)
+    0x080003f2   0x0000004a   Code   RO          148    .text               c_w.l(sys_stackheap_outer.o)
+    0x0800043c   0x00000012   Code   RO          152    .text               c_w.l(exit.o)
+    0x0800044e   0x00000002   PAD
+    0x08000450   0x00000008   Code   RO          160    .text               c_w.l(libspace.o)
+    0x08000458   0x0000000c   Code   RO          231    .text               c_w.l(sys_exit.o)
+    0x08000464   0x00000002   Code   RO          248    .text               c_w.l(use_no_semi.o)
+    0x08000466   0x00000000   Code   RO          250    .text               c_w.l(indicate_semi.o)
+    0x08000466   0x0000001e   Code   RO           53    i.BQ76940_CRC8_Calculate  crc8_bq76940.o
+    0x08000484   0x00000014   Code   RO           54    i.BQ76940_CRC8_FirstRead  crc8_bq76940.o
+    0x08000498   0x0000000c   Code   RO           56    i.BQ76940_CRC8_NextByte  crc8_bq76940.o
+    0x080004a4   0x00000020   Code   RO           57    i.BQ76940_CRC8_Update  crc8_bq76940.o
+    0x080004c4   0x00000070   Code   RO            6    i.BQ76940_ConvertCcRawToCurrentMa  bq76940_measurement.o
+    0x08000534   0x00000078   Code   RO           23    i.BQ76940_ConvertCellRawToMv  bq76940.o
+    0x080005ac   0x00000070   Code   RO            7    i.BQ76940_ConvertTs1RawToResistanceOhm  bq76940_measurement.o
+    0x0800061c   0x0000000a   Code   RO           25    i.BQ76940_DecodeRaw14  bq76940.o
+    0x08000626   0x00000010   Code   RO           26    i.BQ76940_DecodeSigned16  bq76940.o
+    0x08000636   0x0000002c   Code   RO           27    i.BQ76940_Init      bq76940.o
+    0x08000662   0x0000002a   Code   RO           29    i.BQ76940_MapI2CStatus  bq76940.o
+    0x0800068c   0x0000002c   Code   RO            8    i.BQ76940_Measurement_RequireCalibration  bq76940_measurement.o
+    0x080006b8   0x00000014   Code   RO            9    i.BQ76940_Measurement_VcChannelOfLogicalCell  bq76940_measurement.o
+    0x080006cc   0x00000028   Code   RO           30    i.BQ76940_ReadAdjacentU16  bq76940.o
+    0x080006f4   0x00000140   Code   RO           31    i.BQ76940_ReadBlock  bq76940.o
+    0x08000834   0x0000002a   Code   RO           10    i.BQ76940_ReadCcRaw  bq76940_measurement.o
+    0x0800085e   0x00000002   PAD
+    0x08000860   0x00000078   Code   RO           11    i.BQ76940_ReadCellVoltages13  bq76940_measurement.o
+    0x080008d8   0x0000007c   Code   RO           12    i.BQ76940_ReadPackVoltageMv  bq76940_measurement.o
+    0x08000954   0x0000002a   Code   RO           13    i.BQ76940_ReadTs1Raw  bq76940_measurement.o
+    0x0800097e   0x00000020   Code   RO           34    i.BQ76940_RequireReady  bq76940.o
+    0x0800099e   0x00000026   Code   RO           35    i.BQ76940_StopAfterFailure  bq76940.o
+    0x080009c4   0x0000002c   Code   RO           71    i.Mock_CountEvent   test_phase4_measurement.o
+    0x080009f0   0x00000010   Code   RO           72    i.Mock_FailAt       test_phase4_measurement.o
+    0x08000a00   0x00000022   Code   RO           73    i.Mock_ReadyDevice  test_phase4_measurement.o
+    0x08000a22   0x00000002   PAD
+    0x08000a24   0x00000034   Code   RO           74    i.Mock_Record       test_phase4_measurement.o
+    0x08000a58   0x00000040   Code   RO           75    i.Mock_Reset        test_phase4_measurement.o
+    0x08000a98   0x00000028   Code   RO           76    i.Mock_SetReads     test_phase4_measurement.o
+    0x08000ac0   0x00000012   Code   RO           77    i.SoftI2C_IsInitialized  test_phase4_measurement.o
+    0x08000ad2   0x00000002   PAD
+    0x08000ad4   0x00000044   Code   RO           78    i.SoftI2C_ReadByteBegin  test_phase4_measurement.o
+    0x08000b18   0x00000008   Code   RO           79    i.SoftI2C_RepeatedStart  test_phase4_measurement.o
+    0x08000b20   0x00000006   Code   RO           80    i.SoftI2C_SendReadResponse  test_phase4_measurement.o
+    0x08000b26   0x00000008   Code   RO           81    i.SoftI2C_Start     test_phase4_measurement.o
+    0x08000b2e   0x00000008   Code   RO           82    i.SoftI2C_Stop      test_phase4_measurement.o
+    0x08000b36   0x00000006   Code   RO           83    i.SoftI2C_WriteAddress  test_phase4_measurement.o
+    0x08000b3c   0x00000006   Code   RO           84    i.SoftI2C_WriteByte  test_phase4_measurement.o
+    0x08000b42   0x00000002   Code   RO           63    i.SystemInit        test_phase4_main.o
+    0x08000b44   0x0000020c   Code   RO           85    i.Test_Cc           test_phase4_measurement.o
+    0x08000d50   0x00000154   Code   RO           86    i.Test_CellTransactional  test_phase4_measurement.o
+    0x08000ea4   0x000000b0   Code   RO           87    i.Test_CellWindowGolden  test_phase4_measurement.o
+    0x08000f54   0x0000010c   Code   RO           88    i.Test_PackVoltage  test_phase4_measurement.o
+    0x08001060   0x000000cc   Code   RO           68    i.Test_Phase4_Mapping  test_phase4_mapping.o
+    0x0800112c   0x0000003c   Code   RO           89    i.Test_Phase4_Measurement  test_phase4_measurement.o
+    0x08001168   0x0000010c   Code   RO           90    i.Test_Ts1          test_phase4_measurement.o
+    0x08001274   0x00000024   Code   RO           64    i.main              test_phase4_main.o
+    0x08001298   0x0000000d   Data   RO           14    .constdata          bq76940_measurement.o
+    0x080012a5   0x0000000d   Data   RO           69    .constdata          test_phase4_mapping.o
+    0x080012b2   0x0000007c   Data   RO           92    .constdata          test_phase4_measurement.o
+    0x0800132e   0x00000002   PAD
+    0x08001330   0x00000020   Data   RO          293    Region$$Table       anon$$obj.o
+
+
+    Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x00000850, Max: 0x00005000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x20000000   0x00000010   Data   RW           65    .data               test_phase4_main.o
+    0x20000010   0x00000014   Data   RW           93    .data               test_phase4_measurement.o
+    0x20000024   0x000001c8   Zero   RW           91    .bss                test_phase4_measurement.o
+    0x200001ec   0x00000060   Zero   RW          161    .bss                c_w.l(libspace.o)
+    0x2000024c   0x00000004   PAD
+    0x20000250   0x00000200   Zero   RW            2    HEAP                startup_stm32f10x_md.o
+    0x20000450   0x00000400   Zero   RW            1    STACK               startup_stm32f10x_md.o
+

@@ -1,0 +1,9 @@
+PASS: Phase 1/2/3 validated input hashes
+PASS: 13S mapping oracle (VC9/VC14 skipped, 13 golden entries)
+PASS: cell conversion oracle (TI eq. 1, GAIN=380 OFFSET=+30)
+PASS: BAT pack-voltage oracle (TI eq. 9, 13 cells)
+PASS: CC raw decode + CC->mA oracle (TI eq. 3, truncating)
+PASS: TS1 raw->resistance oracle (TI eq. 4/5)
+PASS: Phase 4 driver boundary (no RTOS/App/protection/CAN/HAL)
+PASS: ARMCC5 Simulator actual-C execution (completed=1 failures=0)
+PHASE4_STATIC_AND_EXECUTION_CHECKS: PASS
