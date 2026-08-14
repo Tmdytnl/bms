@@ -234,8 +234,13 @@ def check_transport_and_boundaries() -> None:
                 f"forbidden Phase 4+/framework symbol matched {pattern}")
     for forbidden_name in (
         "bms_protect.c", "bms_balance.c", "bms_soc.c", "bsp_can.c",
-        "app_tasks.c", "bq76940_measurement.c",
+        "app_tasks.c",
     ):
+        # NOTE (Phase 4): "bq76940_measurement.c" was removed from this
+        # historical forbidden list because it is the authorized Phase 4
+        # measurement module. This list is a Phase-3-completion gate; all
+        # other Phase 1/2/3 regression checks below remain unchanged. See
+        # deliverables/phase4/BMS_V1_Phase4_Report.md section on regression.
         require(not any(path.name.lower() == forbidden_name for path in FW.rglob("*")),
                 f"premature Phase 4+ file exists: {forbidden_name}")
 
