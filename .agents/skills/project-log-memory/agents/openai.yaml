@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Log Memory"
+  short_description: "Restore and maintain verified project continuity"
+  default_prompt: "Use $project-log-memory to restore verified project context before work and, only when writes are authorized, record evidence-backed results at closeout."

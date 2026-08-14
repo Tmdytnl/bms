@@ -1,0 +1,8 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase2\phase2_tests.axf
+RESET
+G
+printf("PHASE2_TEST_COMPLETED=%u\n", g_phase2_test_completed)
+PHASE2_TEST_COMPLETED=1
+printf("PHASE2_TEST_FAILURES=%u\n", g_phase2_test_failures)
+PHASE2_TEST_FAILURES=0
+LOG OFF

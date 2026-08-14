@@ -1,0 +1,39 @@
+# ============================================================
+# BMS V1 .gitattributes
+#
+# CRITICAL: The Phase 3 validated baseline and all phase reports
+# bind evidence to exact file BYTE hashes (SHA-256), and several
+# referenced files (FreeRTOSConfig.h, SPL sources, build logs,
+# map files) contain MIXED CRLF/LF line endings in the working
+# tree. Any Git EOL conversion (core.autocrlf) would silently
+# change those bytes and invalidate the evidence.
+#
+# Policy: store every file byte-for-byte as it exists in the
+# working tree; never normalize line endings. Files not listed
+# as binary keep text-diff capability (they are still stored
+# exactly as-is thanks to the global `-text` rule).
+# ============================================================
+
+# Store all files exactly as-is (no CRLF/LF conversion, ever).
+*               -text
+
+# Explicit binary markers (no text diff, no conversion).
+*.pdf           binary
+*.o             binary
+*.obj           binary
+*.axf           binary
+*.hex           binary
+*.bin           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.exe           binary
+*.lib           binary
+*.a             binary
+*.d             binary
+*.dep           binary
+*.crf           binary
+*.lnp           binary
+*.lst           binary
+*.htm           binary

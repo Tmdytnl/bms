@@ -1,0 +1,53 @@
+# ============================================================
+# BMS V1 project .gitignore
+# Based on the real repository file tree (Phase 3 validated baseline).
+# Decisions documented in deliverables/review/BMS_V1_Git_基线提交说明.md
+# ============================================================
+
+# --- General editor / OS / temp files ---
+*.tmp
+*.bak
+*.orig
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+
+# --- Keil build artifacts (reproducible, machine-local) ---
+# Auto-generated objects, dependencies, images and listings must not be
+# committed; the plain-text build logs that the phase reports cite as
+# evidence ARE committed (see below).
+firmware/Project/Keil/Objects/
+*.o
+*.obj
+*.crf
+*.axf
+*.bin
+*.d
+*.dep
+*.lnp
+*.lst
+*.htm
+*.build_log.htm
+firmware/Project/Keil/Objects/BMS_V1.sct
+
+# --- Keil per-user GUI state (file name embeds the Windows user) ---
+*.uvguix.*
+
+# --- Keil Simulator test-build intermediates ---
+# Keep the *.log evidence files; ignore objects/AXF produced by the
+# phase2/phase3 test targets.
+firmware/Tests/Build/**/*.o
+firmware/Tests/Build/**/*.axf
+
+# --- Temporary working area (PDF page snapshots, downloaded installers) ---
+tmp/
+
+# --- Project-memory runtime lock ---
+.project-memory/*.lock

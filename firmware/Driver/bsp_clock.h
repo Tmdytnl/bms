@@ -1,0 +1,18 @@
+#ifndef BSP_CLOCK_H
+#define BSP_CLOCK_H
+
+#include <stdint.h>
+
+typedef enum
+{
+    BSP_CLOCK_STATUS_OK = 0,
+    BSP_CLOCK_STATUS_HSE_NOT_READY,
+    BSP_CLOCK_STATUS_PLL_NOT_READY,
+    BSP_CLOCK_STATUS_SOURCE_MISMATCH,
+    BSP_CLOCK_STATUS_DIVIDER_MISMATCH,
+    BSP_CLOCK_STATUS_FREQUENCY_MISMATCH
+} BSP_ClockStatus_t;
+
+BSP_ClockStatus_t BSP_Clock_Verify(void);
+
+#endif /* BSP_CLOCK_H */
