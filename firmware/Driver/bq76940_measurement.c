@@ -1,0 +1,259 @@
+#include "bq76940_measurement.h"
+
+#include <string.h>
+
+#include "bq76940_regs.h"
+
+/*
+ * Explicit 13S logical-cell to VC channel table (logical cell 1..13):
+ *   1..8 -> VC1..VC8, 9..12 -> VC10..VC13, 13 -> VC15.
+ * VC9 and VC14 are skipped (TI SLUSBK2I Table 9-4 "13 Cells").
+ * Index is logical_cell - 1. Never derive channels by arithmetic.
+ */
+static const uint8_t s_logical_cell_to_vc[BQ76940_MEASUREMENT_CELL_COUNT] =
+{
+    1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U,
+    10U, 11U, 12U, 13U, 15U
+};
+
+uint8_t BQ76940_Measurement_VcChannelOfLogicalCell(uint8_t logical_cell_index)
+{
+    if (logical_cell_index >= BQ76940_MEASUREMENT_CELL_COUNT)
+    {
+        return 0U;
+    }
+    return s_logical_cell_to_vc[logical_cell_index];
+}
+
+static BQ76940_Status_t BQ76940_Measurement_RequireCalibration(
+    const BQ76940_Calibration_t *calibration)
+{
+    if ((calibration == NULL) || !calibration->valid ||
+        (calibration->gain_uv_per_lsb < BQ76940_ADC_GAIN_BASE_UV_PER_LSB) ||
+        (calibration->gain_uv_per_lsb > BQ76940_ADC_GAIN_MAX_UV_PER_LSB) ||
+        (calibration->offset_mv < -128) || (calibration->offset_mv > 127))
+    {
+        return BQ76940_STATUS_CALIBRATION_INVALID;
+    }
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ReadCellVoltages13(
+    BQ76940_t *device,
+    const BQ76940_Calibration_t *calibration,
+    uint16_t cell_mv[BQ76940_MEASUREMENT_CELL_COUNT])
+{
+    uint8_t staged[BQ76940_MEASUREMENT_VC_WINDOW_BYTES];
+    uint16_t converted[BQ76940_MEASUREMENT_CELL_COUNT];
+    BQ76940_Status_t result;
+    uint8_t index;
+    uint8_t vc_channel;
+    uint16_t raw14;
+
+    if (cell_mv == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    result = BQ76940_Measurement_RequireCalibration(calibration);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+
+    /*
+     * One atomic 30-byte block transaction over VC1_HI..VC15_LO. The
+     * Phase 3 transport checks every data byte CRC and commits the block
+     * atomically; this is a single software read window, not a claim that
+     * the 13 cell ADCs converted simultaneously.
+     */
+    result = BQ76940_ReadBlock(device,
+                               BQ76940_REG_VC1_HI,
+                               staged,
+                               BQ76940_MEASUREMENT_VC_WINDOW_BYTES);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+
+    for (index = 0U; index < BQ76940_MEASUREMENT_CELL_COUNT; ++index)
+    {
+        vc_channel = s_logical_cell_to_vc[index];
+        raw14 = BQ76940_DecodeRaw14(
+            staged[(vc_channel - 1U) * 2U],
+            staged[((vc_channel - 1U) * 2U) + 1U]);
+        result = BQ76940_ConvertCellRawToMv(raw14, calibration,
+                                            &converted[index]);
+        if (result != BQ76940_STATUS_OK)
+        {
+            /* Any single cell failure aborts the whole commit. */
+            return result;
+        }
+    }
+
+    (void)memcpy(cell_mv, converted, sizeof(converted));
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ReadPackVoltageMv(
+    BQ76940_t *device,
+    const BQ76940_Calibration_t *calibration,
+    uint32_t *pack_mv)
+{
+    uint16_t bat_raw;
+    int64_t microvolts;
+    int64_t rounded_mv;
+    BQ76940_Status_t result;
+
+    if (pack_mv == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    result = BQ76940_Measurement_RequireCalibration(calibration);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+
+    result = BQ76940_ReadAdjacentU16(device, BQ76940_REG_BAT_HI, &bat_raw);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+
+    /*
+     * TI eq. (9): V(BAT) = 4 x GAIN x ADC + (#Cells x OFFSET).
+     * BAT register holds (sum of cell ADC)/4, so the 4x factor restores
+     * the summed cell ADC scale. OFFSET is in mV, GAIN in uV/LSB.
+     */
+    microvolts = ((int64_t)4 * (int64_t)calibration->gain_uv_per_lsb *
+                  (int64_t)bat_raw) +
+                 ((int64_t)BQ76940_MEASUREMENT_BAT_NUM_CELLS *
+                  (int64_t)calibration->offset_mv * 1000LL);
+    if (microvolts < 0LL)
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+    rounded_mv = (microvolts + 500LL) / 1000LL;
+    if (rounded_mv > (int64_t)UINT32_MAX)
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+
+    *pack_mv = (uint32_t)rounded_mv;
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ReadCcRaw(BQ76940_t *device, int16_t *cc_raw)
+{
+    uint16_t raw;
+    BQ76940_Status_t result;
+
+    if (cc_raw == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    result = BQ76940_ReadAdjacentU16(device, BQ76940_REG_CC_HI, &raw);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+    *cc_raw = BQ76940_DecodeSigned16((uint8_t)(raw >> 8),
+                                     (uint8_t)(raw & 0xFFU));
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ConvertCcRawToCurrentMa(
+    int16_t cc_raw,
+    uint32_t rsense_uohm,
+    int8_t polarity,
+    int32_t *current_ma)
+{
+    int64_t numerator;
+    int64_t milliamps;
+
+    if (current_ma == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    if ((rsense_uohm == 0U) || (rsense_uohm > 100000000UL))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+    if ((polarity != 1) && (polarity != -1))
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+
+    /*
+     * I[mA] = polarity x (CC_raw x 8440 nV/LSB) / (Rsense in u-ohm)
+     * 64-bit numerator so the full 16-bit signed range cannot overflow.
+     */
+    numerator = (int64_t)cc_raw * (int64_t)BQ76940_MEASUREMENT_CC_LSB_NV;
+    milliamps = (numerator * (int64_t)polarity) / (int64_t)rsense_uohm;
+    if ((milliamps < INT32_MIN) || (milliamps > INT32_MAX))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+
+    *current_ma = (int32_t)milliamps;
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ReadTs1Raw(BQ76940_t *device,
+                                    uint16_t *ts1_raw14)
+{
+    uint16_t raw;
+    BQ76940_Status_t result;
+
+    if (ts1_raw14 == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    result = BQ76940_ReadAdjacentU16(device, BQ76940_REG_TS1_HI, &raw);
+    if (result != BQ76940_STATUS_OK)
+    {
+        return result;
+    }
+    *ts1_raw14 = BQ76940_DecodeRaw14((uint8_t)(raw >> 8),
+                                     (uint8_t)(raw & 0xFFU));
+    return BQ76940_STATUS_OK;
+}
+
+BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
+    uint16_t ts1_raw14,
+    uint32_t *resistance_ohm)
+{
+    int64_t ts_uv;
+    int64_t denominator;
+    int64_t resistance;
+
+    if (resistance_ohm == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    if (ts1_raw14 > BQ76940_CELL_RAW14_MASK)
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+
+    /* VTSX[uV] = raw x 382 uV/LSB (eq. 4). */
+    ts_uv = (int64_t)ts1_raw14 *
+            (int64_t)BQ76940_MEASUREMENT_TS_UV_PER_LSB;
+    denominator = (int64_t)BQ76940_MEASUREMENT_TS_REGOUT_UV - ts_uv;
+    if (denominator <= 0LL)
+    {
+        /* VTSX >= 3.3 V is outside the thermistor divider model. */
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+
+    /* RTS[ohm] = (10000 x VTSX) / (3.3 V - VTSX), all uV (eq. 5). */
+    resistance = ((int64_t)BQ76940_MEASUREMENT_TS_PULLUP_OHM * ts_uv) /
+                 denominator;
+    if ((resistance < 0LL) || (resistance > (int64_t)UINT32_MAX))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+
+    *resistance_ohm = (uint32_t)resistance;
+    return BQ76940_STATUS_OK;
+}
