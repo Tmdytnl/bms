@@ -49,9 +49,8 @@
 
 - `firmware/Project/Keil/BMS_V1.uvprojx`：在 `Driver_Phase3` group 增量加入 `bq76940_measurement.c`（唯一 target 增量；新 SHA-256 `d829c41f0e813544bbda3a31eeca669168c05c2ccd8095efb1cc63b300745c1f`）
 - `firmware/Project/Keil/BMS_V1.uvoptx`：Simulator 自动化入口切到 `phase4_simulator.ini`（Phase 2/3 同款做法）
-- `firmware/Tests/verify_phase3.py`：历史 Phase-3 完成门禁的 forbidden 列表移除已授权的 `bq76940_measurement.c`（唯一改动，其余检查原样；详见 §22）
 
-未修改：`soft_i2c.*`、`crc8_bq76940.*`、`bq76940.c/.h`、`bq76940_regs.h`、Phase 1 App 模型、`bms_memory_map.h`、startup、toolchain、`main.c`。
+未修改：`soft_i2c.*`、`crc8_bq76940.*`、`bq76940.c/.h`、`bq76940_regs.h`、Phase 1 App 模型、`bms_memory_map.h`、startup、toolchain、`main.c`、`firmware/Tests/verify_phase1.py`、`firmware/Tests/verify_phase2.py`、`firmware/Tests/verify_phase3.py`。历史 Phase verifier 是**不可变验收快照**，Phase 4 不修改它们（见 §22）。
 
 ## 5. 最终 firmware tree 增量
 
@@ -238,7 +237,7 @@ python firmware/Tests/verify_phase4.py
 & 'D:\Keil_v5\UV4\UV4.exe' -cr 'D:\AI\Codex\Bms_shop\firmware\Project\Keil\BMS_V1.uvprojx' -t 'BMS_V1' -j0 -o 'D:\AI\Codex\Bms_shop\firmware\Project\Keil\Build\BMS_V1_Phase4_build.log'
 ```
 
-结果：ARM Compiler 5.06 update 7 build 960，16 个 source/assembly units 全量重编译，`0 Error(s), 0 Warning(s)`。build log SHA-256 `a489d878836199f1320d2327868a40de93983568b087ed1754665352be25944a`。
+结果：ARM Compiler 5.06 update 7 build 960，16 个 source/assembly units 全量重编译，`0 Error(s), 0 Warning(s)`。build log SHA-256 `d7f5a669404e6dd442d860916f4b0713ec54e8cd0aed00eee63bc6e34fca1d51`（verifier 恢复后重跑的一次 Clean Rebuild 证据；早期同内容构建的 `a489d878...` 已由本哈希取代）。
 
 ## 20. Code / RO / RW / ZI
 
@@ -271,12 +270,12 @@ P3→P4 增量为 0 是 split-sections 未引用移除的预期结果（见 §20
 
 | Verifier | 结果 | 说明 |
 |---|---|---|
-| `verify_phase1.py` | FAIL（历史门禁） | 检查"Phase 2+ 文件不得存在"，Phase 2/3 合法内容加入后 Phase 4 之前即已 FAIL；其 Phase 1 模型哈希回归由 verify_phase3/4 覆盖 PASS |
-| `verify_phase2.py` | FAIL（历史门禁） | 检查"main 无 BQ76940_"，Phase 3 合法加入 `BQ76940_Init` 后 Phase 4 之前即已 FAIL；其 Phase 2 源哈希回归由 verify_phase3/4 覆盖 PASS |
-| `verify_phase3.py` | **PASS** | 唯一因 Phase 4 触发的检查（forbidden 含 `bq76940_measurement.c`）已按规则二十五最小化适配：仅从该历史完成门禁列表移除已授权文件，其余 5 组检查（Phase2 hashes、project/toolchain、register、transport/atomicity、CRC/calibration oracle、Simulator+Rebuild）全部原样 PASS |
-| `verify_phase4.py` | **PASS** | 8 组全过 |
+| `verify_phase1.py` | FAIL（历史快照，预期） | 不可变验收快照：检查"Phase 2+ 文件不得存在"。Phase 2/3 合法内容加入后即无法在后续阶段工程上整体 PASS，这是快照语义，不是回归。其 Phase 1 公共模型哈希由 verify_phase4 的 `check_regression` 覆盖 PASS |
+| `verify_phase2.py` | FAIL（历史快照，预期） | 不可变验收快照：检查"main 无 BQ76940_"。Phase 3 合法加入 `BQ76940_Init` 后即无法整体 PASS。其 Phase 2 源哈希由 verify_phase4 的 `check_regression` 覆盖 PASS |
+| `verify_phase3.py` | FAIL（历史快照，预期） | 不可变验收快照：forbidden 列表含 `bq76940_measurement.c`，Phase 4 合法创建该文件后触发 `premature Phase 4+ file exists`，这是快照的应有行为。其 Phase 2 hashes、project/toolchain、register、transport/atomicity、CRC/calibration oracle、Simulator+Rebuild 检查全部仍 PASS（仅该范围检查 FAIL） |
+| `verify_phase4.py` | **PASS** | 8 组全过，其中 `check_regression` 直接验证 Phase 1 App 哈希、Phase 2 源哈希、Phase 3 源/报告哈希、uvprojx Phase 4 增量 |
 
-分析结论：`verify_phase1/2` 的 FAIL 是历史阶段门禁（"该阶段不得有后续阶段内容"），非 Phase 4 引入，未篡改其历史行为；Phase 1/2 的实质回归（公共模型/源哈希）由 verify_phase3（Phase2 hashes + App hashes）与 verify_phase4（App/Phase2/Phase3 全哈希）持续覆盖并 PASS。
+**历史 verifier 语义（最终决定）**：`verify_phase1/2/3` 是各阶段完成时刻的**不可变验收快照**，其后阶段工程不得要求它们全部直接 PASS，也不得为容纳后续阶段文件而修改它们。历史源码 hash/contract 的持续回归由**最新阶段 verifier**（当前为 `verify_phase4.py`）负责：其 `check_regression` 已覆盖 Phase 1 公共模型（6 文件）、Phase 2 源（11 文件）、Phase 3 源/报告（4 文件）的精确哈希及 uvprojx 增量正确性。恢复后实测：verify_phase4 8/8 PASS（exit 0）；verify_phase3 仅范围检查 FAIL、其余 PASS。
 
 ## 23. Hardware Validation TODO
 
@@ -298,19 +297,22 @@ Simulator/mock 只证明软件逻辑，不冒充硬件。
 ## 25. Git commit list
 
 ```text
-61d8578 phase4: add validated 13S measurement mapping and driver
-af33ef5 phase4: add measurement source to ARMCC5 target and rebuild
+phase4: restore immutable phase3 verifier            (最新提交，见 git log)
+6daf8d1 phase4: add Phase 4 report (13S measurement layer)
+b3e506e phase4: allow authorized measurement module in historical Phase 3 gate   (后由 restore 提交撤销其内容修改)
 578a47f phase4: add measurement simulator harness, oracle and golden tests
-b3e506e phase4: allow authorized measurement module in historical Phase 3 gate
-bc99e0c phase4: add Phase 4 report (13S measurement layer)
+af33ef5 phase4: add measurement source to ARMCC5 target and rebuild
+61d8578 phase4: add validated 13S measurement mapping and driver
 ```
 
 全部在 `dsh/phase4`；`main` 与 `phase3-validated` 未改变；无 push；未创建 `phase4-validated` tag。
 
+说明：`b3e506e` 曾短暂修改 `verify_phase3.py` 以容纳 Phase 4 文件，后按审计决定（历史 Phase verifier 为不可变验收快照）由最新的 `phase4: restore immutable phase3 verifier` 提交将其恢复为 `phase3-validated` 原始版本，并一并更新本报告与重跑 Clean Rebuild 证据；最终 `verify_phase3.py` 与 `phase3-validated` 字节一致（SHA-256 `d6774e55...`），其 commit hash 以 `git log phase3-validated..HEAD` 为准。
+
 ## 26. git diff --stat phase3-validated..HEAD
 
 ```text
- deliverables/phase4/BMS_V1_Phase4_Report.md        | 345 ++++++++++++
+ deliverables/phase4/BMS_V1_Phase4_Report.md        | 374 +++++++++++++
  deliverables/review/BMS_V1_Git_基线建立任务报告.md  | 163 ++++++
  firmware/Driver/bq76940_measurement.c              | 259 +++++++++
  firmware/Driver/bq76940_measurement.h              | 175 ++++++
@@ -327,15 +329,16 @@ bc99e0c phase4: add Phase 4 report (13S measurement layer)
  firmware/Tests/test_phase4_main.c                  |  24 +
  firmware/Tests/test_phase4_mapping.c               |  91 +++
  firmware/Tests/test_phase4_measurement.c           | 617 +++++++++++++++++++++
- firmware/Tests/verify_phase3.py                    |   7 +-
  firmware/Tests/verify_phase4.py                    | 316 +++++++++++
- 19 files changed, 2366 insertions(+), 102 deletions(-)
+ 18 files changed, 2389 insertions(+), 101 deletions(-)
 ```
+
+（`firmware/Tests/verify_phase1/2/3.py` 均未在 Phase 4 修改；`verify_phase3.py` 与 `phase3-validated` 版本字节一致）
 
 ## 27. Codex takeover review 注意事项
 
-1. **verify_phase3.py 有唯一一处最小适配**：forbidden 列表移除 `bq76940_measurement.c`（§22），其余检查未动；对比 `phase3-validated` 版本即可审查该行 diff。
-2. **verify_phase1/2 的 FAIL 是历史门禁**，Phase 3 完成时已存在，非 Phase 4 引入；实质回归由 verify_phase3/4 覆盖。
+1. **历史 Phase verifier（verify_phase1/2/3）保持不可变**：它们是各阶段完成时刻的验收快照，Phase 4 未修改任何一个；`verify_phase3.py` 与 `phase3-validated` 版本字节一致（SHA-256 `d6774e55...`）。它们在后阶段工程上不要求全部直接 PASS（如 Phase 4 文件触发 verify_phase3 的范围检查 FAIL 是快照预期行为）。
+2. **历史 contract/hash 回归由 verify_phase4 负责**：`check_regression` 覆盖 Phase 1 App 6 文件、Phase 2 源 11 文件、Phase 3 源/报告 4 文件的精确哈希 + uvprojx Phase 4 增量正确性，Phase 4 8/8 PASS。
 3. **BAT 上限**：pack_mv 为 uint32，0xFFFF→100,003 mV 合法（16 位 BAT 寄存器）。
 4. **CC rounding 为向零截断**，与规格 §19.4 和 ARMCC5 C 语义一致。
 5. **current polarity 是显式参数**，板级极性未定 → 硬件验证项。
@@ -349,7 +352,7 @@ bc99e0c phase4: add Phase 4 report (13S measurement layer)
 |---|---|
 | 当前分支 dsh/phase4 | PASS |
 | main / phase3-validated 未改变 | PASS |
-| Phase 3 preflight + verify_phase3 | PASS |
+| Phase 3 preflight PASS；verify_phase3 快照在 Phase 4 文件加入后按预期 FAIL（其余检查 PASS） | PASS（见 §22） |
 | 13S mapping exact tests（VC9/VC14 跳过） | PASS |
 | cell HI/LO atomic contract（单 30-byte block） | PASS |
 | calibration dependency | PASS |
