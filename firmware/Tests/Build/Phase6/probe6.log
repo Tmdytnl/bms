@@ -1,6 +1,0 @@
-LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase6\probe6.axf
-RESET
-G
-printf("PROBE6=%u\n", g_probe6)
-PROBE6=4
-LOG OFF
