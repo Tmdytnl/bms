@@ -1,6 +1,0 @@
-LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7\phase6_tests_copy.axf
-RESET
-G
-printf("PHASE6_RECHECK=%u\n", g_phase6_test_completed)
-PHASE6_RECHECK=1
-LOG OFF
