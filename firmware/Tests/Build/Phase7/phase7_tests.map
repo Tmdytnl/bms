@@ -1,0 +1,117 @@
+Component: ARM Compiler 5.06 update 7 (build 960) Tool: armlink [4d3601]
+
+==============================================================================
+
+Memory Map of the image
+
+  Image Entry point : 0x080000ed
+
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00000b7c, Max: 0x00010000, ABSOLUTE)
+
+    Execution Region ER_IROM1 (Base: 0x08000000, Size: 0x00000b00, Max: 0x00010000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x08000000   0x000000ec   Data   RO            3    RESET               startup_stm32f10x_md.o
+    0x080000ec   0x00000008   Code   RO          573  * !!!main             c_w.l(__main.o)
+    0x080000f4   0x00000034   Code   RO          746    !!!scatter          c_w.l(__scatter.o)
+    0x08000128   0x0000001a   Code   RO          748    !!handler_copy      c_w.l(__scatter_copy.o)
+    0x08000142   0x00000002   PAD
+    0x08000144   0x0000001c   Code   RO          750    !!handler_zi        c_w.l(__scatter_zi.o)
+    0x08000160   0x00000002   Code   RO          610    .ARM.Collect$$libinit$$00000000  c_w.l(libinit.o)
+    0x08000162   0x00000000   Code   RO          621    .ARM.Collect$$libinit$$00000002  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          623    .ARM.Collect$$libinit$$00000004  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          626    .ARM.Collect$$libinit$$0000000A  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          628    .ARM.Collect$$libinit$$0000000C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          630    .ARM.Collect$$libinit$$0000000E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          633    .ARM.Collect$$libinit$$00000011  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          635    .ARM.Collect$$libinit$$00000013  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          637    .ARM.Collect$$libinit$$00000015  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          639    .ARM.Collect$$libinit$$00000017  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          641    .ARM.Collect$$libinit$$00000019  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          643    .ARM.Collect$$libinit$$0000001B  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          645    .ARM.Collect$$libinit$$0000001D  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          647    .ARM.Collect$$libinit$$0000001F  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          649    .ARM.Collect$$libinit$$00000021  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          651    .ARM.Collect$$libinit$$00000023  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          653    .ARM.Collect$$libinit$$00000025  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          657    .ARM.Collect$$libinit$$0000002C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          659    .ARM.Collect$$libinit$$0000002E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          661    .ARM.Collect$$libinit$$00000030  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          663    .ARM.Collect$$libinit$$00000032  c_w.l(libinit2.o)
+    0x08000162   0x00000002   Code   RO          664    .ARM.Collect$$libinit$$00000033  c_w.l(libinit2.o)
+    0x08000164   0x00000002   Code   RO          694    .ARM.Collect$$libshutdown$$00000000  c_w.l(libshutdown.o)
+    0x08000166   0x00000000   Code   RO          711    .ARM.Collect$$libshutdown$$00000002  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          713    .ARM.Collect$$libshutdown$$00000004  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          715    .ARM.Collect$$libshutdown$$00000006  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          718    .ARM.Collect$$libshutdown$$00000009  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          721    .ARM.Collect$$libshutdown$$0000000C  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          723    .ARM.Collect$$libshutdown$$0000000E  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          726    .ARM.Collect$$libshutdown$$00000011  c_w.l(libshutdown2.o)
+    0x08000166   0x00000002   Code   RO          727    .ARM.Collect$$libshutdown$$00000012  c_w.l(libshutdown2.o)
+    0x08000168   0x00000000   Code   RO          575    .ARM.Collect$$rtentry$$00000000  c_w.l(__rtentry.o)
+    0x08000168   0x00000000   Code   RO          581    .ARM.Collect$$rtentry$$00000002  c_w.l(__rtentry2.o)
+    0x08000168   0x00000006   Code   RO          593    .ARM.Collect$$rtentry$$00000004  c_w.l(__rtentry4.o)
+    0x0800016e   0x00000000   Code   RO          583    .ARM.Collect$$rtentry$$00000009  c_w.l(__rtentry2.o)
+    0x0800016e   0x00000004   Code   RO          584    .ARM.Collect$$rtentry$$0000000A  c_w.l(__rtentry2.o)
+    0x08000172   0x00000000   Code   RO          586    .ARM.Collect$$rtentry$$0000000C  c_w.l(__rtentry2.o)
+    0x08000172   0x00000008   Code   RO          587    .ARM.Collect$$rtentry$$0000000D  c_w.l(__rtentry2.o)
+    0x0800017a   0x00000002   Code   RO          614    .ARM.Collect$$rtexit$$00000000  c_w.l(rtexit.o)
+    0x0800017c   0x00000000   Code   RO          666    .ARM.Collect$$rtexit$$00000002  c_w.l(rtexit2.o)
+    0x0800017c   0x00000004   Code   RO          667    .ARM.Collect$$rtexit$$00000003  c_w.l(rtexit2.o)
+    0x08000180   0x00000006   Code   RO          668    .ARM.Collect$$rtexit$$00000004  c_w.l(rtexit2.o)
+    0x08000186   0x00000002   PAD
+    0x08000188   0x00000096   Code   RO          327    .emb_text           port.o
+    0x0800021e   0x00000002   PAD
+    0x08000220   0x00000040   Code   RO            4    .text               startup_stm32f10x_md.o
+    0x08000260   0x00000006   Code   RO          571    .text               c_w.l(heapauxi.o)
+    0x08000266   0x0000004a   Code   RO          599    .text               c_w.l(sys_stackheap_outer.o)
+    0x080002b0   0x00000012   Code   RO          603    .text               c_w.l(exit.o)
+    0x080002c2   0x00000002   PAD
+    0x080002c4   0x00000008   Code   RO          611    .text               c_w.l(libspace.o)
+    0x080002cc   0x0000000c   Code   RO          682    .text               c_w.l(sys_exit.o)
+    0x080002d8   0x00000002   Code   RO          699    .text               c_w.l(use_no_semi.o)
+    0x080002da   0x00000000   Code   RO          701    .text               c_w.l(indicate_semi.o)
+    0x080002da   0x00000002   Code   RO          367    i.App_Rtos_FatalStop  app_rtos_hooks.o
+    0x080002dc   0x00000018   Code   RO          377    i.BMS_Fault_Contains  bms_fault.o
+    0x080002f4   0x0000000c   Code   RO          378    i.BMS_Fault_IdIsValid  bms_fault.o
+    0x08000300   0x0000000c   Code   RO          379    i.BMS_Fault_Init    bms_fault.o
+    0x0800030c   0x00000016   Code   RO          380    i.BMS_Fault_Mask    bms_fault.o
+    0x08000322   0x000000f4   Code   RO          385    i.BMS_Protect_Decide  bms_protect.o
+    0x08000416   0x00000008   Code   RO          389    i.BMS_Protect_HasFaultBits  bms_protect.o
+    0x0800041e   0x00000002   PAD
+    0x08000420   0x00000040   Code   RO          394    i.EXTI1_IRQHandler  bms_protect.o
+    0x08000460   0x0000000c   Code   RO          515    i.EXTI_ClearITPendingBit  stm32f10x_exti.o
+    0x0800046c   0x00000020   Code   RO          519    i.EXTI_GetITStatus  stm32f10x_exti.o
+    0x0800048c   0x0000002c   Code   RO          328    i.SysTick_Handler   port.o
+    0x080004b8   0x00000002   Code   RO          546    i.SystemInit        test_phase7_main.o
+    0x080004ba   0x00000004   Code   RO          551    i.Test_Phase7_CcQueue  test_phase7_logic.o
+    0x080004be   0x000001da   Code   RO          552    i.Test_Phase7_ProtectLogic  test_phase7_logic.o
+    0x08000698   0x00000004   Code   RO          553    i.Test_Phase7_Xready  test_phase7_logic.o
+    0x0800069c   0x00000040   Code   RO          547    i.main              test_phase7_main.o
+    0x080006dc   0x00000020   Code   RO           15    i.prvResetNextTaskUnblockTime  tasks.o
+    0x080006fc   0x0000000c   Code   RO           20    i.uxTaskGetNumberOfTasks  tasks.o
+    0x08000708   0x00000004   Code   RO          368    i.vApplicationAssertFailedHandler  app_rtos_hooks.o
+    0x0800070c   0x00000004   Code   RO          371    i.vApplicationStackOverflowHook  app_rtos_hooks.o
+    0x08000710   0x0000005c   Code   RO          335    i.vPortValidateInterruptPriority  port.o
+    0x0800076c   0x00000094   Code   RO           37    i.vTaskSwitchContext  tasks.o
+    0x08000800   0x000000c2   Code   RO          132    i.xQueueGiveFromISR  queue.o
+    0x080008c2   0x00000002   PAD
+    0x080008c4   0x00000138   Code   RO           51    i.xTaskIncrementTick  tasks.o
+    0x080009fc   0x000000e4   Code   RO           54    i.xTaskRemoveFromEventList  tasks.o
+    0x08000ae0   0x00000020   Data   RO          744    Region$$Table       anon$$obj.o
+
+
+    Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x000007b8, Max: 0x00005000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x20000000   0x0000003c   Data   RW           57    .data               tasks.o
+    0x2000003c   0x0000000c   Data   RW          337    .data               port.o
+    0x20000048   0x0000001c   Data   RW          357    .data               app_rtos.o
+    0x20000064   0x00000018   Data   RW          548    .data               test_phase7_main.o
+    0x2000007c   0x000000dc   Zero   RW           56    .bss                tasks.o
+    0x20000158   0x00000060   Zero   RW          612    .bss                c_w.l(libspace.o)
+    0x200001b8   0x00000200   Zero   RW            2    HEAP                startup_stm32f10x_md.o
+    0x200003b8   0x00000400   Zero   RW            1    STACK               startup_stm32f10x_md.o
+

@@ -1,0 +1,6 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7\phase4_tests_copy.axf
+RESET
+G
+printf("PHASE4_RECHECK=%u\n", g_phase4_test_completed)
+PHASE4_RECHECK=1
+LOG OFF

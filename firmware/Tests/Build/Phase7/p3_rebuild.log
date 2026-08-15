@@ -1,0 +1,6 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7\p3_rebuild.axf
+RESET
+G
+printf("P3_REBUILD=%u\n", g_phase3_test_completed)
+P3_REBUILD=1
+LOG OFF

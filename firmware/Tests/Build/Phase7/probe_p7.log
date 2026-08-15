@@ -1,0 +1,6 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7\probe_p7.axf
+RESET
+G
+printf("PROBE_P7=%u\n", g_probe_p7)
+PROBE_P7=5
+LOG OFF
