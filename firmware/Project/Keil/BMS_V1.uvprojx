@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_MD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\App;..\..\Config;..\..\Driver;..\..\User;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Start;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary</IncludePath>
+              <IncludePath>..\..\App;..\..\Config;..\..\Driver;..\..\User;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Start;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary;..\..\..\docs\FreeRTOS\include;..\..\..\docs\FreeRTOS\portable</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -488,6 +488,66 @@
               <FileName>core_cm3.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Start\core_cm3.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>FreeRTOS_V11</GroupName>
+          <Files>
+            <File>
+              <FileName>tasks.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\tasks.c</FilePath>
+            </File>
+            <File>
+              <FileName>queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>list.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\list.c</FilePath>
+            </File>
+            <File>
+              <FileName>event_groups.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\event_groups.c</FilePath>
+            </File>
+            <File>
+              <FileName>timers.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\timers.c</FilePath>
+            </File>
+            <File>
+              <FileName>stream_buffer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\stream_buffer.c</FilePath>
+            </File>
+            <File>
+              <FileName>croutine.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\source\croutine.c</FilePath>
+            </File>
+            <File>
+              <FileName>heap_4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\portable\heap_4.c</FilePath>
+            </File>
+            <File>
+              <FileName>port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\FreeRTOS\portable\port.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rtos.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\app_rtos.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rtos_hooks.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\app_rtos_hooks.c</FilePath>
             </File>
           </Files>
         </Group>
