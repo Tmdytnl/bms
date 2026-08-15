@@ -1,3 +1,4 @@
+#include "app_rtos.h"
 #include "bms_data.h"
 #include "bms_config.h"
 #include "bms_memory_map.h"
@@ -62,6 +63,19 @@ int main(void)
         BMS_SafeIdle();
     }
 
-    /* Phase 3 stops here: no BQ transaction, probe, or business logic starts. */
+    /* Phase 6: NVIC grouping, RTOS objects, seven task skeletons,
+     * scheduler start. BQ transport is initialized but no transaction
+     * or probe runs before the scheduler (spec §12.2). */
+    if (App_Rtos_CreateObjects() != pdTRUE)
+    {
+        BMS_SafeIdle();
+    }
+    if (App_Rtos_CreateTasks() != pdTRUE)
+    {
+        BMS_SafeIdle();
+    }
+    vTaskStartScheduler();
+
+    /* vTaskStartScheduler only returns on fatal configuration error. */
     BMS_SafeIdle();
 }
