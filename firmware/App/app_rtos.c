@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include "bms_protect.h"   /* Task_Protect entry (Phase 7 implementation) */
+
 /* ------------------------------------------------------------------ */
 /* IPC objects (spec §11.2).                                           */
 /* ------------------------------------------------------------------ */
@@ -45,25 +47,11 @@ BaseType_t App_Rtos_CreateObjects(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* Seven task skeletons (Phase 6). Bodies are placeholders that keep a  */
-/* per-task period with vTaskDelayUntil; functional code lands in       */
-/* Phase 7..11. Each entry records nothing yet (no heartbeat until the  */
-/* Phase 9 health/supervision design).                                 */
+/* Seven task bodies (Phase 6 skeletons; Task_Protect is implemented in
+ * bms_protect.c from Phase 7 onward). The remaining six are placeholders
+ * that keep a per-task period with vTaskDelayUntil; functional code lands
+ * in Phase 8..11. */
 /* ------------------------------------------------------------------ */
-
-void Task_Protect(void *argument)
-{
-    const TickType_t period = pdMS_TO_TICKS(20U);
-    TickType_t last;
-
-    (void)argument;
-    last = xTaskGetTickCount();
-    for (;;)
-    {
-        vTaskDelayUntil(&last, period);
-        /* Phase 7: ALERT drain / SYS_STAT / CC_READY / fault handling. */
-    }
-}
 
 void Task_Sample(void *argument)
 {

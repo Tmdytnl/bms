@@ -2,11 +2,15 @@
 #include "bms_data.h"
 #include "bms_config.h"
 #include "bms_memory_map.h"
+#include "bms_protect.h"
 #include "bsp_clock.h"
+#include "bsp_exti.h"
 #include "bsp_gpio.h"
 #include "bsp_timer.h"
 #include "bq76940.h"
 #include "soft_i2c.h"
+
+#include "misc.h"   /* NVIC_PriorityGroupConfig (SPL, Phase 6/7 target) */
 
 static SoftI2C_t s_afe_bus;
 static BQ76940_t s_afe_device;
@@ -63,9 +67,20 @@ int main(void)
         BMS_SafeIdle();
     }
 
-    /* Phase 6: NVIC grouping, RTOS objects, seven task skeletons,
-     * scheduler start. BQ transport is initialized but no transaction
-     * or probe runs before the scheduler (spec §12.2). */
+    /* Phase 7: protect module + ALERT EXTI before the scheduler starts.
+     * NVIC PriorityGroup_4 is required for the locked priorities (C-02);
+     * it must be set before any interrupt is enabled. */
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+    BMS_Protect_Init();
+    BMS_Protect_SetDevice(&s_afe_device);
+    if (!BSP_ALERT_EXTI_Init())
+    {
+        BMS_SafeIdle();
+    }
+
+    /* Phase 6: RTOS objects, seven task skeletons, scheduler start.
+     * BQ transport is initialized but no transaction or probe runs
+     * before the scheduler (spec §12.2). */
     if (App_Rtos_CreateObjects() != pdTRUE)
     {
         BMS_SafeIdle();
