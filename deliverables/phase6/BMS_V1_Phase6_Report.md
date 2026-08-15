@@ -248,11 +248,41 @@ Simulator/mock 只证明对象/任务创建与配置正确，不冒充调度实�
 
 ## 23. Git commit list
 
-（提交后由 `git log dsh/phase5..HEAD` 提供；建议拆分：FreeRTOSConfig + app_rtos、Keil target、tests+oracle、report）
+```text
+230a4ce phase6: add BMS FreeRTOS config, IPC objects and seven task skeletons
+2fe0253 phase6: add FreeRTOS kernel sources to ARMCC5 target
+f711197 phase6: add RTOS foundation simulator tests and oracle
+00d98d3 phase6: add Phase 6 report (FreeRTOS foundation)
+b5c50cf phase6: remove simulator diagnostic scratch files from evidence
+```
+
+全部在 `dsh/phase6`；main / phase3-validated / dsh/phase4 / dsh/phase5 未改变；无 push；未创建 phase6-validated tag。
 
 ## 24. git diff --stat dsh/phase5..HEAD
 
-（提交后输出）
+```text
+ deliverables/phase6/BMS_V1_Phase6_Report.md        |  290 ++++
+ firmware/App/app_rtos.c                            |  210 +++
+ firmware/App/app_rtos.h                            |  102 ++
+ firmware/App/app_rtos_hooks.c                      |   42 +
+ firmware/Config/FreeRTOSConfig.h                   |  141 ++
+ firmware/Project/Keil/BMS_V1.uvoptx                |    2 +-
+ firmware/Project/Keil/BMS_V1.uvprojx               |   62 +-
+ firmware/Project/Keil/Build/BMS_V1_Phase6_build.log|  39 +
+ firmware/Project/Keil/Listings/BMS_V1.map          | 1679 ++++++---
+ firmware/Tests/Build/Phase6/phase6_simulator.log   |  14 +
+ firmware/Tests/Build/Phase6/phase6_tests.map       |  171 ++
+ firmware/Tests/Build/Phase6/verify_phase6.log      |   7 +
+ firmware/Tests/phase6_simulator.ini                |  12 +
+ firmware/Tests/phase6_tests.sct                    |  13 +
+ firmware/Tests/test_phase6.h                       |  11 +
+ firmware/Tests/test_phase6_main.c                  |  28 ++
+ firmware/Tests/test_phase6_objects.c               |  80 ++
+ firmware/Tests/test_phase6_tasks.c                 |  45 ++
+ firmware/Tests/verify_phase6.py                    |  292 ++++
+ firmware/User/main.c                               |  16 +-
+ 20 files changed, 2919 insertions(+), 337 deletions(-)
+```
 
 ## 25. Codex takeover review 注意事项
 
