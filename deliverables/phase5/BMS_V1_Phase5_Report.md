@@ -190,7 +190,7 @@ log：`verify_phase5.log`（SHA-256 `461861d40dffb047178452aa4802062badc11acf7be
 & 'D:\Keil_v5\UV4\UV4.exe' -cr '...\BMS_V1.uvprojx' -t 'BMS_V1' -j0 -o '...\BMS_V1_Phase5_build.log'
 ```
 
-结果：ARM Compiler 5.06 update 7 build 960，17 个 units 全量重编译，`0 Error(s), 0 Warning(s)`。build log SHA-256 `c5134fecc1217879b517f5d2e241a2661d56cf3355d6cf3a9865661546f03280`。
+结果：ARM Compiler 5.06 update 7 build 960，17 个 units 全量重编译，`0 Error(s), 0 Warning(s)`。build log SHA-256 `039ac907af8a5ae7f5d00590c3746a946ab95f41d1c6a3d2241b984e0ca58352`。
 
 ## 18. Code / RO / RW / ZI
 
@@ -240,18 +240,39 @@ Simulator/mock 只证明软件编码与仲裁逻辑。
 ## 23. Git commit list
 
 ```text
-phase5: add BQ protection register encoding (OV/UV/OCD/SCD)      [预期拆分]
-phase5: add safe FET arbitration primitives
-phase5: add internal balancing register policy
-phase5: add protection and FET simulator tests
-phase5: pass ARMCC5 rebuild and add phase5 report
+686cb85 phase5: add BQ protection encoding and safe FET/balance primitives
+643df99 phase5: add control source to ARMCC5 target and rebuild
+5b10ee9 phase5: add protection, FET and balance simulator tests with oracle
+110716c phase5: add Phase 5 report (protection/FET/balance foundation)
+[HEAD]  phase5: sync uvoptx file list and record full Clean Rebuild evidence
 ```
 
-（实际 commit hash 以 `git log dsh/phase4..dsh/phase5` 为准，见提交后输出）
+全部在 `dsh/phase5`；`main`、`phase3-validated`、`dsh/phase4` 未改变；无 push；未创建 phase5-validated tag。（HEAD 提交的精确 hash 以 `git log dsh/phase4..HEAD` 为准。）
 
 ## 24. git diff --stat dsh/phase4..HEAD
 
-（提交后输出）
+```text
+ deliverables/phase5/BMS_V1_Phase5_Report.md        | 290 ++++++++++++
+ firmware/Driver/bq76940_control.c                  | 517 +++++++++++++++++++++
+ firmware/Driver/bq76940_control.h                  | 231 +++++++++
+ firmware/Project/Keil/BMS_V1.uvoptx                |  38 +-
+ firmware/Project/Keil/BMS_V1.uvprojx               |   5 +
+ firmware/Project/Keil/Build/BMS_V1_Phase5_build.log|  28 ++
+ firmware/Project/Keil/Listings/BMS_V1.map          | 217 +++++----
+ firmware/Tests/Build/Phase5/phase5_simulator.log   |  16 +
+ firmware/Tests/Build/Phase5/phase5_tests.map       | 121 +++++
+ firmware/Tests/Build/Phase5/verify_phase5.log      |   8 +
+ firmware/Tests/phase5_simulator.ini                |  13 +
+ firmware/Tests/phase5_tests.sct                    |  13 +
+ firmware/Tests/test_phase5.h                       |  11 +
+ firmware/Tests/test_phase5_cellbal.c               | 117 +++++
+ firmware/Tests/test_phase5_fet.c                   |  84 ++++
+ firmware/Tests/test_phase5_main.c                  |  28 ++
+ firmware/Tests/test_phase5_ocdscd.c                | 161 +++++++
+ firmware/Tests/test_phase5_trip.c                  | 108 +++++
+ firmware/Tests/verify_phase5.py                    | 338 ++++++++++++++
+ 19 files changed, 2252 insertions(+), 92 deletions(-)
+```
 
 ## 25. Codex takeover review 注意事项
 
