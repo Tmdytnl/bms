@@ -1,0 +1,6 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase6\probe_only.axf
+RESET
+G
+printf("PROBE_ONLY=%x\n", g_probe_only)
+PROBE_ONLY=aa55
+LOG OFF

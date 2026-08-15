@@ -1,0 +1,6 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase6\min_test.axf
+RESET
+G
+printf("MIN_TEST_DONE=%u\n", g_min_test_done)
+MIN_TEST_DONE=1
+LOG OFF

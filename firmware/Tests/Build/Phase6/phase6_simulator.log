@@ -1,0 +1,14 @@
+LOAD D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase6\phase6_tests.axf
+RESET
+G
+printf("PHASE6_TEST_COMPLETED=%u\n", g_phase6_test_completed)
+PHASE6_TEST_COMPLETED=1
+printf("PHASE6_TEST_FAILURES=%u\n", g_phase6_test_failures)
+PHASE6_TEST_FAILURES=0
+printf("P6_OBJECTS_FAILURES=%u\n", g_p6_objects_failures)
+P6_OBJECTS_FAILURES=0
+printf("P6_TASKS_FAILURES=%u\n", g_p6_tasks_failures)
+P6_TASKS_FAILURES=0
+printf("P6_PROBE=%u\n", g_p6_probe)
+P6_PROBE=4
+LOG OFF
