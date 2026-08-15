@@ -399,6 +399,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\App\bms_fault.c</FilePath>
             </File>
+            <File>
+              <FileName>bms_protect.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_protect.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -428,6 +433,11 @@
               <FileName>crc8_bq76940.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Driver\crc8_bq76940.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bsp_exti.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -468,6 +478,16 @@
               <FileName>stm32f10x_tim.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_tim.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_exti.c</FilePath>
+            </File>
+            <File>
+              <FileName>misc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\misc.c</FilePath>
             </File>
           </Files>
         </Group>
