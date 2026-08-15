@@ -444,6 +444,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Driver\bq76940_measurement.c</FilePath>
             </File>
+            <File>
+              <FileName>bq76940_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bq76940_control.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
