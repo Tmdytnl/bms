@@ -19,7 +19,7 @@
  *     full = (V_mV - OFFSET_mV) * 1000 / GAIN_uV (SLUSBK2I 8.3.1.2.1).
  *   - UV_TRIP: same mapping with "01" / "0000" presets.
  *   - PROTECT1 (0x06): RSNS=bit7, SCD_D1:0=bits4-3 (70/100/200/400 us),
- *     SCD_T2:0=bits2-0 (RSNS=1: 6..200 mV).
+ *     SCD_T2:0=bits2-0 (RSNS=1: 44..200 mV).
  *   - PROTECT2 (0x07): OCD_D2:0=bits6-4 (8..1280 ms), OCD_T3:0=bits3-0
  *     (RSNS=1: 17..100 mV).
  *   - PROTECT3 (0x08): UV_D1:0=bits7-6 (1/4/8/16 s), OV_D1:0=bits5-4
@@ -134,19 +134,28 @@ BQ76940_Status_t BQ76940_Control_SelectUvDelayS(
 /*
  * Compose the full PROTECT1 (SCD) register byte from parts.
  * rsns: RSNS bit 7. delay_code: SCD_D1:0 (bits 4-3). thresh_code:
- * SCD_T2:0 (bits 2-0). Bit 5 and bits 6 stay 0 per datasheet.
+ * SCD_T2:0 (bits 2-0). Bits 6-5 stay 0 per datasheet. Invalid codes return
+ * RANGE_ERROR and leave register_value unchanged.
  */
-uint8_t BQ76940_Control_ComposeProtect1(bool rsns,
-                                        uint8_t delay_code,
-                                        uint8_t thresh_code);
+BQ76940_Status_t BQ76940_Control_ComposeProtect1(
+    bool rsns,
+    uint8_t delay_code,
+    uint8_t thresh_code,
+    uint8_t *register_value);
 
-/* PROTECT2 (OCD): delay_code in bits 6-4, thresh_code in bits 3-0. */
-uint8_t BQ76940_Control_ComposeProtect2(uint8_t delay_code,
-                                        uint8_t thresh_code);
+/* PROTECT2 (OCD): delay_code in bits 6-4, thresh_code in bits 3-0.
+ * Invalid codes return RANGE_ERROR and leave register_value unchanged. */
+BQ76940_Status_t BQ76940_Control_ComposeProtect2(
+    uint8_t delay_code,
+    uint8_t thresh_code,
+    uint8_t *register_value);
 
-/* PROTECT3: uv_delay_code bits 7-6, ov_delay_code bits 5-4. */
-uint8_t BQ76940_Control_ComposeProtect3(uint8_t uv_delay_code,
-                                        uint8_t ov_delay_code);
+/* PROTECT3: uv_delay_code bits 7-6, ov_delay_code bits 5-4.
+ * Invalid codes return RANGE_ERROR and leave register_value unchanged. */
+BQ76940_Status_t BQ76940_Control_ComposeProtect3(
+    uint8_t uv_delay_code,
+    uint8_t ov_delay_code,
+    uint8_t *register_value);
 
 /* ------------------------------------------------------------------ */
 /* FET arbitration (errata H-04 single-writer rule)                    */
@@ -174,9 +183,11 @@ typedef struct
 
 /*
  * Build a new SYS_CTRL2 byte from the current register value and the
- * desired CHG/DSG bits, preserving CC_EN (bit 6), DELAY_DIS (bit 7),
- * and the reserved bits. This is the ONLY way control code may derive a
- * new SYS_CTRL2 byte; no module writes CHG/DSG bits directly.
+ * desired CHG/DSG bits, preserving only CC_EN (bit 6). DELAY_DIS (bit 7) is
+ * factory-test-only and is forced low in the production compositor, together
+ * with CC_ONESHOT (bit 5) and reserved bits 4..2. NULL request is fail-safe
+ * FET-off. This is the ONLY way control code may derive a new SYS_CTRL2 byte;
+ * no module writes CHG/DSG bits directly.
  */
 uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
                                          const BQ76940_FetRequest_t *request);
@@ -187,8 +198,9 @@ void BQ76940_Control_ObserveFets(uint8_t ctrl2,
 
 /*
  * Decide the safe effective FET state after a fault-inhibited request:
- * if either inhibit is set, the corresponding FET must be forced OFF
- * regardless of the requested desire. Returns the effective request.
+ * if either inhibit is set, the corresponding FET is forced OFF regardless
+ * of the requested desire. A NULL request is fail-safe and writes both
+ * effective desires OFF. A NULL effective output is ignored.
  */
 void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
                                    bool inhibit_chg,

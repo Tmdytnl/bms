@@ -64,11 +64,15 @@ uint32_t Test_Phase5_Trip(void)
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(4250U, &CAL_382_30, &trip) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(trip == 0xB2U);
+    back = BQ76940_Control_DecodeOvTripMv(trip, &CAL_382_30);
+    TEST_CHECK(back == 4250U);
 
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeUvTrip(2800U, &CAL_382_30, &trip) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(trip == 0xC5U);
+    back = BQ76940_Control_DecodeUvTripMv(trip, &CAL_382_30);
+    TEST_CHECK(back == 2799U);
 
     /* MSB window violations -> RANGE_ERROR. */
     /* OV full code must have bits 13:12 = 10: e.g. 1.0V is below OV window
@@ -102,6 +106,12 @@ uint32_t Test_Phase5_Trip(void)
         BQ76940_Calibration_t bad = { 100U, 0, false };
         TEST_CHECK(BQ76940_Control_DecodeOvTripMv(0xBFU, &bad) == 0U);
         TEST_CHECK(BQ76940_Control_DecodeUvTripMv(0x99U, NULL) == 0U);
+    }
+    {
+        BQ76940_Calibration_t bad_gain = { 100U, 0, true };
+        BQ76940_Calibration_t bad_offset = { 382U, 200, true };
+        TEST_CHECK(BQ76940_Control_DecodeOvTripMv(0xBFU, &bad_gain) == 0U);
+        TEST_CHECK(BQ76940_Control_DecodeUvTripMv(0x99U, &bad_offset) == 0U);
     }
 
     return failures;

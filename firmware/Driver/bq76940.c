@@ -165,7 +165,14 @@ BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
     }
 
     i2c_status = SoftI2C_Stop(device->bus);
-    return BQ76940_MapI2CStatus(i2c_status);
+    if (i2c_status != SOFT_I2C_STATUS_OK)
+    {
+        /* All data and CRC bytes were ACKed before STOP. Preserve that commit
+         * boundary so W1C users cannot mistake an accepted clear for a
+         * rejected write and later clear a newly arrived event. */
+        return BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR;
+    }
+    return BQ76940_STATUS_OK;
 
 failure:
     return BQ76940_StopAfterFailure(device, result);

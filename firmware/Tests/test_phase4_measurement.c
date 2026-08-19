@@ -8,6 +8,7 @@
 #include "bq76940.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
+#include "crc8_bq76940.h"
 #include "soft_i2c.h"
 
 /*
@@ -305,6 +306,8 @@ static uint32_t Test_CellTransactional(void)
     uint16_t cell_mv[BQ76940_MEASUREMENT_CELL_COUNT];
     uint16_t expected[BQ76940_MEASUREMENT_CELL_COUNT];
     BQ76940_Calibration_t invalid_cal;
+    BQ76940_Calibration_t negative_cal;
+    uint8_t zero_window_reads[60];
     uint32_t failures;
     uint8_t index;
 
@@ -361,6 +364,32 @@ static uint32_t Test_CellTransactional(void)
         TEST_CHECK(cell_mv[index] == expected[index]);
     }
 
+    /* A valid negative offset can make one raw cell unrepresentable. The
+     * entire 13-cell destination remains transactional in that case. */
+    zero_window_reads[0] = 0U;
+    zero_window_reads[1] = BQ76940_CRC8_FirstRead(0x11U, 0U);
+    for (index = 1U; index < 30U; ++index)
+    {
+        zero_window_reads[index * 2U] = 0U;
+        zero_window_reads[(index * 2U) + 1U] =
+            BQ76940_CRC8_NextByte(0U);
+    }
+    negative_cal.gain_uv_per_lsb = 365U;
+    negative_cal.offset_mv = -128;
+    negative_cal.valid = true;
+    Mock_ReadyDevice(&device, &bus);
+    Mock_SetReads(zero_window_reads, 60U);
+    for (index = 0U; index < 13U; ++index)
+    {
+        cell_mv[index] = expected[index];
+    }
+    TEST_CHECK(BQ76940_ReadCellVoltages13(&device, &negative_cal, cell_mv) ==
+               BQ76940_STATUS_RANGE_ERROR);
+    for (index = 0U; index < 13U; ++index)
+    {
+        TEST_CHECK(cell_mv[index] == expected[index]);
+    }
+
     /* NULL output pointer. */
     Mock_ReadyDevice(&device, &bus);
     TEST_CHECK(BQ76940_ReadCellVoltages13(&device, &GOLD_CAL, NULL) ==
@@ -381,6 +410,7 @@ static uint32_t Test_PackVoltage(void)
     uint32_t pack_mv;
     uint32_t failures;
     uint32_t original;
+    BQ76940_Calibration_t negative_cal;
 
     failures = 0UL;
 
@@ -402,6 +432,17 @@ static uint32_t Test_PackVoltage(void)
     TEST_CHECK(BQ76940_ReadPackVoltageMv(&device, &GOLD_CAL, &pack_mv) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(pack_mv == 390UL);
+
+    /* Negative calibrated pack result fails without committing output. */
+    negative_cal.gain_uv_per_lsb = 365U;
+    negative_cal.offset_mv = -128;
+    negative_cal.valid = true;
+    Mock_ReadyDevice(&device, &bus);
+    Mock_SetReads(GOLD_BAT_ZERO_READS, 4U);
+    pack_mv = original;
+    TEST_CHECK(BQ76940_ReadPackVoltageMv(&device, &negative_cal, &pack_mv) ==
+               BQ76940_STATUS_RANGE_ERROR);
+    TEST_CHECK(pack_mv == original);
 
     /* Max BAT=0xFFFF -> 100003 mV (fits uint32). */
     Mock_ReadyDevice(&device, &bus);
@@ -568,6 +609,17 @@ static uint32_t Test_Ts1(void)
                BQ76940_STATUS_OK);
     TEST_CHECK(resistance == 0UL);
 
+    /* Exact adjacent denominator boundary: 8638 is below 3.3 V; 8639 is
+     * above it. The failing call leaves the destination unchanged. */
+    resistance = original_res;
+    TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(8638U, &resistance) ==
+               BQ76940_STATUS_OK);
+    TEST_CHECK(resistance != original_res);
+    resistance = original_res;
+    TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(8639U, &resistance) ==
+               BQ76940_STATUS_RANGE_ERROR);
+    TEST_CHECK(resistance == original_res);
+
     /* 0x27DC: VTS >= 3.3 V -> RANGE_ERROR, output unchanged. */
     resistance = original_res;
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(0x27DCU, &resistance) ==
@@ -595,11 +647,51 @@ static uint32_t Test_Ts1(void)
     return failures;
 }
 
+static uint32_t Test_WriteCommitBoundary(void)
+{
+    BQ76940_t device;
+    SoftI2C_t bus;
+    BQ76940_Status_t status;
+    uint32_t failures;
+
+    failures = 0UL;
+
+    /* A normal single-byte write is START/address/register/data/CRC/STOP. */
+    Mock_ReadyDevice(&device, &bus);
+    status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
+    TEST_CHECK(status == BQ76940_STATUS_OK);
+    TEST_CHECK(s_mock.trace_count == 6U);
+
+    /* Once payload and CRC have both been ACKed, a STOP cleanup failure must
+     * preserve the fact that the W1C write was accepted by the slave. */
+    Mock_ReadyDevice(&device, &bus);
+    Mock_FailAt(5, SOFT_I2C_STATUS_TIMEOUT);
+    status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
+    TEST_CHECK(status == BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR);
+    TEST_CHECK(s_mock.trace_count == 6U);
+
+    /* A data-byte NACK occurs before the commit boundary and remains a
+     * definitely rejected write, even though cleanup STOP succeeds. */
+    Mock_ReadyDevice(&device, &bus);
+    Mock_FailAt(3, SOFT_I2C_STATUS_NACK_DATA);
+    status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
+    TEST_CHECK(status == BQ76940_STATUS_I2C_NACK);
+
+    /* CRC NACK is likewise rejected and remains distinguishable. */
+    Mock_ReadyDevice(&device, &bus);
+    Mock_FailAt(4, SOFT_I2C_STATUS_NACK_DATA);
+    status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
+    TEST_CHECK(status == BQ76940_STATUS_CRC_REJECTED);
+
+    return failures;
+}
+
 volatile uint32_t g_p4_cell_window_failures;
 volatile uint32_t g_p4_cell_trans_failures;
 volatile uint32_t g_p4_pack_failures;
 volatile uint32_t g_p4_cc_failures;
 volatile uint32_t g_p4_ts_failures;
+volatile uint32_t g_p4_write_commit_failures;
 
 uint32_t Test_Phase4_Measurement(void)
 {
@@ -611,7 +703,9 @@ uint32_t Test_Phase4_Measurement(void)
     g_p4_pack_failures = Test_PackVoltage();
     g_p4_cc_failures = Test_Cc();
     g_p4_ts_failures = Test_Ts1();
+    g_p4_write_commit_failures = Test_WriteCommitBoundary();
     failures = g_p4_cell_window_failures + g_p4_cell_trans_failures +
-               g_p4_pack_failures + g_p4_cc_failures + g_p4_ts_failures;
+               g_p4_pack_failures + g_p4_cc_failures + g_p4_ts_failures +
+               g_p4_write_commit_failures;
     return failures;
 }

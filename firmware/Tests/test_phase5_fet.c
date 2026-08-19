@@ -23,7 +23,7 @@ uint32_t Test_Phase5_Fet(void)
 
     failures = 0UL;
 
-    /* SYS_CTRL2 with FETs: preserve CC_EN (bit 6) and DELAY_DIS (bit 7). */
+    /* SYS_CTRL2 with FETs: preserve only production CC_EN (bit 6). */
     req.chg = BQ76940_FET_DESIRE_ENABLE;
     req.dsg = BQ76940_FET_DESIRE_ENABLE;
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0x40U, &req);
@@ -34,21 +34,27 @@ uint32_t Test_Phase5_Fet(void)
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0x40U, &req);
     TEST_CHECK(ctrl2 == 0x40U);    /* CC_EN kept, both FETs off */
 
-    /* Only CHG cleared; DSG stays on; high bits preserved. */
+    /* Factory DELAY_DIS, CC_ONESHOT and reserved bits are forced low instead
+     * of being replayed from readback. */
     req.chg = BQ76940_FET_DESIRE_DISABLE;
     req.dsg = BQ76940_FET_DESIRE_ENABLE;
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0xFFU, &req);
-    TEST_CHECK(ctrl2 == 0xFEU);
+    TEST_CHECK(ctrl2 == 0x42U);
 
-    /* DELAY_DIS (0x80) preserved when toggling. */
+    /* DELAY_DIS (0x80) must not escape a factory-test/readback state. */
     req.chg = BQ76940_FET_DESIRE_ENABLE;
     req.dsg = BQ76940_FET_DESIRE_DISABLE;
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0xC0U, &req);
-    TEST_CHECK(ctrl2 == 0xC1U);    /* 0x80 | 0x40 | CHG */
+    TEST_CHECK(ctrl2 == 0x41U);    /* CC_EN | CHG; DELAY_DIS cleared */
 
-    /* NULL request returns current unchanged. */
+    /* NULL request is fail-safe: stable controls remain, both FETs off. */
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0x43U, NULL);
-    TEST_CHECK(ctrl2 == 0x43U);
+    TEST_CHECK(ctrl2 == 0x40U);
+
+    req.chg = BQ76940_FET_DESIRE_ENABLE;
+    req.dsg = BQ76940_FET_DESIRE_DISABLE;
+    ctrl2 = BQ76940_Control_SysCtrl2WithFets(0x3FU, &req);
+    TEST_CHECK(ctrl2 == 0x01U);    /* command/reserved bits all zero */
 
     /* Observe. */
     BQ76940_Control_ObserveFets(0x43U, &observed);
@@ -79,6 +85,12 @@ uint32_t Test_Phase5_Fet(void)
     BQ76940_Control_ApplyInhibits(&req, false, false, &effective);
     TEST_CHECK(effective.chg == BQ76940_FET_DESIRE_ENABLE);
     TEST_CHECK(effective.dsg == BQ76940_FET_DESIRE_ENABLE);
+
+    effective.chg = BQ76940_FET_DESIRE_ENABLE;
+    effective.dsg = BQ76940_FET_DESIRE_ENABLE;
+    BQ76940_Control_ApplyInhibits(NULL, false, false, &effective);
+    TEST_CHECK(effective.chg == BQ76940_FET_DESIRE_DISABLE);
+    TEST_CHECK(effective.dsg == BQ76940_FET_DESIRE_DISABLE);
 
     return failures;
 }

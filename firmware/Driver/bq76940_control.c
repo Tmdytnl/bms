@@ -29,7 +29,7 @@ static const uint16_t s_ocd_delay_ms[BQ76940_CONTROL_OCD_DELAY_COUNT] =
 /* SCD threshold (mV): code 0x0..0x7. */
 static const uint16_t s_scd_threshold_rsns1[BQ76940_CONTROL_SCD_THRESHOLD_COUNT] =
 {
-    6U, 44U, 67U, 89U, 111U, 133U, 155U, 178U
+    44U, 67U, 89U, 111U, 133U, 155U, 178U, 200U
 };
 
 static const uint16_t s_scd_threshold_rsns0[BQ76940_CONTROL_SCD_THRESHOLD_COUNT] =
@@ -153,7 +153,7 @@ static uint16_t BQ76940_Control_DecodeTripMv(
     full_code = (((uint32_t)msb_prefix << 12) |
                  ((uint32_t)trip_value << 4) |
                  (uint32_t)lsb_preset);
-    microvolts = ((int64_t)full_code * calibration->gain_uv_per_lsb) -
+    microvolts = ((int64_t)full_code * calibration->gain_uv_per_lsb) +
                  ((int64_t)calibration->offset_mv * 1000LL);
     if (microvolts < 0LL)
     {
@@ -171,7 +171,8 @@ uint16_t BQ76940_Control_DecodeOvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration)
 {
-    if ((calibration == NULL) || !calibration->valid)
+    if (BQ76940_Control_RequireCalibration(calibration) !=
+        BQ76940_STATUS_OK)
     {
         return 0U;
     }
@@ -183,7 +184,8 @@ uint16_t BQ76940_Control_DecodeUvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration)
 {
-    if ((calibration == NULL) || !calibration->valid)
+    if (BQ76940_Control_RequireCalibration(calibration) !=
+        BQ76940_STATUS_OK)
     {
         return 0U;
     }
@@ -299,27 +301,61 @@ BQ76940_Status_t BQ76940_Control_SelectUvDelayS(
     return BQ76940_STATUS_RANGE_ERROR;
 }
 
-uint8_t BQ76940_Control_ComposeProtect1(bool rsns,
-                                        uint8_t delay_code,
-                                        uint8_t thresh_code)
+BQ76940_Status_t BQ76940_Control_ComposeProtect1(
+    bool rsns,
+    uint8_t delay_code,
+    uint8_t thresh_code,
+    uint8_t *register_value)
 {
-    return (uint8_t)((rsns ? 0x80U : 0x00U) |
-                     ((delay_code & 0x03U) << 3) |
-                     (thresh_code & 0x07U));
+    if (register_value == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    if ((delay_code >= BQ76940_CONTROL_SCD_DELAY_COUNT) ||
+        (thresh_code >= BQ76940_CONTROL_SCD_THRESHOLD_COUNT))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+    *register_value = (uint8_t)((rsns ? 0x80U : 0x00U) |
+                                (delay_code << 3) | thresh_code);
+    return BQ76940_STATUS_OK;
 }
 
-uint8_t BQ76940_Control_ComposeProtect2(uint8_t delay_code,
-                                        uint8_t thresh_code)
+BQ76940_Status_t BQ76940_Control_ComposeProtect2(
+    uint8_t delay_code,
+    uint8_t thresh_code,
+    uint8_t *register_value)
 {
-    return (uint8_t)(((delay_code & 0x07U) << 4) |
-                     (thresh_code & 0x0FU));
+    if (register_value == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    if ((delay_code >= BQ76940_CONTROL_OCD_DELAY_COUNT) ||
+        (thresh_code >= BQ76940_CONTROL_OCD_THRESHOLD_COUNT))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+    *register_value = (uint8_t)((delay_code << 4) | thresh_code);
+    return BQ76940_STATUS_OK;
 }
 
-uint8_t BQ76940_Control_ComposeProtect3(uint8_t uv_delay_code,
-                                        uint8_t ov_delay_code)
+BQ76940_Status_t BQ76940_Control_ComposeProtect3(
+    uint8_t uv_delay_code,
+    uint8_t ov_delay_code,
+    uint8_t *register_value)
 {
-    return (uint8_t)(((uv_delay_code & 0x03U) << 6) |
-                     ((ov_delay_code & 0x03U) << 4));
+    if (register_value == NULL)
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    if ((uv_delay_code >= BQ76940_CONTROL_UV_DELAY_COUNT) ||
+        (ov_delay_code >= BQ76940_CONTROL_OV_DELAY_COUNT))
+    {
+        return BQ76940_STATUS_RANGE_ERROR;
+    }
+    *register_value = (uint8_t)((uv_delay_code << 6) |
+                                (ov_delay_code << 4));
+    return BQ76940_STATUS_OK;
 }
 
 /* ------------------------------------------------------------------ */
@@ -331,13 +367,15 @@ uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
 {
     uint8_t next;
 
+    /* Preserve only the production control required by the V1 contract:
+     * CC_EN (bit6). DELAY_DIS (bit7) bypasses protection delays for factory
+     * testing and must never propagate from readback. CC_ONESHOT (bit5) and
+     * reserved bits4..2 are also forced low. A missing request is fail-safe. */
+    next = (uint8_t)(current_ctrl2 & 0x40U);
     if (request == NULL)
     {
-        return current_ctrl2;
+        return next;
     }
-    next = current_ctrl2;
-    /* Preserve DELAY_DIS (bit7), CC_EN (bit6), reserved bits 5-2. */
-    next &= (uint8_t)0xFCU;
     if (request->chg == BQ76940_FET_DESIRE_ENABLE)
     {
         next |= 0x01U;   /* CHG_ON */
@@ -365,8 +403,14 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
                                    bool inhibit_dsg,
                                    BQ76940_FetRequest_t *effective)
 {
-    if ((request == NULL) || (effective == NULL))
+    if (effective == NULL)
     {
+        return;
+    }
+    if (request == NULL)
+    {
+        effective->chg = BQ76940_FET_DESIRE_DISABLE;
+        effective->dsg = BQ76940_FET_DESIRE_DISABLE;
         return;
     }
     effective->chg = (inhibit_chg) ? BQ76940_FET_DESIRE_DISABLE :
