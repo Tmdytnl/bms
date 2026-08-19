@@ -52,6 +52,7 @@
 #define EVT_AFE_ONLINE                          ((EventBits_t)(1U << 1))
 #define EVT_FAULT_PRESENT                       ((EventBits_t)(1U << 2))
 #define EVT_PARAM_DIRTY                         ((EventBits_t)(1U << 3))
+#define EVT_CC_QUEUE_OVERFLOW                   ((EventBits_t)(1U << 4))
 
 /* Queue element types (spec §11.3). */
 typedef struct

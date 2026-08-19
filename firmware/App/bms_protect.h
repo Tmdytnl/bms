@@ -54,6 +54,44 @@
 /* Drain-retry budget (H-05): bounded retries per ALERT wake. */
 #define BMS_PROTECT_DRAIN_MAX_ITER      (4U)
 
+/* Delay between task-level retry attempts. This prevents a stuck ALERT or
+ * unavailable I2C mutex from turning the highest-priority task into a busy
+ * loop while keeping retry independent of another EXTI edge. */
+#define BMS_PROTECT_RETRY_DELAY_MS      (10U)
+
+typedef enum
+{
+    BMS_PROTECT_DRAIN_COMPLETE = 0,
+    BMS_PROTECT_DRAIN_RETRY_REQUIRED
+} BMS_ProtectDrainResult_t;
+
+typedef enum
+{
+    BMS_PROTECT_SERVICE_IDLE = 0,
+    BMS_PROTECT_SERVICE_RETRY_REQUIRED
+} BMS_ProtectServiceResult_t;
+
+typedef struct
+{
+    uint32_t cc_queue_overflow_count;
+    /* Number of already-queued samples irrecoverably dropped to make room. */
+    uint32_t cc_sample_missed_count;
+    /* Newest-sample enqueue attempts that failed during overflow recovery.
+     * CC_READY remains set in this case, so the hardware sample is retried. */
+    uint32_t cc_enqueue_failure_count;
+    bool cc_queue_overflow_latched;
+} BMS_ProtectDiagnostics_t;
+
+/* Phase 9 supplies the authoritative XREADY recovery implementation. The
+ * hook may return true only after device re-initialization, required settling,
+ * calibration reload, authoritative protection/configuration re-apply with
+ * readback, and status-group verification have all succeeded. The hook runs
+ * while the I2C mutex is held, so each call must be bounded and nonblocking;
+ * a multi-step/settling state machine returns false between short steps and
+ * never delays while holding the mutex. Phase 7 keeps XREADY pending when no
+ * such hook is installed. */
+typedef bool (*BMS_ProtectXreadyRecoveryHook_t)(BQ76940_t *device);
+
 /* FET request helpers (H-04: modules only submit requests). */
 extern BQ76940_FetRequest_t g_bms_fet_request;
 
@@ -70,6 +108,9 @@ void BMS_Protect_Init(void);
  * inject the device for testing and early integration.
  */
 void BMS_Protect_SetDevice(BQ76940_t *device);
+
+void BMS_Protect_SetXreadyRecoveryHook(
+    BMS_ProtectXreadyRecoveryHook_t recovery_hook);
 
 /*
  * ProtectTask entry (priority 5, registered by App_Rtos_CreateTasks).
@@ -89,6 +130,10 @@ void EXTI1_IRQHandler(void);
  * modules; updated by the protect path.
  */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
+
+/* Latched, task-context H-02 diagnostics. The returned multi-field snapshot is
+ * scheduler-protected; counters saturate at UINT32_MAX rather than wrapping. */
+BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void);
 
 /*
  * Pure decision function (no I2C, no RTOS): map a SYS_STAT snapshot to
@@ -115,7 +160,12 @@ bool BMS_Protect_HasFaultBits(uint8_t stat);
  * the task can drive the same path. Reads SYS_STAT, handles every set
  * bit independently, and write-1-clears the successfully handled bits.
  */
-void BMS_Protect_Drain(BQ76940_t *device);
+BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device);
+
+/* Perform one bounded task-level service attempt. A retry result means the
+ * caller must retain pending state, delay briefly, and call again without
+ * waiting for another semaphore edge. */
+BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device);
 
 /*
  * Feed a fresh CC sample into xCcSampleQueue with the H-02 policy:
@@ -126,11 +176,9 @@ void BMS_Protect_Drain(BQ76940_t *device);
 bool BMS_Protect_PushCcSample(int16_t cc_raw);
 
 /*
- * Run the XREADY recovery sequence (H-03): re-read calibration and
- * re-apply the reference protection configuration. On success clears the
- * XREADY fault and returns true; on failure keeps the fault.
- * (The full protection-config re-apply is implemented on top of Phase 5
- * control primitives; Phase 9 wires the complete config table.)
+ * Complete the XREADY recovery contract (H-03) through the authoritative
+ * hook and only then W1C XREADY. On success the active fault clears but the
+ * historical latch remains for explicit reset; on failure nothing is cleared.
  */
 bool BMS_Protect_RecoverXready(BQ76940_t *device);
 

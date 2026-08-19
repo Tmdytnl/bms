@@ -43,12 +43,17 @@ bool BSP_ALERT_EXTI_Init(void)
     exti_config.EXTI_Mode = EXTI_Mode_Interrupt;
     exti_config.EXTI_Trigger = EXTI_Trigger_Rising;
     exti_config.EXTI_LineCmd = ENABLE;
+    /* Drop a stale controller latch before unmasking. ProtectTask performs an
+     * explicit PB1 level check immediately after init, so an AFE ALERT already
+     * high during startup is still converted into task work. */
+    EXTI_ClearITPendingBit(EXTI_Line1);
     EXTI_Init(&exti_config);
 
     /*
      * C-02: logical priority 6 (raw 0x60) >= max-syscall 5, so FromISR
      * calls in the handler are legal. PriorityGroup_4 must already be set
-     * by the Phase 6 main flow before the scheduler starts.
+     * by main before scheduler start. This function itself runs from the first
+     * ProtectTask context, after the FreeRTOS port initialized ISR validation.
      */
     nvic_config.NVIC_IRQChannel = EXTI1_IRQn;
     nvic_config.NVIC_IRQChannelPreemptionPriority =

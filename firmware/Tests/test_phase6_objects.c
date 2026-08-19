@@ -44,6 +44,7 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(EVT_AFE_ONLINE == ((EventBits_t)1U << 1));
     TEST_CHECK(EVT_FAULT_PRESENT == ((EventBits_t)1U << 2));
     TEST_CHECK(EVT_PARAM_DIRTY == ((EventBits_t)1U << 3));
+    TEST_CHECK(EVT_CC_QUEUE_OVERFLOW == ((EventBits_t)1U << 4));
 
     /* Queue element layout must match the spec §11.3 fields. The struct
      * is a C layout: BMS_CanFrame_t pads to 16 bytes (uint32_t alignment),

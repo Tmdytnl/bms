@@ -13,8 +13,9 @@
  *   - the ISR only clears the STM32 pending bit, gives xAfeAlertSem and
  *     yields; it never touches the BQ or I2C (H-05).
  *
- * NVIC grouping must be PriorityGroup_4 (set once before the scheduler
- * starts in Phase 6 main flow; this module asserts the grouping at init).
+ * NVIC grouping must be PriorityGroup_4 (set once before scheduler start).
+ * EXTI/NVIC enable occurs from ProtectTask after the FreeRTOS port starts, so
+ * no FromISR API can run before the port's priority validator is initialized.
  */
 
 /* EXTI1 logical priority (C-02/Gate §3.3). */

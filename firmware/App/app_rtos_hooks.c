@@ -14,6 +14,7 @@
 
 static void App_Rtos_FatalStop(void)
 {
+    taskDISABLE_INTERRUPTS();
     for (;;)
     {
     }

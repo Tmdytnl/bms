@@ -26,9 +26,14 @@ uint32_t Test_Phase6_Tasks(void)
 
     failures = 0UL;
 
-    /* Objects must exist before tasks. */
+    /* Test_Phase6_Objects already created the single production-equivalent
+     * object set. Reuse it here; creating a second set would only measure a
+     * harness leak and distort the Phase 6 heap evidence. */
     g_p6_probe = 20UL;
-    result = App_Rtos_CreateObjects();
+    result = ((xI2CMutex != NULL) && (xDataMutex != NULL) &&
+              (xAfeAlertSem != NULL) && (xCanTxQueue != NULL) &&
+              (xCanRxQueue != NULL) && (xCcSampleQueue != NULL) &&
+              (xSysEvents != NULL)) ? pdTRUE : pdFALSE;
     g_p6_probe = 21UL;
     TEST_CHECK(result == pdTRUE);
 

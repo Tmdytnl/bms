@@ -4,7 +4,6 @@
 #include "bms_memory_map.h"
 #include "bms_protect.h"
 #include "bsp_clock.h"
-#include "bsp_exti.h"
 #include "bsp_gpio.h"
 #include "bsp_timer.h"
 #include "bq76940.h"
@@ -17,6 +16,7 @@ static BQ76940_t s_afe_device;
 
 static void BMS_SafeIdle(void)
 {
+    __disable_irq();
     while (1)
     {
     }
@@ -67,24 +67,20 @@ int main(void)
         BMS_SafeIdle();
     }
 
-    /* Phase 7: protect module + ALERT EXTI before the scheduler starts.
-     * NVIC PriorityGroup_4 is required for the locked priorities (C-02);
-     * it must be set before any interrupt is enabled. */
+    /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
+     * is intentionally enabled by the first ProtectTask context only after
+     * the FreeRTOS port has initialized its ISR-priority validation state.
+     * NVIC PriorityGroup_4 is locked before scheduler/interrupt activation. */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
     BMS_Protect_Init();
     BMS_Protect_SetDevice(&s_afe_device);
-    if (!BSP_ALERT_EXTI_Init())
-    {
-        BMS_SafeIdle();
-    }
-
-    /* Phase 6: RTOS objects, seven task skeletons, scheduler start.
-     * BQ transport is initialized but no transaction or probe runs
-     * before the scheduler (spec §12.2). */
     if (App_Rtos_CreateObjects() != pdTRUE)
     {
         BMS_SafeIdle();
     }
+    /* Phase 6: seven task skeletons and scheduler start.
+     * BQ transport is initialized but no transaction or probe runs
+     * before the scheduler (spec §12.2). */
     if (App_Rtos_CreateTasks() != pdTRUE)
     {
         BMS_SafeIdle();
