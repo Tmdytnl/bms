@@ -1,0 +1,52 @@
+LOAD ..\..\Tests\Build\Phase7Review\phase4_review_tests.axf
+RESET
+G
+printf("PHASE4_REVIEW_TEST_COMPLETED=%u\n", g_phase4_test_completed)
+PHASE4_REVIEW_TEST_COMPLETED=1
+printf("PHASE4_REVIEW_TEST_FAILURES=%u\n", g_phase4_test_failures)
+PHASE4_REVIEW_TEST_FAILURES=0
+printf("P4_MAPPING_FAILURES=%u\n", g_phase4_mapping_failures)
+P4_MAPPING_FAILURES=0
+printf("P4_MEASUREMENT_FAILURES=%u\n", g_phase4_measurement_failures)
+P4_MEASUREMENT_FAILURES=0
+printf("P4_WRITE_COMMIT_FAILURES=%u\n", g_p4_write_commit_failures)
+P4_WRITE_COMMIT_FAILURES=0
+LOAD ..\..\Tests\Build\Phase7Review\phase6_review_tests.axf
+RESET
+G
+printf("PHASE6_REVIEW_TEST_COMPLETED=%u\n", g_phase6_test_completed)
+PHASE6_REVIEW_TEST_COMPLETED=1
+printf("PHASE6_REVIEW_TEST_FAILURES=%u\n", g_phase6_test_failures)
+PHASE6_REVIEW_TEST_FAILURES=0
+printf("P6_OBJECTS_FAILURES=%u\n", g_p6_objects_failures)
+P6_OBJECTS_FAILURES=0
+printf("P6_TASKS_FAILURES=%u\n", g_p6_tasks_failures)
+P6_TASKS_FAILURES=0
+printf("P6_PROBE=%u\n", g_p6_probe)
+P6_PROBE=4
+LOAD ..\..\Tests\Build\Phase7Review\phase7_review_tests.axf
+RESET
+G
+printf("PHASE7_REVIEW_TEST_COMPLETED=%u\n", g_phase7_test_completed)
+PHASE7_REVIEW_TEST_COMPLETED=1
+printf("PHASE7_REVIEW_TEST_FAILURES=%u\n", g_phase7_test_failures)
+PHASE7_REVIEW_TEST_FAILURES=0
+printf("P5_TRIP_FAILURES=%u\n", g_p5_trip_failures)
+P5_TRIP_FAILURES=0
+printf("P5_OCDSCD_FAILURES=%u\n", g_p5_ocdscd_failures)
+P5_OCDSCD_FAILURES=0
+printf("P5_FET_FAILURES=%u\n", g_p5_fet_failures)
+P5_FET_FAILURES=0
+printf("P5_CELLBAL_FAILURES=%u\n", g_p5_cellbal_failures)
+P5_CELLBAL_FAILURES=0
+printf("P7_PROTECT_FAILURES=%u\n", g_p7_protect_failures)
+P7_PROTECT_FAILURES=0
+printf("P7_CC_FAILURES=%u\n", g_p7_cc_failures)
+P7_CC_FAILURES=0
+printf("P7_RETRY_FAILURES=%u\n", g_p7_retry_failures)
+P7_RETRY_FAILURES=0
+printf("P7_XREADY_FAILURES=%u\n", g_p7_xready_failures)
+P7_XREADY_FAILURES=0
+printf("P7_PROBE=%u\n", g_p7_probe)
+P7_PROBE=7
+LOG OFF
