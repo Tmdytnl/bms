@@ -21,11 +21,13 @@ typedef enum
     BQ76940_STATUS_CRC_REJECTED,
     BQ76940_STATUS_CALIBRATION_INVALID,
     BQ76940_STATUS_RANGE_ERROR,
-    /* Appended to preserve every validated Phase 3 status ordinal. The slave
-     * ACKed every payload and CRC byte, so the register write was accepted,
-     * but generation/verification of final STOP failed. Callers must treat the
-     * write as committed while still recovering the bus. */
-    BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR
+    /* Appended to preserve every validated Phase 3 status ordinal. Every
+     * payload and CRC byte was ACKed, but final STOP generation/verification
+     * failed. The BQ7694003 register-side commit point is not established by
+     * the available software evidence, so the write may or may not have taken
+     * effect. Callers must neither report success nor blindly replay a W1C or
+     * other non-idempotent write. */
+    BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS
 } BQ76940_Status_t;
 
 typedef struct

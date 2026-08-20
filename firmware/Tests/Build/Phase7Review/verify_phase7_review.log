@@ -6,12 +6,16 @@ PASS: active Keil Simulator entry has no stale workspace path
 PASS: artifact exists: firmware\User\main.c
 PASS: artifact exists: firmware\App\bms_protect.c
 PASS: artifact exists: firmware\App\bms_protect.h
+PASS: artifact exists: firmware\App\bms_fault.h
 PASS: artifact exists: firmware\App\app_rtos.h
 PASS: artifact exists: firmware\App\app_rtos_hooks.c
 PASS: artifact exists: firmware\Driver\bsp_exti.c
 PASS: artifact exists: firmware\Driver\bq76940.c
+PASS: artifact exists: firmware\Driver\bq76940.h
 PASS: artifact exists: firmware\Driver\bq76940_control.c
+PASS: artifact exists: firmware\Tests\test_phase4_measurement.c
 PASS: artifact exists: firmware\Tests\test_phase7_logic.c
+PASS: artifact exists: deliverables\review\BMS_V1_Codex_Phase7_Review.md
 PASS: startup creates RTOS objects/tasks before scheduler start
 PASS: main never enables ALERT before FreeRTOS port initialization
 PASS: ProtectTask enables EXTI after scheduler start and seeds high pin
@@ -21,13 +25,22 @@ PASS: ProtectTask retains delayed task-level pending retry
 PASS: SYS_STAT drain has a bounded per-attempt budget and retry result
 PASS: CC_READY clear bit is added after fault decision reset
 PASS: CC W1C retry cannot enqueue one hardware sample twice
-PASS: W1C distinguishes an accepted write from STOP cleanup failure
+PASS: ACKed write plus failed STOP is finalization-ambiguous end-to-end
+PASS: no executable contract claims ACKed W1C is definitely committed
+PASS: W1C finalization ambiguity has observable counter and state
+PASS: ambiguous W1C bits are quarantined until observed low
+PASS: production-C regression forbids ambiguous CC replay/reenqueue
 PASS: CC overflow has observable event and exact counters
 PASS: drop-oldest plus enqueue-newest is scheduler-protected
 PASS: CC replacement failure regression is executable
 PASS: H-05 regression executes task retry, startup-high seed and ISR
 PASS: XREADY clear is gated by an authoritative recovery hook
 PASS: XREADY recovery no longer overwrites authoritative configuration
+PASS: fault getter copies active+latched under scheduler protection
+PASS: ProtectTask publishes active+latched under scheduler protection
+PASS: fault API and production-C regression forbid W1C-as-recovery
+PASS: Phase 7 recovery-eligible versus latched fault policy is tested
+PASS: report preserves the mandatory W1C hardware-validation boundary
 PASS: SCD RSNS=1 table matches TI Rev. I
 PASS: OV/UV decode applies calibration offset with the correct sign
 PASS: SYS_CTRL2 RMW preserves only CC_EN in production
@@ -39,7 +52,7 @@ PASS: production Clean/Rebuild has zero errors and zero warnings
 PASS: production build reports Code/RO/RW/ZI
 PASS: production ROM image fits configured STM32F103C8 IROM
 PASS: production static/link-time RAM fits 20 KiB SRAM
-INFO: production sizes Code=18576 RO=268 RW=200 ZI=10432
+INFO: production sizes Code=18908 RO=268 RW=200 ZI=10440
 PASS: artifact exists: firmware\Project\Keil\Listings\BMS_V1.map
 PASS: production map identifies ARMCC5 5.06u7 build 960
 PASS: production map enforces the 0xF400 IROM limit
@@ -89,7 +102,8 @@ PASS: Simulator evidence contains P7_PROTECT_FAILURES=0
 PASS: Simulator evidence contains P7_CC_FAILURES=0
 PASS: Simulator evidence contains P7_RETRY_FAILURES=0
 PASS: Simulator evidence contains P7_XREADY_FAILURES=0
-PASS: Simulator evidence contains P7_PROBE=7
+PASS: Simulator evidence contains P7_BOUNDARY_FAILURES=0
+PASS: Simulator evidence contains P7_PROBE=8
 PASS: artifact exists: firmware\Tests\Build\Phase7Review\phase4_review_tests.map
 PASS: phase4_review_tests.map identifies ARMCC5 5.06u7 build 960
 PASS: phase4_review_tests.map links BQ76940_ReadCellVoltages13
@@ -115,6 +129,8 @@ PASS: phase7_review_tests.map links BSP_ALERT_EXTI_Init
 PASS: phase7_review_tests.map links Test_Phase7_AlertRetry
 PASS: phase7_review_tests.map links Test_Phase7_CcQueue
 PASS: phase7_review_tests.map links Test_Phase7_Xready
+PASS: phase7_review_tests.map links Test_Phase7_BoundaryContracts
+PASS: phase7_review_tests.map links BMS_Protect_GetFaultSummary
 PASS: Phase 4 test AXF exists
 PASS: Phase 4 test AXF inputs exist
 PASS: Phase 4 test AXF is fresh relative to its sources

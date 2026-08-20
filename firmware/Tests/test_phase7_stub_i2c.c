@@ -57,6 +57,8 @@ static uint8_t s_mutex_failures;
 static bool s_alert_active;
 static bool s_alert_active_once;
 static bool s_scheduler_suspended;
+static uint32_t s_scheduler_suspend_count;
+static uint32_t s_scheduler_resume_count;
 static bool s_queue_ops_protected;
 static bool s_drop_just_occurred;
 static uint8_t s_replacement_failures;
@@ -120,6 +122,8 @@ void TestP7_StubReset(void)
     s_alert_active = false;
     s_alert_active_once = false;
     s_scheduler_suspended = false;
+    s_scheduler_suspend_count = 0UL;
+    s_scheduler_resume_count = 0UL;
     s_queue_ops_protected = true;
     s_drop_just_occurred = false;
     s_replacement_failures = 0U;
@@ -273,6 +277,22 @@ bool TestP7_QueueOpsProtected(void)
 bool TestP7_MutexAvailable(void)
 {
     return s_mutex_available;
+}
+
+uint32_t TestP7_SchedulerSuspendCount(void)
+{
+    return s_scheduler_suspend_count;
+}
+
+uint32_t TestP7_SchedulerResumeCount(void)
+{
+    return s_scheduler_resume_count;
+}
+
+bool TestP7_SchedulerProtectionBalanced(void)
+{
+    return !s_scheduler_suspended &&
+           (s_scheduler_suspend_count == s_scheduler_resume_count);
 }
 
 static bool TestP7_RunProtectTaskScenario(bool seed_semaphore,
@@ -483,11 +503,13 @@ BaseType_t xQueueGiveFromISR(QueueHandle_t queue,
 
 void vTaskSuspendAll(void)
 {
+    ++s_scheduler_suspend_count;
     s_scheduler_suspended = true;
 }
 
 BaseType_t xTaskResumeAll(void)
 {
+    ++s_scheduler_resume_count;
     s_scheduler_suspended = false;
     return pdFALSE;
 }

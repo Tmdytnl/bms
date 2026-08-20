@@ -143,7 +143,7 @@ uint32_t Test_Phase7_CcQueue(void)
 {
     uint32_t failures;
     uint8_t index;
-    uint8_t stat_values[4];
+    uint8_t stat_values[6];
     int16_t cc_values[2];
     BMS_CcSample_t sample;
     BMS_ProtectDiagnostics_t diagnostics;
@@ -260,29 +260,49 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_WriteValue(1U) == BMS_PROTECT_STAT_CC_READY);
     TEST_CHECK(TestP7_QueueCount() == 1U);
 
-    /* Payload+CRC accepted but STOP cleanup failed: the old W1C is committed.
-     * If a new conversion asserts CC_READY before the next read (no observed
-     * low gap), it must be sampled rather than mistaken for the old event. */
+    /* Payload+CRC ACKed but STOP finalization failed: commit is ambiguous. A
+     * continuously high bit cannot identify old versus new conversion. The
+     * production path quarantines CC_READY, neither replaying W1C nor
+     * enqueueing again, and exposes the possible coalescence to Phase 10. */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
-    stat_values[2] = 0U;
+    stat_values[2] = BMS_PROTECT_STAT_CC_READY;
+    stat_values[3] = BMS_PROTECT_STAT_CC_READY;
+    stat_values[4] = BMS_PROTECT_STAT_CC_READY;
+    stat_values[5] = 0U;
     cc_values[0] = 500;
     cc_values[1] = 501;
-    TestP7_SetStatScript(stat_values, NULL, 3U);
+    TestP7_SetStatScript(stat_values, NULL, 6U);
     TestP7_SetCcScript(cc_values, NULL, 2U);
-    TestP7_SetWriteFailure(BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR, 1U);
+    TestP7_SetWriteFailure(
+        BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    diagnostics = BMS_Protect_GetDiagnostics();
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_count == 1UL);
+    TEST_CHECK(diagnostics.cc_event_identity_ambiguous_count == 1UL);
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask ==
+               BMS_PROTECT_STAT_CC_READY);
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_latched);
+    /* Four continuously-high reads consume the next bounded attempt without
+     * replaying or inventing a second sample. */
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    TEST_CHECK(TestP7_CcReadCount() == 1U);
+    TEST_CHECK(TestP7_WriteCount() == 1U);
+    TEST_CHECK(TestP7_QueueCount() == 1U);
+    /* Only an observed-low read retires the current quarantine. History and
+     * the CC ambiguity counter remain available to later consumers. */
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
-    TEST_CHECK(TestP7_CcReadCount() == 2U);
-    TEST_CHECK(TestP7_WriteCount() == 2U);
-    TEST_CHECK(TestP7_QueueCount() == 2U);
+    diagnostics = BMS_Protect_GetDiagnostics();
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask == 0U);
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_count == 1UL);
+    TEST_CHECK(diagnostics.cc_event_identity_ambiguous_count == 1UL);
     TEST_CHECK(TestP7_QueuePop(&sample));
     TEST_CHECK(sample.raw == 500);
-    TEST_CHECK(TestP7_QueuePop(&sample));
-    TEST_CHECK(sample.raw == 501);
+    TEST_CHECK(!TestP7_QueuePop(&sample));
 
     return failures;
 }
@@ -418,6 +438,7 @@ uint32_t Test_Phase7_Xready(void)
     uint32_t failures;
     uint8_t stat_values[2];
     BMS_FaultSummary_t faults;
+    BMS_ProtectDiagnostics_t diagnostics;
 
     failures = 0UL;
     stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
@@ -458,15 +479,24 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(!BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
 
-    /* If XREADY W1C was accepted but STOP cleanup failed, recovery and W1C
-     * are not replayed. A clean follow-up read completes while history stays. */
+    /* If XREADY W1C finalization is ambiguous, active remains set and neither
+     * recovery nor W1C is replayed. Observed-low then confirms retirement;
+     * history remains for the Phase 9 explicit-reset policy. */
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
     TestP7_SetStatScript(stat_values, NULL, 2U);
-    TestP7_SetWriteFailure(BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR, 1U);
+    TestP7_SetWriteFailure(
+        BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    faults = BMS_Protect_GetFaultSummary();
+    TEST_CHECK(BMS_Fault_Contains(faults.active,
+                                  BMS_FAULT_ID_AFE_XREADY));
+    TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_COMM));
+    diagnostics = BMS_Protect_GetDiagnostics();
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask ==
+               BMS_PROTECT_STAT_DEVICE_XREADY);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
@@ -474,6 +504,71 @@ uint32_t Test_Phase7_Xready(void)
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(!BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
+    diagnostics = BMS_Protect_GetDiagnostics();
+    TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask == 0U);
+
+    return failures;
+}
+
+uint32_t Test_Phase7_BoundaryContracts(void)
+{
+    uint32_t failures;
+    uint32_t suspend_before;
+    uint32_t resume_before;
+    uint8_t stat_values[2];
+    uint8_t clear_mask;
+    BMS_FaultBitmap_t active_before;
+    BMS_FaultBitmap_t latched_before;
+    BMS_FaultSummary_t faults;
+    BQ76940_FetRequest_t request;
+
+    failures = 0UL;
+
+    /* Phase 7 captures events; a later zero SYS_STAT does not clear physical
+     * recovery state. OV/UV/OCD are recovery-eligible but not history-latched;
+     * SCD/OVRD are active+latched and never auto-clear in this phase. */
+    TestP7_StubReset();
+    stat_values[0] = BMS_PROTECT_STAT_OV | BMS_PROTECT_STAT_UV |
+                     BMS_PROTECT_STAT_OCD | BMS_PROTECT_STAT_SCD |
+                     BMS_PROTECT_STAT_OVRD_ALERT;
+    stat_values[1] = 0U;
+    TestP7_SetStatScript(stat_values, NULL, 2U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+
+    /* Getter itself must bracket the two-word active+latched copy. The static
+     * verifier additionally checks the exact production source ordering. */
+    suspend_before = TestP7_SchedulerSuspendCount();
+    resume_before = TestP7_SchedulerResumeCount();
+    faults = BMS_Protect_GetFaultSummary();
+    TEST_CHECK(TestP7_SchedulerSuspendCount() == (suspend_before + 1UL));
+    TEST_CHECK(TestP7_SchedulerResumeCount() == (resume_before + 1UL));
+    TEST_CHECK(TestP7_SchedulerProtectionBalanced());
+
+    TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_OV));
+    TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_UV));
+    TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_OCD));
+    TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_SCD));
+    TEST_CHECK(BMS_Fault_Contains(faults.active,
+                                  BMS_FAULT_ID_AFE_OVRD_ALERT));
+    TEST_CHECK(!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_OV));
+    TEST_CHECK(!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_UV));
+    TEST_CHECK(!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_OCD));
+    TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_SCD));
+    TEST_CHECK(BMS_Fault_Contains(faults.latched,
+                                  BMS_FAULT_ID_AFE_OVRD_ALERT));
+
+    /* The pure decision API is capture-only. Feeding a zero status cannot be
+     * misused as a physical-recovery shortcut. */
+    active_before = faults.active;
+    latched_before = faults.latched;
+    request.chg = BQ76940_FET_DESIRE_ENABLE;
+    request.dsg = BQ76940_FET_DESIRE_ENABLE;
+    clear_mask = 0xFFU;
+    BMS_Protect_Decide(0U, &faults, &request, &clear_mask);
+    TEST_CHECK(faults.active == active_before);
+    TEST_CHECK(faults.latched == latched_before);
+    TEST_CHECK(clear_mask == 0U);
 
     return failures;
 }

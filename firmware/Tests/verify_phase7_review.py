@@ -102,12 +102,18 @@ def verify_source_contracts() -> None:
     main = read(FW / "User" / "main.c")
     protect = read(FW / "App" / "bms_protect.c")
     protect_h = read(FW / "App" / "bms_protect.h")
+    fault_h = read(FW / "App" / "bms_fault.h")
     rtos_h = read(FW / "App" / "app_rtos.h")
     rtos_hooks = read(FW / "App" / "app_rtos_hooks.c")
     exti = read(FW / "Driver" / "bsp_exti.c")
     transport = read(FW / "Driver" / "bq76940.c")
+    transport_h = read(FW / "Driver" / "bq76940.h")
     control = read(FW / "Driver" / "bq76940_control.c")
+    phase4_test = read(TESTS / "test_phase4_measurement.c")
     phase7_test = read(TESTS / "test_phase7_logic.c")
+    boundary_report = read(
+        REPO / "deliverables" / "review" / "BMS_V1_Codex_Phase7_Review.md"
+    )
 
     objects_pos = main.find("App_Rtos_CreateObjects()")
     tasks_pos = main.find("App_Rtos_CreateTasks()")
@@ -143,10 +149,27 @@ def verify_source_contracts() -> None:
             "CC_READY clear bit is added after fault decision reset")
     require("s_cc_clear_pending" in protect,
             "CC W1C retry cannot enqueue one hardware sample twice")
-    require("BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR" in transport and
-            "BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR" in protect and
-            "BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR" in phase7_test,
-            "W1C distinguishes an accepted write from STOP cleanup failure")
+    ambiguous_status = "BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS"
+    require(all(ambiguous_status in source for source in
+                (transport_h, transport, phase4_test, protect, phase7_test)),
+            "ACKed write plus failed STOP is finalization-ambiguous end-to-end")
+    require("BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR" not in "\n".join(
+                (transport_h, transport, phase4_test, protect, phase7_test)),
+            "no executable contract claims ACKed W1C is definitely committed")
+    require(all(token in protect_h for token in (
+                "w1c_finalization_ambiguous_count",
+                "cc_event_identity_ambiguous_count",
+                "w1c_finalization_ambiguous_mask",
+                "w1c_finalization_ambiguous_latched")),
+            "W1C finalization ambiguity has observable counter and state")
+    require("BMS_Protect_RecordW1cFinalizationAmbiguity" in protect and
+            "BMS_Protect_ResolveObservedLowW1c" in protect and
+            "~s_w1c_finalization_ambiguous_mask" in protect,
+            "ambiguous W1C bits are quarantined until observed low")
+    require("cc_event_identity_ambiguous_count == 1UL" in phase7_test and
+            "TestP7_CcReadCount() == 1U" in phase7_test and
+            "TestP7_WriteCount() == 1U" in phase7_test,
+            "production-C regression forbids ambiguous CC replay/reenqueue")
 
     require("EVT_CC_QUEUE_OVERFLOW" in rtos_h and
             "cc_queue_overflow_count" in protect_h and
@@ -167,6 +190,33 @@ def verify_source_contracts() -> None:
             "XREADY clear is gated by an authoritative recovery hook")
     require("4250U" not in protect and "2800U" not in protect,
             "XREADY recovery no longer overwrites authoritative configuration")
+
+    getter_start = protect.find("BMS_FaultSummary_t BMS_Protect_GetFaultSummary")
+    getter_end = protect.find("BMS_ProtectDiagnostics_t", getter_start)
+    getter = protect[getter_start:getter_end]
+    require(getter_start >= 0 and
+            0 <= getter.find("vTaskSuspendAll();") <
+            getter.find("snapshot = s_fault;") <
+            getter.find("xTaskResumeAll();"),
+            "fault getter copies active+latched under scheduler protection")
+    drain_decide = protect.find("BMS_Protect_Decide(stat")
+    require(protect.rfind("vTaskSuspendAll();", 0, drain_decide) >= 0 and
+            protect.find("xTaskResumeAll();", drain_decide) >= 0,
+            "ProtectTask publishes active+latched under scheduler protection")
+    require("cleared hardware status bit alone is not proof" in fault_h and
+            "SYS_STAT=0" in protect_h and
+            "BMS_Protect_Decide(0U" in phase7_test,
+            "fault API and production-C regression forbid W1C-as-recovery")
+    require(all(token in phase7_test for token in (
+                "!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_OV)",
+                "!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_UV)",
+                "!BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_OCD)",
+                "BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_HW_SCD)",
+                "BMS_FAULT_ID_AFE_OVRD_ALERT")),
+            "Phase 7 recovery-eligible versus latched fault policy is tested")
+    require("HARDWARE VALIDATION REQUIRED: BQ7694003 W1C commit behavior "
+            "when STOP finalization fails" in boundary_report,
+            "report preserves the mandatory W1C hardware-validation boundary")
 
     require("44U, 67U, 89U, 111U, 133U, 155U, 178U, 200U" in control,
             "SCD RSNS=1 table matches TI Rev. I")
@@ -294,7 +344,8 @@ def verify_build_and_execution() -> None:
         "P7_CC_FAILURES=0",
         "P7_RETRY_FAILURES=0",
         "P7_XREADY_FAILURES=0",
-        "P7_PROBE=7",
+        "P7_BOUNDARY_FAILURES=0",
+        "P7_PROBE=8",
     )
     simulator_log = read(BUILD / "phase7_review_simulator.log")
     for token in expected_simulator:
@@ -325,6 +376,8 @@ def verify_build_and_execution() -> None:
             "Test_Phase7_AlertRetry",
             "Test_Phase7_CcQueue",
             "Test_Phase7_Xready",
+            "Test_Phase7_BoundaryContracts",
+            "BMS_Protect_GetFaultSummary",
         ),
     }
     for map_name, symbols in map_requirements.items():

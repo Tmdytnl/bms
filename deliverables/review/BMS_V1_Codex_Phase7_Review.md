@@ -44,7 +44,7 @@ column; it does not mean independently accepted or hardware validated.
 | ID | Severity | Affected area | Problem, impact and root cause | Review action | Evidence/status |
 |---|---|---|---|---|---|
 | C-01 | Critical | `App/bms_protect.c`, `User/main.c` | After consuming the rising-edge semaphore, mutex/read/budget failure returned to an infinite semaphore wait. A continuously high ALERT produces no second rising edge, so a protection event could remain permanently unserviced. EXTI was also enabled before the semaphore and, even after reordering objects, before `xPortStartScheduler` initialized the Cortex-M FromISR priority validator. | Added an explicit service result and delayed task-level pending retry; each attempt has a four-read budget, releases the I2C mutex, checks the active pin, and never requires a new edge. ProtectTask now enables EXTI only in its first post-scheduler context and directly seeds work from an already-high PB1. | Fixed; real Task/ISR bodies plus H-05 Cases A/B/C and startup-high execute with zero failures. |
-| C-02 | Critical | `App/bms_protect.c`, `Driver/bq76940.[ch]` | The baseline read CC, set CC_READY in `clear_mask`, then called `BMS_Protect_Decide`, which reset the mask to zero. CC_READY therefore was not W1C; repeated drain reads could enqueue the same hardware sample four times and then sleep with ALERT high. A second ambiguity existed when payload+CRC were ACKed but STOP failed: replaying that accepted W1C could clear a newly arrived CC event. | Decision now runs before CC handling. A `s_cc_clear_pending` state retries only definitely rejected clears. The transport exposes `WRITE_ACCEPTED_STOP_ERROR`, so an accepted W1C retires the old marker while bus recovery remains pending. | Fixed; combined-bit, rejected-write-high, accepted-STOP-error/new-event-high, and no-duplicate regressions pass. |
+| C-02 | Critical | `App/bms_protect.c`, `Driver/bq76940.[ch]` | The baseline read CC, set CC_READY in `clear_mask`, then called `BMS_Protect_Decide`, which reset the mask to zero. CC_READY therefore was not W1C; repeated drain reads could enqueue the same hardware sample four times and then sleep with ALERT high. Payload+CRC ACK followed by STOP failure also has no documented BQ7694003 register-commit point. | Decision runs before CC handling. A `s_cc_clear_pending` state retries only definitely rejected clears. `WRITE_FINALIZATION_AMBIGUOUS` is neither success nor definite rejection: requested W1C bits are diagnosed and quarantined until observed low, with no blind W1C replay or duplicate CC enqueue. | Software containment fixed; combined-bit, rejected-write retry, continuously-high ambiguous-finalization quarantine, observed-low retirement, diagnostics, and no-duplicate regressions pass. Hardware commit behavior remains deferred. |
 | H-01 | High | `Driver/bq76940_control.c` | The SCD RSNS=1 table was `[6,44,67,89,111,133,155,178]`; TI Rev. I Table 8-9 is `[44,67,89,111,133,155,178,200]`. A requested 111 mV encoded code 4 instead of code 3, producing 133 mV (33.25 A at 4 mΩ) rather than 111 mV (27.75 A). Tests and verifier copied the same bad oracle. | Corrected the table and exercised all eight entries in both RSNS ranges with an independent fixed vector. The 111 mV/100 µs PROTECT1 value is now `0x8B`. | Fixed; Phase 5 OCD/SCD suite passes. |
 | H-02 | High | `App/bms_protect.c` | Queue-full replacement was silent and the baseline did not expose exact overflow/missed diagnostics. | Added saturating overflow, irrecoverably-dropped-sample, and replacement-enqueue-failure counters, a latched diagnostic, `EVT_CC_QUEUE_OVERFLOW`, and a scheduler-protected drop-one/enqueue-newest operation. A failed replacement does not W1C and the hardware sample is retried. | Fixed at the producer boundary; first, repeated, latest/oldest, concurrent-consumer exclusion, and replacement-failure vectors pass. No Phase 7 consumer/reporting policy exists yet. |
 | H-03 | High | `App/bms_protect.c` | Baseline XREADY “recovery” used hard-coded reference thresholds, omitted required settling/reinit/readback/group verification, cleared the history latch, and could overwrite future authoritative configuration. | Removed the false recovery. XREADY remains active+latched and FET requests remain off unless an externally supplied, bounded authoritative recovery hook confirms the complete contract; only then is XREADY W1C, last. | Safe boundary fixed and tested. Full hardware recovery implementation remains deferred; see §14. |
@@ -52,17 +52,17 @@ column; it does not mean independently accepted or hardware validated.
 | M-01 | Medium | `Driver/bq76940_control.c` | OV/UV decode subtracted ADCOFFSET although TI’s voltage equation adds it. A +30 mV calibration caused a 60 mV decode error relative to the programmed threshold. | Corrected the sign, reused full calibration validation, and added positive-offset round-trip vectors. | Fixed; trip suite passes. |
 | M-02 | Medium | `Driver/bq76940_control.c` | SYS_CTRL2 FET composition preserved bits 5..2, replaying the CC_ONESHOT command and reserved bits from readback. During review, preserving `DELAY_DIS` was also rejected because it bypasses protection delays for factory testing. | Preserve only production `CC_EN` (`0x40`); force `DELAY_DIS`, CC_ONESHOT, and reserved bits low; NULL request is fail-safe FET-off. | Fixed; per-bit, factory-test-bit, and NULL regressions pass. |
 | M-03 | Medium | `Driver/bq76940_control.[ch]` | PROTECT1/2/3 composers silently masked invalid codes, potentially converting invalid configuration into a different, live protection setting. The report incorrectly claimed a status return. | APIs now return `BQ76940_Status_t`, validate every field, and leave output unchanged on failure. | Fixed; all upper-bound/null vectors pass. |
-| M-04 | Medium | `App/bms_protect.c` | CC read/W1C/SYS_STAT failures were incompletely observable and CRC was collapsed into generic communication failure. | Centralized transport status mapping to AFE_COMM or AFE_CRC and sets `EVT_FAULT_PRESENT`; successful SYS_STAT communication clears those active transport indicators. | Fixed; timeout/NACK/CRC paths pass. |
+| M-04 | Medium | `App/bms_protect.c` | CC read/W1C/SYS_STAT failures were incompletely observable and CRC was collapsed into generic communication failure. | Centralized transport status mapping to AFE_COMM or AFE_CRC and sets `EVT_FAULT_PRESENT`; successful SYS_STAT communication clears those active transport indicators only when no W1C-finalization ambiguity remains unresolved. | Fixed; timeout/NACK/CRC and ambiguity paths pass. |
 | M-05 | Medium | `App/app_rtos_hooks.c`, `User/main.c` | Fatal hooks and safe-idle comments promised an interrupt-disabled halt, but both paths only spun forever. Interrupts could continue mutating state or enter RTOS ISR APIs during a fatal/pre-scheduler state. | RTOS fatal hooks now call `taskDISABLE_INTERRUPTS()` and main safe-idle globally disables IRQs before halting. | Fixed; compiled in both review/production images and statically gated. |
 | L-01 | Low/evidence | Phase 6 report and harness | The historical report added the already-included MSP/C heap to map ZI a second time, and the harness created all IPC objects twice before creating tasks. Neither result represented a production-equivalent single initialization. | Current harness creates one object set and reuses it for task construction. This report uses the fresh production map and does not rewrite the historical report. | Corrected review evidence; runtime stack high-water remains unmeasured. |
 | S-01 | Spec gap | UART | V1 specifications require debug UART1 on PA9/PA10 at 115200 and name `bsp_uart.c/.h`; no validated erratum supersedes it. The Phase 2 report and current 32-file target contain no USART/UART implementation. | No UART was added because it is outside this repair scope. | **UART REQUIRED — IMPLEMENTATION MISSING.** Must be scheduled before V1 completion. |
 
 No confirmed Phase 4 measurement defect was found. The Phase 3 BQ transport
-API/source was necessarily extended for the Phase 7 W1C commit boundary. The
-new status, appended to preserve every validated Phase 3 status ordinal,
+API/source was necessarily extended for the Phase 7 W1C finalization boundary.
+The new status, appended to preserve every validated Phase 3 status ordinal,
 changes only the payload+CRC-ACKed/final-STOP-failed outcome; existing callers
-still see a non-OK result, while ProtectTask can avoid replaying an
-already accepted clear. Normal write, data NACK, CRC NACK, and STOP-failure
+still see a non-OK result, while ProtectTask avoids claiming either commit or
+rejection. Normal write, data NACK, CRC NACK, and STOP-failure
 transport regressions were rebuilt and executed.
 
 ## 4. H-05 ALERT retry / lost-edge result
@@ -90,7 +90,7 @@ Regression coverage:
 - Case C: OV is cleared, UV appears on the next read, and both independent W1C
   writes and faults are observed.
 - Additional paths: direct ISR execution, SYS_STAT timeout, rejected W1C NACK,
-  accepted-write/STOP cleanup failure, CC CRC mismatch, and repeated CC_READY.
+  ambiguous write finalization, CC CRC mismatch, and repeated CC_READY.
 
 The test image executes the production drain/service functions, post-scheduler
 EXTI enable/startup-high seed, the actual `Task_Protect` loop through
@@ -118,8 +118,16 @@ Observable state now includes:
 If the replacement enqueue fails after the oldest entry was dropped, the
 diagnostic records one dropped sample and one enqueue failure, CC_READY is not
 W1C, and the bounded drain retries the still-pending hardware reading. A
-definitely rejected W1C retries only the clear; an accepted write with STOP
-cleanup failure is not replayed against a potentially newer CC event.
+definitely rejected W1C retries only the clear. If payload/CRC are ACKed but
+STOP finalization fails, the outcome is not called committed: the requested
+bit is quarantined, no W1C or enqueue is replayed while it remains high, and an
+observed-low read is the only software retirement point.
+
+Observable ambiguity state includes a saturating transaction counter, a
+CC-specific event-identity ambiguity counter, a current quarantined-bit mask,
+and a latched history flag. A continuously high CC_READY after ambiguous
+finalization can represent either the old uncleared event or a newer event;
+software does not invent an identity and exact zero-loss is not claimed.
 
 ## 6. Phase 4 review result
 
@@ -129,7 +137,7 @@ rounding/range behavior, transactional output, CRC/I2C failure propagation,
 and stale/partial-read boundaries.
 
 Result: no confirmed measurement-layer production change was required. The
-shared Phase 3 BQ write transport gained the accepted-write/STOP-error outcome
+shared Phase 3 BQ write transport gained the finalization-ambiguous outcome
 needed by Phase 7. A freshly built ARMCC5 Phase 4 image executed mapping,
 measurement, negative-result transactionality, TS-boundary, and real transport
 commit tests with zero failures. This is software/Simulator evidence, not board
@@ -172,13 +180,19 @@ margin measurement.
   against deterministic RTOS/BSP fakes.
 - SYS_STAT: every bit handled independently; only successfully consumed bits
   enter W1C; drain re-reads for newly arriving bits.
-- CC_READY: sampled/enqueued before W1C; overflow visible; duplicate protection
-  and explicit accepted-versus-rejected W1C retry added.
-- OV/UV/OCD/SCD: independent active fault and inhibit decisions retained.
+- CC_READY: sampled/enqueued before W1C; overflow visible; definite rejection
+  retries only W1C, while ambiguous finalization quarantines event identity.
+- OV/UV/OCD: captured as unresolved active events and FET inhibits; they are
+  recovery-eligible only through the Phase 9 measurement/freshness/threshold/
+  hysteresis/delay/policy owner. SYS_STAT low never clears them.
+- SCD: captured active+latched and not auto-cleared in Phase 7.
 - OVRD_ALERT: independent active+latched fault, both FET requests off, event,
-  and W1C path retained and executed in pure-decision tests.
+  and W1C path retained; its later physical recovery policy remains required.
 - XREADY: no immediate clear and no invented configuration. Active+latched and
-  FET-off remain until the full external recovery contract succeeds.
+  FET-off remain until the full external recovery contract succeeds and W1C
+  finalization is confirmed; its latch remains for Phase 9 explicit reset.
+- Fault readers receive a scheduler-protected same-generation `active+latched`
+  snapshot; task-context writers publish both words under the same protection.
 - H-05: task-level pending retry no longer depends on a new rising edge.
 
 Result: reviewed software candidate suitable for independent diff review. This
@@ -213,17 +227,18 @@ on checked-in binaries. It then runs three images in one Keil Simulator session:
 
 | Image | Executed scope | Result |
 |---|---|---|
-| Phase 4 review | mapping, atomic cell window, BAT, signed CC, TS, CRC/I2C/transactional errors, write commit boundary | completed=1, failures=0 |
+| Phase 4 review | mapping, atomic cell window, BAT, signed CC, TS, CRC/I2C/transactional errors, write finalization boundary | completed=1, failures=0 |
 | Phase 6 review | one IPC object set, event bits, queue layouts, priorities/stacks, seven task creation | completed=1, failures=0 |
-| Combined Phase 5/7 review | trip/table/composer/FET/CELLBAL plus cross-API inhibit, decision, real Task/ISR bodies, CC queue, H-05 retry and XREADY gates | completed=1, all eight suite counters=0 |
+| Combined Phase 5/7 review | trip/table/composer/FET/CELLBAL plus cross-API inhibit, decision, real Task/ISR bodies, CC queue, H-05 retry and XREADY gates | completed=1, all nine suite counters=0 |
 
 Key new regression vectors include first/repeated queue full, exact oldest/newest
 sequence, replacement enqueue failure, rejected W1C retry without duplicate
-sample, accepted W1C/STOP failure immediately followed by a new high CC event,
+sample, ambiguous W1C/STOP quarantine across continuously high CC_READY,
+observed-low quarantine retirement, ambiguity counters/current mask,
 Task-level mutex timeout/delayed retry, post-scheduler EXTI enable, startup-high
 without an ISR edge, drain budget, active-pin-high retry,
 event arrival during drain, ISR execution, transport timeout/NACK/CRC, XREADY
-absent/failing/successful recovery hook and accepted-STOP outcome, all SCD table
+absent/failing/successful recovery hook and ambiguous-STOP outcome, all SCD table
 entries, invalid composer fields, calibration offset sign, negative transactional
 results, TS denominator boundary, and SYS_CTRL2 factory/command/reserved bits.
 
@@ -240,8 +255,8 @@ Production Clean/Rebuild actually executed in the current environment:
 - 32 compilation units;
 - ARMCC5 5.06 update 7 build 960;
 - `0 Error(s), 0 Warning(s)`;
-- `Code=18576`, `RO-data=268`, `RW-data=200`, `ZI-data=10432`;
-- total ROM `19044` bytes; link-time RW+ZI `10632` bytes.
+- `Code=18908`, `RO-data=268`, `RW-data=200`, `ZI-data=10440`;
+- total ROM `19376` bytes; link-time RW+ZI `10640` bytes.
 
 Plain-text evidence:
 
@@ -262,6 +277,8 @@ different checkout directories.
 ## 13. Deferred hardware validation
 
 The following remain **HARDWARE VALIDATION REQUIRED / DEFERRED**:
+
+`HARDWARE VALIDATION REQUIRED: BQ7694003 W1C commit behavior when STOP finalization fails`
 
 - actual BQ7694003 identity, CRC-enabled address, 13S VC/VCxB wiring, VC9/VC14
   shorts, supply/REGSRC/REGOUT/CAP/RC implementation, and group population;
@@ -287,11 +304,11 @@ Simulator/mock evidence must not be described as any of the above.
    scheduler-protection calls, but does not replace a running-scheduler stress
    test or target ISR concurrency test.
 4. A definitely rejected CC W1C retains the old pending marker to prevent
-   duplicate integration. If bus failure persists across another hardware CC
-   conversion, old/new high states are not distinguishable and a conversion
-   may be coalesced. The 10 ms retry bounds the normal software delay and raises
-   an AFE transport fault, but exact zero-loss under a prolonged bus fault is
-   not claimed.
+   duplicate integration. An ACKed-payload/CRC plus failed STOP is quarantined
+   instead of replayed. If CC_READY remains high, old/new event identity is not
+   distinguishable: no duplicate is enqueued, but a later conversion may
+   coalesce. The saturating ambiguity diagnostics remain observable to Phase 10;
+   exact zero-loss is not claimed without the deferred BQ7694003 hardware test.
 5. Phase 7 provides overflow/event/transport diagnostics, but the placeholder
    SOC/State tasks do not yet consume the CC queue or publish those diagnostics;
    system-level reporting/handling belongs to later phases.

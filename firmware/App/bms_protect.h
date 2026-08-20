@@ -32,6 +32,18 @@
  *   - H-05: ALERT is drained with retry; a stuck-high line keeps the
  *     pending state instead of waiting for a new edge.
  *
+ * Phase 7 fault-lifecycle boundary:
+ *   - SYS_STAT is an event-capture source. W1C/observed-low is not evidence
+ *     that the underlying voltage/current/physical condition recovered.
+ *   - HW_OV, HW_UV and HW_OCD set active only. They are recovery-eligible,
+ *     but remain active until the Phase 9 recovery owner proves fresh valid
+ *     measurements, threshold+hysteresis+delay, policy and hardware status.
+ *   - HW_SCD, AFE_XREADY and AFE_OVRD_ALERT set active+latched. Phase 7 never
+ *     auto-clears their latches. SCD/OVRD require an explicit later policy;
+ *     XREADY active may clear only after full recovery and confirmed W1C.
+ *   - ProtectTask is the Phase 7 hardware-event capture/publish owner. Other
+ *     modules receive snapshots and must not infer recovery from SYS_STAT=0.
+ *
  * This module owns the ALERT ISR entry (EXTI1_IRQHandler) and the
  * ProtectTask body. It reuses the Phase 5 FET arbitration primitives and
  * the Phase 6 IPC objects; it does not implement state machine, SOC,
@@ -79,7 +91,20 @@ typedef struct
     /* Newest-sample enqueue attempts that failed during overflow recovery.
      * CC_READY remains set in this case, so the hardware sample is retried. */
     uint32_t cc_enqueue_failure_count;
+    /* SYS_STAT W1C transactions whose payload/CRC were ACKed but final STOP
+     * failed. This is transaction history, not a claim of register commit. */
+    uint32_t w1c_finalization_ambiguous_count;
+    /* Subset of the above transactions that included CC_READY. A nonzero
+     * value means CC event identity may have coalesced and Phase 10 must not
+     * claim exact-zero-loss integration across the event. */
+    uint32_t cc_event_identity_ambiguous_count;
+    /* Currently quarantined SYS_STAT bits. A quarantined bit is neither W1C
+     * replayed nor treated as a new event until an observed-low read retires
+     * it. A continuously high old/new event cannot be disambiguated in
+     * software. */
+    uint8_t w1c_finalization_ambiguous_mask;
     bool cc_queue_overflow_latched;
+    bool w1c_finalization_ambiguous_latched;
 } BMS_ProtectDiagnostics_t;
 
 /* Phase 9 supplies the authoritative XREADY recovery implementation. The
@@ -125,10 +150,10 @@ void Task_Protect(void *argument);
  */
 void EXTI1_IRQHandler(void);
 
-/*
- * Return the current fault summary (Phase 1 model). Read-only for other
- * modules; updated by the protect path.
- */
+/* Return one same-generation active+latched snapshot. This task-context API
+ * is scheduler-protected against the ProtectTask publisher; it is not an ISR
+ * API. The returned value is read-only and SYS_STAT=0 must not be interpreted
+ * as a recovery authorization. */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
 
 /* Latched, task-context H-02 diagnostics. The returned multi-field snapshot is
@@ -177,8 +202,9 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw);
 
 /*
  * Complete the XREADY recovery contract (H-03) through the authoritative
- * hook and only then W1C XREADY. On success the active fault clears but the
- * historical latch remains for explicit reset; on failure nothing is cleared.
+ * hook and only then W1C XREADY. Active clears only after a successful final
+ * STOP, or after a prior ambiguous finalization is resolved by observing the
+ * bit low. The historical latch remains for the Phase 9 explicit-reset policy.
  */
 bool BMS_Protect_RecoverXready(BQ76940_t *device);
 

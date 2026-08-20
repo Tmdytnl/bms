@@ -39,8 +39,14 @@ typedef uint32_t BMS_FaultBitmap_t;
 
 typedef struct
 {
-    BMS_FaultBitmap_t active;  /* The condition is currently present. */
-    BMS_FaultBitmap_t latched; /* Severe history requires explicit reset. */
+    /* An unresolved safety condition or captured event whose source owner has
+     * not yet proved the configured recovery contract. For W1C event sources,
+     * a cleared hardware status bit alone is not proof of physical recovery. */
+    BMS_FaultBitmap_t active;
+    /* Retained severe-event history. It is never cleared merely because the
+     * corresponding active bit or hardware status bit became zero; an
+     * authoritative, source-specific explicit-reset policy owns any clear. */
+    BMS_FaultBitmap_t latched;
 } BMS_FaultSummary_t;
 
 #define BMS_FAULT_BITMAP_WIDTH_BITS              (32U)

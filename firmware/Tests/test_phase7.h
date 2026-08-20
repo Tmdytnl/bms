@@ -12,6 +12,7 @@ uint32_t Test_Phase7_ProtectLogic(void);
 uint32_t Test_Phase7_CcQueue(void);
 uint32_t Test_Phase7_AlertRetry(void);
 uint32_t Test_Phase7_Xready(void);
+uint32_t Test_Phase7_BoundaryContracts(void);
 
 /* Deterministic RTOS/BQ/BSP fakes used to execute the production Phase 7
  * queue, drain and service functions under ARMCC5. */
@@ -36,6 +37,9 @@ bool TestP7_QueuePop(BMS_CcSample_t *sample);
 EventBits_t TestP7_EventBits(void);
 bool TestP7_QueueOpsProtected(void);
 bool TestP7_MutexAvailable(void);
+uint32_t TestP7_SchedulerSuspendCount(void);
+uint32_t TestP7_SchedulerResumeCount(void);
+bool TestP7_SchedulerProtectionBalanced(void);
 bool TestP7_RunProtectTaskRetryScenario(void);
 bool TestP7_RunProtectTaskAlreadyHighScenario(void);
 uint8_t TestP7_TaskDelayCount(void);

@@ -662,15 +662,15 @@ static uint32_t Test_WriteCommitBoundary(void)
     TEST_CHECK(status == BQ76940_STATUS_OK);
     TEST_CHECK(s_mock.trace_count == 6U);
 
-    /* Once payload and CRC have both been ACKed, a STOP cleanup failure must
-     * preserve the fact that the W1C write was accepted by the slave. */
+    /* ACKed payload/CRC followed by a STOP failure does not prove whether the
+     * BQ7694003 register side effect was committed. */
     Mock_ReadyDevice(&device, &bus);
     Mock_FailAt(5, SOFT_I2C_STATUS_TIMEOUT);
     status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
-    TEST_CHECK(status == BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR);
+    TEST_CHECK(status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS);
     TEST_CHECK(s_mock.trace_count == 6U);
 
-    /* A data-byte NACK occurs before the commit boundary and remains a
+    /* A data-byte NACK occurs before all payload/CRC bytes are ACKed and is a
      * definitely rejected write, even though cleanup STOP succeeds. */
     Mock_ReadyDevice(&device, &bus);
     Mock_FailAt(3, SOFT_I2C_STATUS_NACK_DATA);

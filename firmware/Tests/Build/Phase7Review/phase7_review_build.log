@@ -1,5 +1,5 @@
-BMS V1 Codex Phase 7 review test build
-Repository: D:\AI\ai_day\codex\Bms_shop_day
+﻿BMS V1 Codex Phase 7 review test build
+Repository: D:\AI\Codex\Bms_shop
 ARMCC5: D:\Keil_v5\ARM\Version5.06\bin\armcc.exe
 uVision executable: D:\Keil_v5\UV4\UV4.exe
 uVision FileVersion: 5.38.0.0
@@ -43,14 +43,14 @@ SIZE REPORT: phase4
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-      6288        278        420         40       2088      45199   D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase4_review_tests.axf
-      6288        278        420         40          0          0   ROM Totals for D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase4_review_tests.axf
+      6288        278        420         40       2088      43799   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase4_review_tests.axf
+      6288        278        420         40          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase4_review_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-      6288        278        420         40       2088      45199   Grand Totals
+      6288        278        420         40       2088      43799   Grand Totals
       6288        278        420         40          0          0   ROM Totals
 
 ========================================================================
@@ -84,14 +84,14 @@ SIZE REPORT: phase6
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-      8408        696        268        148      10108     122710   D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase6_review_tests.axf
-      8408        696        268        148          0          0   ROM Totals for D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase6_review_tests.axf
+      8408        696        268        148      10108     120270   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase6_review_tests.axf
+      8408        696        268        148          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase6_review_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-      8408        696        268        148      10108     122710   Grand Totals
+      8408        696        268        148      10108     120270   Grand Totals
       8408        696        268        148          0          0   ROM Totals
 
 ========================================================================
@@ -122,21 +122,21 @@ SIZE REPORT: phase7
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-     12524        964        500        152       1968     299215   D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase7_review_tests.axf
-     12524        964        500        152          0          0   ROM Totals for D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\Build\Phase7Review\phase7_review_tests.axf
+     13732       1074        500        164       1980     300740   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase7_review_tests.axf
+     13732       1074        500        164          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase7Review\phase7_review_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-     12524        964        500        152       1968     299215   Grand Totals
-     12524        964        500        152          0          0   ROM Totals
+     13732       1074        500        164       1980     300740   Grand Totals
+     13732       1074        500        164          0          0   ROM Totals
 
 ========================================================================
 
-    Total RO  Size (Code + RO Data)                13024 (  12.72kB)
-    Total RW  Size (RW Data + ZI Data)              2120 (   2.07kB)
-    Total ROM Size (Code + RO Data + RW Data)      13176 (  12.87kB)
+    Total RO  Size (Code + RO Data)                14232 (  13.90kB)
+    Total RW  Size (RW Data + ZI Data)              2144 (   2.09kB)
+    Total ROM Size (Code + RO Data + RW Data)      14396 (  14.06kB)
 
 ========================================================================
 

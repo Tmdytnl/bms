@@ -47,6 +47,8 @@ printf("P7_RETRY_FAILURES=%u\n", g_p7_retry_failures)
 P7_RETRY_FAILURES=0
 printf("P7_XREADY_FAILURES=%u\n", g_p7_xready_failures)
 P7_XREADY_FAILURES=0
+printf("P7_BOUNDARY_FAILURES=%u\n", g_p7_boundary_failures)
+P7_BOUNDARY_FAILURES=0
 printf("P7_PROBE=%u\n", g_p7_probe)
-P7_PROBE=7
+P7_PROBE=8
 LOG OFF

@@ -167,10 +167,10 @@ BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
     i2c_status = SoftI2C_Stop(device->bus);
     if (i2c_status != SOFT_I2C_STATUS_OK)
     {
-        /* All data and CRC bytes were ACKed before STOP. Preserve that commit
-         * boundary so W1C users cannot mistake an accepted clear for a
-         * rejected write and later clear a newly arrived event. */
-        return BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR;
+        /* ACK of all data/CRC bytes does not prove when the BQ7694003 applies
+         * the register side effect. Without a successful final STOP this is
+         * deliberately neither success nor definite rejection. */
+        return BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS;
     }
     return BQ76940_STATUS_OK;
 

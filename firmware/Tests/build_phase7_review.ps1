@@ -308,7 +308,8 @@ if (-not $SkipSimulator) {
         'P7_CC_FAILURES=0',
         'P7_RETRY_FAILURES=0',
         'P7_XREADY_FAILURES=0',
-        'P7_PROBE=7'
+        'P7_BOUNDARY_FAILURES=0',
+        'P7_PROBE=8'
     )) {
         if ($simText -notmatch [regex]::Escape($required)) {
             throw "Simulator evidence is missing: $required"

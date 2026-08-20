@@ -755,21 +755,21 @@ Image Symbol Table
     ../clib/signal.s                         0x00000000   Number         0  defsig.o ABSOLUTE
     ../clib/stdlib.c                         0x00000000   Number         0  exit.o ABSOLUTE
     ../fplib/fpinit.s                        0x00000000   Number         0  fpinit.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\portable\heap_4.c 0x00000000   Number         0  phase6_heap_4.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\portable\port.c 0x00000000   Number         0  phase6_port.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\source\event_groups.c 0x00000000   Number         0  phase6_event_groups.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\source\list.c 0x00000000   Number         0  phase6_list.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\source\queue.c 0x00000000   Number         0  phase6_queue.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\source\tasks.c 0x00000000   Number         0  phase6_tasks.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\FreeRTOS\source\timers.c 0x00000000   Number         0  phase6_timers.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\docs\reference\ST\STM32F10x Standard Peripheral Library\Start\startup_stm32f10x_md.s 0x00000000   Number         0  startup_stm32f10x_md.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\App\app_rtos.c 0x00000000   Number         0  phase6_app_rtos.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\App\app_rtos_hooks.c 0x00000000   Number         0  phase6_app_rtos_hooks.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\test_phase6_main.c 0x00000000   Number         0  phase6_test_main.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\test_phase6_objects.c 0x00000000   Number         0  phase6_test_objects.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\test_phase6_task_stub.c 0x00000000   Number         0  phase6_task_stub.o ABSOLUTE
-    D:\AI\ai_day\codex\Bms_shop_day\firmware\Tests\test_phase6_tasks.c 0x00000000   Number         0  phase6_test_tasks.o ABSOLUTE
-    D:\\AI\\ai_day\\codex\\Bms_shop_day\\docs\\FreeRTOS\\portable\\port.c 0x00000000   Number         0  phase6_port.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\portable\heap_4.c 0x00000000   Number         0  phase6_heap_4.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\portable\port.c 0x00000000   Number         0  phase6_port.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\source\event_groups.c 0x00000000   Number         0  phase6_event_groups.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\source\list.c 0x00000000   Number         0  phase6_list.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\source\queue.c 0x00000000   Number         0  phase6_queue.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\source\tasks.c 0x00000000   Number         0  phase6_tasks.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\FreeRTOS\source\timers.c 0x00000000   Number         0  phase6_timers.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\reference\ST\STM32F10x Standard Peripheral Library\Start\startup_stm32f10x_md.s 0x00000000   Number         0  startup_stm32f10x_md.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\app_rtos.c 0x00000000   Number         0  phase6_app_rtos.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\app_rtos_hooks.c 0x00000000   Number         0  phase6_app_rtos_hooks.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase6_main.c 0x00000000   Number         0  phase6_test_main.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase6_objects.c 0x00000000   Number         0  phase6_test_objects.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase6_task_stub.c 0x00000000   Number         0  phase6_task_stub.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase6_tasks.c 0x00000000   Number         0  phase6_test_tasks.o ABSOLUTE
+    D:\\AI\\Codex\\Bms_shop\\docs\\FreeRTOS\\portable\\port.c 0x00000000   Number         0  phase6_port.o ABSOLUTE
     dc.s                                     0x00000000   Number         0  dc.o ABSOLUTE
     RESET                                    0x08000000   Section      236  startup_stm32f10x_md.o(RESET)
     !!!main                                  0x080000ec   Section        8  __main.o(!!!main)
@@ -1372,22 +1372,22 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-       714        112          0         28          0      31181   phase6_app_rtos.o
-        34          0          0          0          0      11301   phase6_app_rtos_hooks.o
-       140          0          0          0          0       3228   phase6_event_groups.o
-      1016         84          0         28       8192       5971   phase6_heap_4.o
-       124          0          0          0          0       2705   phase6_list.o
-       466         44          0         12          0       8555   phase6_port.o
-      1286         16          0          0         64      20435   phase6_queue.o
-         4          0          0          0          0        475   phase6_task_stub.o
-      3358        312          0         60        220      37523   phase6_tasks.o
-        90         22          0         20          0       1742   phase6_test_main.o
-       256         32          0          0          0        630   phase6_test_objects.o
-       160         32          0          0          0        636   phase6_test_tasks.o
-        64         26        236          0       1536        972   startup_stm32f10x_md.o
+       714        112          0         28          0      30781   phase6_app_rtos.o
+        34          0          0          0          0      11153   phase6_app_rtos_hooks.o
+       140          0          0          0          0       3112   phase6_event_groups.o
+      1016         84          0         28       8192       5823   phase6_heap_4.o
+       124          0          0          0          0       2589   phase6_list.o
+       466         44          0         12          0       8335   phase6_port.o
+      1286         16          0          0         64      20055   phase6_queue.o
+         4          0          0          0          0        451   phase6_task_stub.o
+      3358        312          0         60        220      36803   phase6_tasks.o
+        90         22          0         20          0       1654   phase6_test_main.o
+       256         32          0          0          0        606   phase6_test_objects.o
+       160         32          0          0          0        612   phase6_test_tasks.o
+        64         26        236          0       1536        940   startup_stm32f10x_md.o
 
     ----------------------------------------------------------------------
-      7728        680        268        148      10012     125354   Object Totals
+      7728        680        268        148      10012     122914   Object Totals
          0          0         32          0          0          0   (incl. Generated)
         16          0          0          0          0          0   (incl. Padding)
 
@@ -1441,8 +1441,8 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      8408        696        268        148      10108     122710   Grand Totals
-      8408        696        268        148      10108     122710   ELF Image Totals
+      8408        696        268        148      10108     120270   Grand Totals
+      8408        696        268        148      10108     120270   ELF Image Totals
       8408        696        268        148          0          0   ROM Totals
 
 ==============================================================================

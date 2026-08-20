@@ -14,6 +14,7 @@ static BMS_FaultSummary_t s_fault;
 static BMS_ProtectDiagnostics_t s_diagnostics;
 static bool s_xready_recovery_pending;
 static bool s_cc_clear_pending;
+static uint8_t s_w1c_finalization_ambiguous_mask;
 static BQ76940_t *s_afe_device;
 static BMS_ProtectXreadyRecoveryHook_t s_xready_recovery_hook;
 
@@ -25,9 +26,14 @@ void BMS_Protect_Init(void)
     s_diagnostics.cc_queue_overflow_count = 0UL;
     s_diagnostics.cc_sample_missed_count = 0UL;
     s_diagnostics.cc_enqueue_failure_count = 0UL;
+    s_diagnostics.w1c_finalization_ambiguous_count = 0UL;
+    s_diagnostics.cc_event_identity_ambiguous_count = 0UL;
+    s_diagnostics.w1c_finalization_ambiguous_mask = 0U;
     s_diagnostics.cc_queue_overflow_latched = false;
+    s_diagnostics.w1c_finalization_ambiguous_latched = false;
     s_xready_recovery_pending = false;
     s_cc_clear_pending = false;
+    s_w1c_finalization_ambiguous_mask = 0U;
     s_afe_device = NULL;
     s_xready_recovery_hook = NULL;
     g_bms_fet_request.chg = BQ76940_FET_DESIRE_DISABLE;
@@ -47,7 +53,12 @@ void BMS_Protect_SetXreadyRecoveryHook(
 
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void)
 {
-    return s_fault;
+    BMS_FaultSummary_t snapshot;
+
+    vTaskSuspendAll();
+    snapshot = s_fault;
+    (void)xTaskResumeAll();
+    return snapshot;
 }
 
 BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void)
@@ -56,6 +67,8 @@ BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void)
 
     vTaskSuspendAll();
     snapshot = s_diagnostics;
+    snapshot.w1c_finalization_ambiguous_mask =
+        s_w1c_finalization_ambiguous_mask;
     (void)xTaskResumeAll();
     return snapshot;
 }
@@ -82,19 +95,87 @@ static void BMS_Protect_RecordCcOverflow(bool oldest_was_dropped,
 
 static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status)
 {
+    BMS_FaultBitmap_t active_mask;
+
+    active_mask = (BMS_FaultBitmap_t)0U;
     if ((status == BQ76940_STATUS_CRC_MISMATCH) ||
         (status == BQ76940_STATUS_CRC_REJECTED))
     {
-        s_fault.active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_CRC);
+        active_mask = BMS_Fault_Mask(BMS_FAULT_ID_AFE_CRC);
     }
     else if (status != BQ76940_STATUS_OK)
     {
-        s_fault.active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_COMM);
+        active_mask = BMS_Fault_Mask(BMS_FAULT_ID_AFE_COMM);
+    }
+    if (active_mask != (BMS_FaultBitmap_t)0U)
+    {
+        vTaskSuspendAll();
+        s_fault.active |= active_mask;
+        (void)xTaskResumeAll();
     }
     if ((status != BQ76940_STATUS_OK) && (xSysEvents != NULL))
     {
         (void)xEventGroupSetBits(xSysEvents, EVT_FAULT_PRESENT);
     }
+}
+
+static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
+{
+    if (clear_mask == 0U)
+    {
+        return;
+    }
+
+    vTaskSuspendAll();
+    if (s_diagnostics.w1c_finalization_ambiguous_count < UINT32_MAX)
+    {
+        ++s_diagnostics.w1c_finalization_ambiguous_count;
+    }
+    if (((clear_mask & BMS_PROTECT_STAT_CC_READY) != 0U) &&
+        (s_diagnostics.cc_event_identity_ambiguous_count < UINT32_MAX))
+    {
+        ++s_diagnostics.cc_event_identity_ambiguous_count;
+    }
+    s_w1c_finalization_ambiguous_mask |= clear_mask;
+    s_diagnostics.w1c_finalization_ambiguous_latched = true;
+    (void)xTaskResumeAll();
+}
+
+static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
+{
+    uint8_t resolved_mask;
+
+    vTaskSuspendAll();
+    resolved_mask = (uint8_t)(s_w1c_finalization_ambiguous_mask &
+                              (uint8_t)(~stat));
+    s_w1c_finalization_ambiguous_mask &= stat;
+    if ((resolved_mask & BMS_PROTECT_STAT_CC_READY) != 0U)
+    {
+        /* The queued sample remains accepted. Observed-low is the only
+         * software-safe point at which its quarantined W1C can retire. */
+        s_cc_clear_pending = false;
+    }
+    if (((resolved_mask & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U) &&
+        s_xready_recovery_pending)
+    {
+        /* The full recovery hook already succeeded before the ambiguous W1C.
+         * Observing XREADY low confirms that no W1C replay is needed. */
+        s_fault.active &=
+            ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
+        s_xready_recovery_pending = false;
+    }
+    (void)xTaskResumeAll();
+}
+
+static void BMS_Protect_RecordAfeReadSuccess(void)
+{
+    vTaskSuspendAll();
+    s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_CRC));
+    if (s_w1c_finalization_ambiguous_mask == 0U)
+    {
+        s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_COMM));
+    }
+    (void)xTaskResumeAll();
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,7 +252,19 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
 {
     BQ76940_Status_t status;
 
-    if ((device == NULL) || (s_xready_recovery_hook == NULL))
+    if (device == NULL)
+    {
+        return false;
+    }
+    /* A prior full recovery reached an ambiguous W1C finalization. Re-running
+     * either the hook or W1C while XREADY remains high could replay a
+     * non-idempotent recovery or clear a newer event. Wait for observed-low. */
+    if ((s_w1c_finalization_ambiguous_mask &
+         BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
+    {
+        return false;
+    }
+    if (s_xready_recovery_hook == NULL)
     {
         return false;
     }
@@ -182,23 +275,26 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
 
     /* XREADY is W1C only after the authoritative hook confirms the complete
      * recovery contract. The history latch intentionally remains set. */
+    s_xready_recovery_pending = true;
     status = BQ76940_WriteByte(device, BQ76940_REG_SYS_STAT,
                                BMS_PROTECT_STAT_DEVICE_XREADY);
-    if ((status != BQ76940_STATUS_OK) &&
-        (status != BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR))
+    if (status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS)
+    {
+        BMS_Protect_RecordW1cFinalizationAmbiguity(
+            BMS_PROTECT_STAT_DEVICE_XREADY);
+        BMS_Protect_RecordAfeFailure(status);
+        return false;
+    }
+    if (status != BQ76940_STATUS_OK)
     {
         /* The clear was rejected: keep the fault pending. */
         BMS_Protect_RecordAfeFailure(status);
         return false;
     }
+    vTaskSuspendAll();
     s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
     s_xready_recovery_pending = false;
-    if (status == BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR)
-    {
-        /* W1C was accepted, but the bus still requires recovery/retry. */
-        BMS_Protect_RecordAfeFailure(status);
-        return false;
-    }
+    (void)xTaskResumeAll();
     return true;
 }
 
@@ -211,9 +307,16 @@ static void BMS_Protect_HandleCcReady(BQ76940_t *device,
     int16_t cc_raw;
     BQ76940_Status_t status;
 
-    /* A previous sample was already committed to the queue but its W1C
-     * write failed. Retry only the clear so one hardware sample cannot be
-     * enqueued repeatedly and later integrated more than once. */
+    /* ACKed bytes plus failed STOP leave old/new event identity unknowable.
+     * Do not W1C replay and do not enqueue again while that bit remains high. */
+    if ((s_w1c_finalization_ambiguous_mask &
+         BMS_PROTECT_STAT_CC_READY) != 0U)
+    {
+        return;
+    }
+
+    /* A previous sample was committed to the queue but its W1C was definitely
+     * rejected. Retry only the clear so the sample cannot be enqueued twice. */
     if (s_cc_clear_pending)
     {
         *clear_mask |= BMS_PROTECT_STAT_CC_READY;
@@ -248,7 +351,8 @@ void BMS_Protect_Decide(uint8_t stat,
 
     *clear_mask = 0U;
 
-    /* OV: active fault + inhibit CHG. */
+    /* OV event: capture unresolved active + inhibit CHG. Only the Phase 9
+     * recovery owner may clear it after the full recovery contract. */
     if ((stat & BMS_PROTECT_STAT_OV) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_OV);
@@ -256,7 +360,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OV;
     }
 
-    /* UV: active fault + inhibit DSG. */
+    /* UV event: capture unresolved active + inhibit DSG; not auto-cleared. */
     if ((stat & BMS_PROTECT_STAT_UV) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_UV);
@@ -264,7 +368,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_UV;
     }
 
-    /* OCD: active fault + inhibit DSG. */
+    /* OCD event: capture unresolved active + inhibit DSG; not auto-cleared. */
     if ((stat & BMS_PROTECT_STAT_OCD) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_OCD);
@@ -272,7 +376,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OCD;
     }
 
-    /* SCD: active + latched fault + inhibit both. */
+    /* SCD event: active + permanent-policy latch + inhibit both. */
     if ((stat & BMS_PROTECT_STAT_SCD) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_SCD);
@@ -282,7 +386,8 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_SCD;
     }
 
-    /* OVRD_ALERT (H-01): independent handling, inhibit both. */
+    /* OVRD_ALERT (H-01): active+latched independent capture, inhibit both.
+     * Phase 7 has no physical-source recovery policy and never auto-clears. */
     if ((stat & BMS_PROTECT_STAT_OVRD_ALERT) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_OVRD_ALERT);
@@ -292,8 +397,9 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OVRD_ALERT;
     }
 
-    /* XREADY (H-03): latched fault + both off; recovery via
-     * BMS_Protect_RecoverXready; never cleared here. */
+    /* XREADY (H-03): active+latched + both off. Full reinitialization may
+     * clear active through BMS_Protect_RecoverXready; latched remains owned by
+     * the Phase 9 explicit-reset policy and is never cleared here. */
     if ((stat & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY);
@@ -334,13 +440,12 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
             BMS_Protect_RecordAfeFailure(status);
             return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
         }
-        s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_COMM) |
-                            BMS_Fault_Mask(BMS_FAULT_ID_AFE_CRC));
+        BMS_Protect_ResolveObservedLowW1c(stat);
+        BMS_Protect_RecordAfeReadSuccess();
 
-        /* A definitely rejected W1C can later be rendered moot by a reset or
-         * another authorized clear. A successful low read retires that stale
-         * retry marker. Accepted-write/STOP failures are handled explicitly at
-         * the write site and never leave this marker set. */
+        /* A definitely rejected W1C can later be rendered moot by reset or an
+         * authorized external clear. A successful low read retires its retry
+         * marker. Ambiguous finalization uses the separate quarantine above. */
         if ((stat & BMS_PROTECT_STAT_CC_READY) == 0U)
         {
             s_cc_clear_pending = false;
@@ -360,7 +465,12 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         }
 
         clear_mask = 0U;
+        /* The getter also suspends the scheduler, so active+latched publish as
+         * one task-context generation rather than two independently torn
+         * words. ProtectTask remains the only Phase 7 writer. */
+        vTaskSuspendAll();
         BMS_Protect_Decide(stat, &s_fault, &g_bms_fet_request, &clear_mask);
+        (void)xTaskResumeAll();
         if (BMS_Protect_HasFaultBits(stat) && (xSysEvents != NULL))
         {
             (void)xEventGroupSetBits(xSysEvents, EVT_FAULT_PRESENT);
@@ -374,12 +484,25 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
             s_xready_recovery_pending = true;
         }
 
+        /* Never replay a W1C whose previous finalization is unresolved. Other
+         * newly captured bits in the same snapshot may still be cleared. */
+        clear_mask = (uint8_t)(clear_mask &
+                               (uint8_t)(~s_w1c_finalization_ambiguous_mask));
+
         if (clear_mask != 0U)
         {
             status = BQ76940_WriteByte(device, BQ76940_REG_SYS_STAT,
                                        clear_mask);
-            if ((status != BQ76940_STATUS_OK) &&
-                (status != BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR))
+            if (status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS)
+            {
+                /* Contain, diagnose and quarantine. With no documented BQ
+                 * commit point, software cannot safely pick replay versus a
+                 * new event identity while the requested bit stays high. */
+                BMS_Protect_RecordW1cFinalizationAmbiguity(clear_mask);
+                BMS_Protect_RecordAfeFailure(status);
+                return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
+            }
+            if (status != BQ76940_STATUS_OK)
             {
                 /* Clear was rejected: keep pending and retry it. */
                 BMS_Protect_RecordAfeFailure(status);
@@ -388,13 +511,6 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
             if ((clear_mask & BMS_PROTECT_STAT_CC_READY) != 0U)
             {
                 s_cc_clear_pending = false;
-            }
-            if (status == BQ76940_STATUS_WRITE_ACCEPTED_STOP_ERROR)
-            {
-                /* Payload+CRC were ACKed, so do not replay this W1C against a
-                 * possibly newer event. Release the bus and retry service. */
-                BMS_Protect_RecordAfeFailure(status);
-                return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
         }
 
