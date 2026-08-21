@@ -1,0 +1,27 @@
+#ifndef TEST_PHASE8_SAMPLE_H
+#define TEST_PHASE8_SAMPLE_H
+
+#include <stdint.h>
+
+extern volatile uint32_t g_phase8_sample_test_failures;
+extern volatile uint32_t g_phase8_sample_test_completed;
+extern volatile uint32_t g_phase8_sample_contention_completed;
+extern volatile uint32_t g_phase8_sample_contention_attempts;
+extern volatile uint32_t g_phase8_sample_contention_timeouts;
+extern volatile uint32_t g_phase8_sample_contention_successes;
+extern volatile uint32_t g_phase8_sample_contention_gives;
+extern volatile uint32_t g_phase8_sample_contention_wait_ticks;
+extern volatile uint32_t g_phase8_sample_contention_first_take_order;
+extern volatile uint32_t g_phase8_sample_contention_cell_give_order;
+extern volatile uint32_t g_phase8_sample_contention_retry_take_order;
+extern volatile uint32_t g_phase8_sample_contention_retry_give_order;
+extern volatile uint32_t g_phase8_sample_contention_pack_call_order;
+extern volatile uint32_t g_phase8_sample_xready_guard_completed;
+extern volatile uint32_t g_phase8_sample_xready_cell_rejects;
+extern volatile uint32_t g_phase8_sample_xready_pack_rejects;
+extern volatile uint32_t g_phase8_sample_xready_wrap_rejects;
+extern volatile uint32_t g_phase8_sample_xready_atomic_publishes;
+
+uint32_t Test_Phase8_Sample(void);
+
+#endif /* TEST_PHASE8_SAMPLE_H */

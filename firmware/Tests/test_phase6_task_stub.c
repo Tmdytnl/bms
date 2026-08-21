@@ -11,3 +11,13 @@ void Task_Protect(void *argument)
     {
     }
 }
+
+/* Phase 8 executes the production SampleTask in its own image. Keep this
+ * Phase 6 construction-only image independent of measurement drivers. */
+void Task_Sample(void *argument)
+{
+    (void)argument;
+    for (;;)
+    {
+    }
+}

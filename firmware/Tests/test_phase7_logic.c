@@ -147,8 +147,44 @@ uint32_t Test_Phase7_CcQueue(void)
     int16_t cc_values[2];
     BMS_CcSample_t sample;
     BMS_ProtectDiagnostics_t diagnostics;
+    BMS_ProtectLatestCc_t latest_cc;
+    BMS_ProtectLatestCc_t previous_cc;
+    uint32_t suspend_before;
+    uint32_t resume_before;
 
     failures = 0UL;
+
+    /* Latest-CC mailbox starts invalid and its multi-field getter is copied
+     * under the same scheduler exclusion used by the producer. */
+    TestP7_StubReset();
+    TEST_CHECK(!BMS_Protect_GetLatestCc(NULL));
+    suspend_before = TestP7_SchedulerSuspendCount();
+    resume_before = TestP7_SchedulerResumeCount();
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
+    TEST_CHECK(latest_cc.raw == (int16_t)0);
+    TEST_CHECK(latest_cc.tick == (TickType_t)0U);
+    TEST_CHECK(latest_cc.sequence == 0UL);
+    TEST_CHECK(latest_cc.xready_generation == 0UL);
+    TEST_CHECK(BMS_PROTECT_CC_SEQUENCE_NEXT(UINT32_MAX) == 0UL);
+    TEST_CHECK(TestP7_SchedulerSuspendCount() == (suspend_before + 1UL));
+    TEST_CHECK(TestP7_SchedulerResumeCount() == (resume_before + 1UL));
+    TEST_CHECK(TestP7_SchedulerProtectionBalanced());
+
+    /* A mailbox generation is published only after queue acceptance. */
+    TEST_CHECK(BMS_Protect_PushCcSample(77));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.valid);
+    TEST_CHECK(latest_cc.raw == 77);
+    TEST_CHECK(latest_cc.tick == (TickType_t)0U);
+    TEST_CHECK(latest_cc.sequence == 1UL);
+    TEST_CHECK(latest_cc.xready_generation == 0UL);
+    TEST_CHECK(BMS_Protect_PushCcSample(78));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.raw == 78);
+    TEST_CHECK(latest_cc.tick == (TickType_t)1U);
+    TEST_CHECK(latest_cc.sequence == 2UL);
+    TEST_CHECK(latest_cc.xready_generation == 0UL);
 
     /* Single overflow: exactly one oldest sample is replaced by newest. */
     TestP7_StubReset();
@@ -165,6 +201,10 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK((TestP7_EventBits() & EVT_CC_QUEUE_OVERFLOW) != 0U);
     TEST_CHECK(TestP7_QueueOpsProtected());
     TEST_CHECK(TestP7_QueueCount() == APP_RTOS_CC_SAMPLE_QUEUE_DEPTH);
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.raw == 108);
+    TEST_CHECK(latest_cc.tick == (TickType_t)8U);
+    TEST_CHECK(latest_cc.sequence == 9UL);
     for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
         TEST_CHECK(TestP7_QueuePop(&sample));
@@ -189,6 +229,24 @@ uint32_t Test_Phase7_CcQueue(void)
         TEST_CHECK(TestP7_QueuePop(&sample));
         TEST_CHECK(sample.raw == (int16_t)(3 + index));
     }
+
+    /* If the full-queue replacement enqueue fails after dropping the oldest,
+     * the rejected newest sample must not advance or alter the mailbox. */
+    TestP7_StubReset();
+    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    {
+        TEST_CHECK(BMS_Protect_PushCcSample((int16_t)index));
+    }
+    TEST_CHECK(BMS_Protect_GetLatestCc(&previous_cc));
+    TestP7_SetReplacementFailures(1U);
+    TEST_CHECK(!BMS_Protect_PushCcSample(900));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.valid == previous_cc.valid);
+    TEST_CHECK(latest_cc.raw == previous_cc.raw);
+    TEST_CHECK(latest_cc.tick == previous_cc.tick);
+    TEST_CHECK(latest_cc.sequence == previous_cc.sequence);
+    TEST_CHECK(latest_cc.xready_generation ==
+               previous_cc.xready_generation);
 
     /* If the post-discard replacement itself fails, do not W1C. The next
      * bounded drain read retries the still-pending hardware sample. Diagnostics
@@ -437,10 +495,72 @@ uint32_t Test_Phase7_Xready(void)
 {
     uint32_t failures;
     uint8_t stat_values[2];
+    int16_t cc_values[1];
+    BMS_CcSample_t cc_sample;
     BMS_FaultSummary_t faults;
     BMS_ProtectDiagnostics_t diagnostics;
+    BMS_ProtectLatestCc_t latest_cc;
+    BMS_ProtectXreadyState_t xready_state;
+    uint32_t suspend_before;
+    uint32_t resume_before;
 
     failures = 0UL;
+    stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
+    stat_values[1] = 0U;
+
+    /* XREADY epoch starts inactive at generation zero and the public getter
+     * copies both fields under scheduler exclusion. */
+    TestP7_StubReset();
+    TEST_CHECK(!BMS_Protect_GetXreadyState(NULL));
+    suspend_before = TestP7_SchedulerSuspendCount();
+    resume_before = TestP7_SchedulerResumeCount();
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 0UL);
+    TEST_CHECK(!xready_state.active);
+    TEST_CHECK(TestP7_SchedulerSuspendCount() == (suspend_before + 1UL));
+    TEST_CHECK(TestP7_SchedulerResumeCount() == (resume_before + 1UL));
+    TEST_CHECK(BMS_PROTECT_XREADY_GENERATION_NEXT(UINT32_MAX) == 0UL);
+    xready_state.xready_generation = 0UL;
+    xready_state.active = false;
+    TEST_CHECK(!BMS_Protect_XreadyBindingIsCurrent(
+        &xready_state, UINT32_MAX));
+    TEST_CHECK(BMS_Protect_XreadyBindingIsCurrent(&xready_state, 0UL));
+    xready_state.active = true;
+    TEST_CHECK(!BMS_Protect_XreadyBindingIsCurrent(&xready_state, 0UL));
+
+    /* A combined XREADY+CC_READY queues the CC sample for the SOC owner but
+     * cannot expose either it or an unconsumed old-epoch sample through the
+     * SampleTask mailbox. Only a later inactive-epoch CC restores latest. */
+    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)111));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.xready_generation == 0UL);
+    BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
+    TestP7_SetRecoveryResult(true);
+    stat_values[0] = (uint8_t)(BMS_PROTECT_STAT_DEVICE_XREADY |
+                               BMS_PROTECT_STAT_CC_READY);
+    stat_values[1] = 0U;
+    cc_values[0] = (int16_t)222;
+    TestP7_SetStatScript(stat_values, NULL, 2U);
+    TestP7_SetCcScript(cc_values, NULL, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(!xready_state.active);
+    TEST_CHECK(TestP7_CcReadCount() == 1U);
+    TEST_CHECK(TestP7_QueueCount() == 2U);
+    TEST_CHECK(TestP7_QueuePop(&cc_sample));
+    TEST_CHECK(cc_sample.raw == (int16_t)111);
+    TEST_CHECK(TestP7_QueuePop(&cc_sample));
+    TEST_CHECK(cc_sample.raw == (int16_t)222);
+    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)333));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(latest_cc.raw == (int16_t)333);
+    TEST_CHECK(latest_cc.sequence == 2UL);
+    TEST_CHECK(latest_cc.xready_generation == 1UL);
+
     stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
     stat_values[1] = 0U;
 
@@ -452,8 +572,19 @@ uint32_t Test_Phase7_Xready(void)
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(xready_state.active);
     TEST_CHECK(TestP7_WriteCount() == 0U);
     TEST_CHECK(TestP7_RecoveryCallCount() == 0U);
+
+    /* Re-reading the same active event does not advance the generation. */
+    TestP7_SetStatScript(stat_values, NULL, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(xready_state.active);
 
     /* An incomplete hook also keeps the fault pending and uncleared. */
     TestP7_StubReset();
@@ -478,6 +609,49 @@ uint32_t Test_Phase7_Xready(void)
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(!BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(!xready_state.active);
+
+    /* A new inactive-to-active observation advances again; recovery clears
+     * only active and never rewinds the epoch. */
+    TestP7_SetStatScript(stat_values, NULL, 2U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 2UL);
+    TEST_CHECK(!xready_state.active);
+
+    /* A definitely rejected XREADY W1C keeps the same generation active.
+     * Retrying the bounded recovery/clear may retire it, but must neither
+     * advance the generation nor expose an inactive window before success. */
+    TestP7_StubReset();
+    BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
+    TestP7_SetRecoveryResult(true);
+    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)10));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
+    stat_values[1] = BMS_PROTECT_STAT_DEVICE_XREADY;
+    TestP7_SetStatScript(stat_values, NULL, 2U);
+    TestP7_SetWriteFailure(BQ76940_STATUS_I2C_NACK, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(xready_state.active);
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
+    TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
+    TEST_CHECK(TestP7_WriteCount() == 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(!xready_state.active);
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
+    TEST_CHECK(TestP7_RecoveryCallCount() == 2U);
+    TEST_CHECK(TestP7_WriteCount() == 2U);
 
     /* If XREADY W1C finalization is ambiguous, active remains set and neither
      * recovery nor W1C is replayed. Observed-low then confirms retirement;
@@ -485,6 +659,9 @@ uint32_t Test_Phase7_Xready(void)
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
+    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)20));
+    TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
+    stat_values[1] = 0U;
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TestP7_SetWriteFailure(
         BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
@@ -497,6 +674,11 @@ uint32_t Test_Phase7_Xready(void)
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask ==
                BMS_PROTECT_STAT_DEVICE_XREADY);
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(xready_state.active);
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
@@ -504,6 +686,11 @@ uint32_t Test_Phase7_Xready(void)
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(!BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
+    TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
+    TEST_CHECK(xready_state.xready_generation == 1UL);
+    TEST_CHECK(!xready_state.active);
+    TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
+    TEST_CHECK(!latest_cc.valid);
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask == 0U);
 
