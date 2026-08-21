@@ -3,6 +3,7 @@
 #include "bms_config.h"
 #include "bms_memory_map.h"
 #include "bms_protect.h"
+#include "bms_sample.h"
 #include "bsp_clock.h"
 #include "bsp_gpio.h"
 #include "bsp_timer.h"
@@ -30,6 +31,7 @@ int main(void)
 
     /* Reset_Handler has already called the CMSIS SystemInit function. */
     BMS_Data_Init();
+    BMS_Sample_Init();
 
     /* A clock mismatch blocks all later hardware initialization. */
     if (BSP_Clock_Verify() != BSP_CLOCK_STATUS_OK)
@@ -66,6 +68,7 @@ int main(void)
     {
         BMS_SafeIdle();
     }
+    BMS_Sample_SetDevice(&s_afe_device);
 
     /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after
@@ -78,9 +81,10 @@ int main(void)
     {
         BMS_SafeIdle();
     }
-    /* Phase 6: seven task skeletons and scheduler start.
-     * BQ transport is initialized but no transaction or probe runs
-     * before the scheduler (spec §12.2). */
+    /* Phase 8 binds the SampleTask transport, but intentionally does not
+     * fabricate an AFE protection policy or NTC curve. Until the explicit
+     * AFE startup owner supplies a verified calibration, sampling remains
+     * fail-closed and publishes no valid frame. */
     if (App_Rtos_CreateTasks() != pdTRUE)
     {
         BMS_SafeIdle();

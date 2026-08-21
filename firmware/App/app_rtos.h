@@ -91,9 +91,8 @@ BaseType_t App_Rtos_CreateObjects(void);
  */
 BaseType_t App_Rtos_CreateTasks(void);
 
-/* Task entry points. Task_Protect is declared in bms_protect.h (its
- * implementation moved there in Phase 7); the rest remain skeletons
- * until their phases. */
+/* Task entry points. Task_Protect is implemented in bms_protect.c and
+ * Task_Sample in bms_sample.c; the later task bodies remain skeletons. */
 void Task_Sample(void *argument);
 void Task_State(void *argument);
 void Task_SOC(void *argument);

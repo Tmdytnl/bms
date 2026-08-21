@@ -47,25 +47,10 @@ BaseType_t App_Rtos_CreateObjects(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* Seven task bodies (Phase 6 skeletons; Task_Protect is implemented in
- * bms_protect.c from Phase 7 onward). The remaining six are placeholders
- * that keep a per-task period with vTaskDelayUntil; functional code lands
- * in Phase 8..11. */
+/* Seven task bodies. Task_Protect is implemented in bms_protect.c and
+ * Task_Sample in bms_sample.c. The remaining five are placeholders that
+ * keep their specified periods until their later phases. */
 /* ------------------------------------------------------------------ */
-
-void Task_Sample(void *argument)
-{
-    const TickType_t period = pdMS_TO_TICKS(250U);
-    TickType_t last;
-
-    (void)argument;
-    last = xTaskGetTickCount();
-    for (;;)
-    {
-        vTaskDelayUntil(&last, period);
-        /* Phase 8: measurement read + snapshot publication. */
-    }
-}
 
 void Task_State(void *argument)
 {

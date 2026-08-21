@@ -107,6 +107,45 @@ typedef struct
     bool w1c_finalization_ambiguous_latched;
 } BMS_ProtectDiagnostics_t;
 
+/*
+ * Scheduler-coherent mirror of the newest inactive/current-epoch CC sample
+ * which was accepted by xCcSampleQueue. SampleTask reads this mailbox; it
+ * must never receive/peek the SOC-owned queue or perform a second CC register
+ * read.
+ * sequence is a mailbox generation tag (natural unsigned wrap is
+ * intentional). xready_generation binds the sample to the AFE epoch in
+ * which it was read; an XREADY transition invalidates the mailbox even when
+ * the SOC-owned queue still accepts a CC sample under its existing contract.
+ */
+typedef struct
+{
+    int16_t raw;
+    TickType_t tick;
+    uint32_t sequence;
+    uint32_t xready_generation;
+    bool valid;
+} BMS_ProtectLatestCc_t;
+
+/*
+ * Scheduler-coherent XREADY epoch. The generation advances only on the
+ * first inactive-to-active observation and wraps naturally. Clearing active
+ * after recovery never rewinds the generation. Equality rejects a binding
+ * across the observed transition, including the immediate UINT32_MAX-to-zero
+ * wrap. Avoiding alias after a complete 2^32 XREADY-event cycle depends on
+ * the system watchdog/rebinding assumption and is not claimed here.
+ */
+typedef struct
+{
+    uint32_t xready_generation;
+    bool active;
+} BMS_ProtectXreadyState_t;
+
+/* Modular generation advance shared with the production-C wrap regression. */
+#define BMS_PROTECT_CC_SEQUENCE_NEXT(sequence_) \
+    ((uint32_t)((uint32_t)(sequence_) + 1UL))
+#define BMS_PROTECT_XREADY_GENERATION_NEXT(generation_) \
+    ((uint32_t)((uint32_t)(generation_) + 1UL))
+
 /* Phase 9 supplies the authoritative XREADY recovery implementation. The
  * hook may return true only after device re-initialization, required settling,
  * calibration reload, authoritative protection/configuration re-apply with
@@ -199,6 +238,21 @@ BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device);
  * sample is now in the queue.
  */
 bool BMS_Protect_PushCcSample(int16_t cc_raw);
+
+/* Copy the latest current-epoch CC sample under scheduler exclusion. Returns
+ * false for NULL, while XREADY is active, before an inactive-epoch mailbox
+ * publication, or if the mailbox epoch differs from the current AFE epoch.
+ * On a non-NULL unavailable result, snapshot->valid is false. */
+bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot);
+
+/* Copy the current XREADY generation/active pair under scheduler exclusion.
+ * Returns false only for a NULL output. Task context only, never ISR context. */
+bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot);
+
+/* Pure binding decision used by SampleTask and generation-wrap tests. */
+bool BMS_Protect_XreadyBindingIsCurrent(
+    const BMS_ProtectXreadyState_t *state,
+    uint32_t bound_generation);
 
 /*
  * Complete the XREADY recovery contract (H-03) through the authoritative

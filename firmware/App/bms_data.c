@@ -1,6 +1,12 @@
 #include "bms_data.h"
 
+#include <limits.h>
+
+#include "app_rtos.h"
+
 BMS_DataSnapshot_t g_bms_data;
+
+#define BMS_DATA_TS1_RAW14_MAX              ((uint16_t)0x3FFFU)
 
 static void BMS_Data_InitMeasurement(BMS_MeasurementMetadata_t *metadata)
 {
@@ -8,6 +14,7 @@ static void BMS_Data_InitMeasurement(BMS_MeasurementMetadata_t *metadata)
     metadata->age_ms = BMS_DATA_AGE_UNKNOWN_MS;
     metadata->valid = false;
     metadata->in_range = false;
+    metadata->stale_latched = false;
 }
 
 void BMS_Data_Init(void)
@@ -27,9 +34,13 @@ void BMS_Data_Init(void)
 
     g_bms_data.cell_metadata.valid_bitmap = (uint16_t)0U;
     g_bms_data.cell_metadata.in_range_bitmap = (uint16_t)0U;
+    g_bms_data.cell_metadata.stale_bitmap = (uint16_t)0U;
 
     g_bms_data.pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
+    g_bms_data.bq_pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
     g_bms_data.current_ma = (BMS_CurrentMa_t)0;
+    g_bms_data.ts1_raw14 = (uint16_t)0U;
+    g_bms_data.ts1_resistance_ohm = (uint32_t)0U;
     g_bms_data.temperature_decic = (BMS_TemperatureDeciC_t)0;
     g_bms_data.remaining_capacity_mah = (BMS_CapacityMah_t)0U;
     g_bms_data.soc_permille = BMS_SOC_UNKNOWN_PERMILLE;
@@ -38,10 +49,328 @@ void BMS_Data_Init(void)
     BMS_Fault_Init(&g_bms_data.faults);
 
     BMS_Data_InitMeasurement(&g_bms_data.pack_metadata);
+    BMS_Data_InitMeasurement(&g_bms_data.bq_pack_metadata);
     BMS_Data_InitMeasurement(&g_bms_data.current_metadata);
+    BMS_Data_InitMeasurement(&g_bms_data.ts1_metadata);
     BMS_Data_InitMeasurement(&g_bms_data.temperature_metadata);
     BMS_Data_InitMeasurement(&g_bms_data.soc_metadata);
 
     g_bms_data.snapshot_timestamp_ms = (BMS_TimestampMs_t)0U;
     g_bms_data.sample_sequence = (uint32_t)0U;
+}
+
+static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
+{
+    uint16_t undefined_valid_bits;
+    uint16_t undefined_range_bits;
+
+    if (frame == NULL)
+    {
+        return false;
+    }
+
+    undefined_valid_bits =
+        (uint16_t)(frame->cell_valid_bitmap &
+                   (uint16_t)(~BMS_CELL_DEFINED_MASK));
+    undefined_range_bits =
+        (uint16_t)(frame->cell_in_range_bitmap &
+                   (uint16_t)(~BMS_CELL_DEFINED_MASK));
+    if ((undefined_valid_bits != (uint16_t)0U) ||
+        (undefined_range_bits != (uint16_t)0U) ||
+        (frame->cell_valid_bitmap != BMS_CELL_DEFINED_MASK) ||
+        ((frame->cell_in_range_bitmap &
+          (uint16_t)(~frame->cell_valid_bitmap)) != (uint16_t)0U) ||
+        !frame->bq_pack_valid)
+    {
+        return false;
+    }
+    if (frame->update_current && frame->current_in_range &&
+        !frame->current_valid)
+    {
+        return false;
+    }
+    if (frame->update_temperature)
+    {
+        if ((frame->ts1_valid &&
+             (frame->ts1_raw14 > BMS_DATA_TS1_RAW14_MAX)) ||
+            (frame->temperature_valid && !frame->ts1_valid) ||
+            (frame->temperature_in_range &&
+             !frame->temperature_valid))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static BMS_DataAgeMs_t BMS_Data_AgeAtPublication(bool valid)
+{
+    return valid ? (BMS_DataAgeMs_t)0U : BMS_DATA_AGE_UNKNOWN_MS;
+}
+
+static void BMS_Data_PublishMetadata(BMS_MeasurementMetadata_t *metadata,
+                                     BMS_TimestampMs_t timestamp_ms,
+                                     bool valid,
+                                     bool in_range)
+{
+    metadata->timestamp_ms = timestamp_ms;
+    metadata->age_ms = BMS_Data_AgeAtPublication(valid);
+    metadata->valid = valid;
+    metadata->in_range = valid && in_range;
+    metadata->stale_latched = false;
+}
+
+bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
+{
+    BMS_PackVoltageMv_t pack_sum_mv;
+    uint32_t cell_index;
+    bool pack_valid;
+    bool pack_in_range;
+
+    if (!BMS_Data_FrameIsValid(frame))
+    {
+        return false;
+    }
+
+    pack_sum_mv = (BMS_PackVoltageMv_t)0U;
+    for (cell_index = 0U;
+         cell_index < (uint32_t)BMS_CELL_COUNT;
+         ++cell_index)
+    {
+        if ((UINT32_MAX - pack_sum_mv) <
+            (uint32_t)frame->cell_voltage_mv[cell_index])
+        {
+            return false;
+        }
+        pack_sum_mv +=
+            (BMS_PackVoltageMv_t)frame->cell_voltage_mv[cell_index];
+    }
+
+    if ((xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+
+    for (cell_index = 0U;
+         cell_index < (uint32_t)BMS_CELL_COUNT;
+         ++cell_index)
+    {
+        uint16_t cell_mask;
+        bool cell_valid;
+
+        cell_mask = (uint16_t)((uint16_t)1U << cell_index);
+        cell_valid =
+            (frame->cell_valid_bitmap & cell_mask) != (uint16_t)0U;
+        g_bms_data.cell_voltage_mv[cell_index] =
+            frame->cell_voltage_mv[cell_index];
+        g_bms_data.cell_metadata.timestamp_ms[cell_index] =
+            frame->timestamp_ms;
+        g_bms_data.cell_metadata.age_ms[cell_index] =
+            BMS_Data_AgeAtPublication(cell_valid);
+    }
+    g_bms_data.cell_metadata.valid_bitmap = frame->cell_valid_bitmap;
+    g_bms_data.cell_metadata.in_range_bitmap =
+        frame->cell_in_range_bitmap;
+    g_bms_data.cell_metadata.stale_bitmap = (uint16_t)0U;
+
+    pack_valid =
+        frame->cell_valid_bitmap == BMS_CELL_DEFINED_MASK;
+    pack_in_range = pack_valid &&
+        (frame->cell_in_range_bitmap == BMS_CELL_DEFINED_MASK);
+    g_bms_data.pack_voltage_mv = pack_sum_mv;
+    BMS_Data_PublishMetadata(&g_bms_data.pack_metadata,
+                             frame->timestamp_ms,
+                             pack_valid,
+                             pack_in_range);
+
+    g_bms_data.bq_pack_voltage_mv = frame->bq_pack_voltage_mv;
+    BMS_Data_PublishMetadata(&g_bms_data.bq_pack_metadata,
+                             frame->timestamp_ms,
+                             frame->bq_pack_valid,
+                             frame->bq_pack_in_range);
+
+    if (frame->update_current)
+    {
+        g_bms_data.current_ma = frame->current_ma;
+        BMS_Data_PublishMetadata(&g_bms_data.current_metadata,
+                                 frame->current_timestamp_ms,
+                                 frame->current_valid,
+                                 frame->current_in_range);
+    }
+
+    if (frame->update_temperature)
+    {
+        g_bms_data.ts1_raw14 = frame->ts1_raw14;
+        g_bms_data.ts1_resistance_ohm = frame->ts1_resistance_ohm;
+        BMS_Data_PublishMetadata(&g_bms_data.ts1_metadata,
+                                 frame->temperature_timestamp_ms,
+                                 frame->ts1_valid,
+                                 frame->ts1_valid);
+        g_bms_data.temperature_decic = frame->temperature_decic;
+        BMS_Data_PublishMetadata(&g_bms_data.temperature_metadata,
+                                 frame->temperature_timestamp_ms,
+                                 frame->temperature_valid,
+                                 frame->temperature_in_range);
+    }
+
+    g_bms_data.snapshot_timestamp_ms = frame->timestamp_ms;
+    ++g_bms_data.sample_sequence;
+
+    (void)xSemaphoreGive(xDataMutex);
+    return true;
+}
+
+static BMS_DataAgeMs_t BMS_Data_DeriveAge(bool valid,
+                                         BMS_TimestampMs_t timestamp_ms,
+                                         BMS_TimestampMs_t now_ms)
+{
+    if (!valid)
+    {
+        return BMS_DATA_AGE_UNKNOWN_MS;
+    }
+    return (BMS_DataAgeMs_t)(now_ms - timestamp_ms);
+}
+
+static void BMS_Data_DeriveMetadataAge(
+    BMS_MeasurementMetadata_t *metadata,
+    BMS_TimestampMs_t now_ms)
+{
+    metadata->age_ms = BMS_Data_DeriveAge(metadata->valid,
+                                          metadata->timestamp_ms,
+                                          now_ms);
+}
+
+static void BMS_Data_LatchMetadataStale(
+    BMS_MeasurementMetadata_t *metadata,
+    BMS_TimestampMs_t now_ms,
+    BMS_DataAgeMs_t max_age_ms)
+{
+    if (metadata->valid && !metadata->stale_latched &&
+        (BMS_Data_DeriveAge(true, metadata->timestamp_ms, now_ms) >
+         max_age_ms))
+    {
+        metadata->stale_latched = true;
+    }
+}
+
+/*
+ * Must be called only while xDataMutex is held. Periodic readers make the
+ * first threshold crossing sticky, preventing a later uint32_t wrap from
+ * resurrecting old data. A reader stalled for an entire timestamp wrap
+ * cannot be distinguished using a 32-bit clock and remains a watchdog/target
+ * validation concern.
+ */
+static void BMS_Data_LatchStale(BMS_TimestampMs_t now_ms)
+{
+    uint32_t cell_index;
+
+    for (cell_index = 0U;
+         cell_index < (uint32_t)BMS_CELL_COUNT;
+         ++cell_index)
+    {
+        uint16_t cell_mask;
+        BMS_DataAgeMs_t cell_age_ms;
+
+        cell_mask = (uint16_t)((uint16_t)1U << cell_index);
+        if (((g_bms_data.cell_metadata.valid_bitmap & cell_mask) !=
+             (uint16_t)0U) &&
+            ((g_bms_data.cell_metadata.stale_bitmap & cell_mask) ==
+             (uint16_t)0U))
+        {
+            cell_age_ms = BMS_Data_DeriveAge(
+                true,
+                g_bms_data.cell_metadata.timestamp_ms[cell_index],
+                now_ms);
+            if (cell_age_ms > BMS_DATA_VOLTAGE_FRESH_MAX_MS)
+            {
+                g_bms_data.cell_metadata.stale_bitmap |= cell_mask;
+            }
+        }
+    }
+
+    BMS_Data_LatchMetadataStale(&g_bms_data.pack_metadata, now_ms,
+                                BMS_DATA_VOLTAGE_FRESH_MAX_MS);
+    BMS_Data_LatchMetadataStale(&g_bms_data.bq_pack_metadata, now_ms,
+                                BMS_DATA_VOLTAGE_FRESH_MAX_MS);
+    BMS_Data_LatchMetadataStale(&g_bms_data.current_metadata, now_ms,
+                                BMS_DATA_CURRENT_FRESH_MAX_MS);
+    BMS_Data_LatchMetadataStale(&g_bms_data.ts1_metadata, now_ms,
+                                BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
+    BMS_Data_LatchMetadataStale(&g_bms_data.temperature_metadata, now_ms,
+                                BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
+}
+
+bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
+                          BMS_TimestampMs_t now_ms)
+{
+    uint32_t cell_index;
+
+    if ((snapshot == NULL) || (xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+    BMS_Data_LatchStale(now_ms);
+    *snapshot = g_bms_data;
+    (void)xSemaphoreGive(xDataMutex);
+
+    for (cell_index = 0U;
+         cell_index < (uint32_t)BMS_CELL_COUNT;
+         ++cell_index)
+    {
+        uint16_t cell_mask;
+        bool cell_valid;
+
+        cell_mask = (uint16_t)((uint16_t)1U << cell_index);
+        cell_valid =
+            (snapshot->cell_metadata.valid_bitmap & cell_mask) !=
+                (uint16_t)0U;
+        snapshot->cell_metadata.age_ms[cell_index] =
+            BMS_Data_DeriveAge(
+                cell_valid,
+                snapshot->cell_metadata.timestamp_ms[cell_index],
+                now_ms);
+    }
+    BMS_Data_DeriveMetadataAge(&snapshot->pack_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->bq_pack_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->current_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->ts1_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->temperature_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->soc_metadata, now_ms);
+    return true;
+}
+
+bool BMS_Data_GetFreshnessSnapshot(
+    BMS_DataFreshnessSnapshot_t *snapshot,
+    BMS_TimestampMs_t now_ms)
+{
+    if ((snapshot == NULL) || (xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+
+    BMS_Data_LatchStale(now_ms);
+    snapshot->pack_metadata = g_bms_data.pack_metadata;
+    snapshot->current_metadata = g_bms_data.current_metadata;
+    snapshot->temperature_metadata = g_bms_data.temperature_metadata;
+    snapshot->sample_sequence = g_bms_data.sample_sequence;
+    (void)xSemaphoreGive(xDataMutex);
+
+    BMS_Data_DeriveMetadataAge(&snapshot->pack_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->current_metadata, now_ms);
+    BMS_Data_DeriveMetadataAge(&snapshot->temperature_metadata, now_ms);
+    return true;
+}
+
+bool BMS_Data_IsFresh(bool valid,
+                      bool stale_latched,
+                      uint32_t age_ms,
+                      uint32_t max_age_ms)
+{
+    return valid && !stale_latched &&
+           (age_ms != BMS_DATA_AGE_UNKNOWN_MS) &&
+           (max_age_ms != BMS_DATA_AGE_UNKNOWN_MS) &&
+           (age_ms <= max_age_ms);
 }

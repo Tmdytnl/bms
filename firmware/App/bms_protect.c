@@ -12,6 +12,8 @@
 /* ------------------------------------------------------------------ */
 static BMS_FaultSummary_t s_fault;
 static BMS_ProtectDiagnostics_t s_diagnostics;
+static BMS_ProtectLatestCc_t s_latest_cc;
+static BMS_ProtectXreadyState_t s_xready_state;
 static bool s_xready_recovery_pending;
 static bool s_cc_clear_pending;
 static uint8_t s_w1c_finalization_ambiguous_mask;
@@ -31,6 +33,13 @@ void BMS_Protect_Init(void)
     s_diagnostics.w1c_finalization_ambiguous_mask = 0U;
     s_diagnostics.cc_queue_overflow_latched = false;
     s_diagnostics.w1c_finalization_ambiguous_latched = false;
+    s_latest_cc.raw = (int16_t)0;
+    s_latest_cc.tick = (TickType_t)0U;
+    s_latest_cc.sequence = 0UL;
+    s_latest_cc.xready_generation = 0UL;
+    s_latest_cc.valid = false;
+    s_xready_state.xready_generation = 0UL;
+    s_xready_state.active = false;
     s_xready_recovery_pending = false;
     s_cc_clear_pending = false;
     s_w1c_finalization_ambiguous_mask = 0U;
@@ -162,6 +171,7 @@ static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
          * Observing XREADY low confirms that no W1C replay is needed. */
         s_fault.active &=
             ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
+        s_xready_state.active = false;
         s_xready_recovery_pending = false;
     }
     (void)xTaskResumeAll();
@@ -232,6 +242,22 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
         BMS_Protect_RecordCcOverflow(oldest_was_dropped,
                                      newest_was_missed);
     }
+    if ((inserted == pdPASS) && !s_xready_state.active)
+    {
+        s_latest_cc.raw = sample.raw;
+        s_latest_cc.tick = sample.tick;
+        s_latest_cc.sequence =
+            BMS_PROTECT_CC_SEQUENCE_NEXT(s_latest_cc.sequence);
+        s_latest_cc.xready_generation =
+            s_xready_state.xready_generation;
+        s_latest_cc.valid = true;
+    }
+    else if ((inserted == pdPASS) && s_xready_state.active)
+    {
+        /* Preserve the queue/SOC contract, but never expose a CC value read
+         * while the AFE reset epoch is active. */
+        s_latest_cc.valid = false;
+    }
     (void)xTaskResumeAll();
 
     if (overflowed)
@@ -243,6 +269,49 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
     }
 
     return (inserted == pdPASS);
+}
+
+bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
+{
+    bool available;
+
+    if (snapshot == NULL)
+    {
+        return false;
+    }
+
+    vTaskSuspendAll();
+    *snapshot = s_latest_cc;
+    available = snapshot->valid && !s_xready_state.active &&
+        (snapshot->xready_generation ==
+         s_xready_state.xready_generation);
+    if (!available)
+    {
+        snapshot->valid = false;
+    }
+    (void)xTaskResumeAll();
+    return available;
+}
+
+bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot)
+{
+    if (snapshot == NULL)
+    {
+        return false;
+    }
+
+    vTaskSuspendAll();
+    *snapshot = s_xready_state;
+    (void)xTaskResumeAll();
+    return true;
+}
+
+bool BMS_Protect_XreadyBindingIsCurrent(
+    const BMS_ProtectXreadyState_t *state,
+    uint32_t bound_generation)
+{
+    return (state != NULL) && !state->active &&
+           (state->xready_generation == bound_generation);
 }
 
 /* ------------------------------------------------------------------ */
@@ -293,6 +362,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     }
     vTaskSuspendAll();
     s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
+    s_xready_state.active = false;
     s_xready_recovery_pending = false;
     (void)xTaskResumeAll();
     return true;
@@ -470,6 +540,20 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
          * words. ProtectTask remains the only Phase 7 writer. */
         vTaskSuspendAll();
         BMS_Protect_Decide(stat, &s_fault, &g_bms_fet_request, &clear_mask);
+        if ((stat & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
+        {
+            if (!s_xready_state.active)
+            {
+                s_xready_state.xready_generation =
+                    BMS_PROTECT_XREADY_GENERATION_NEXT(
+                        s_xready_state.xready_generation);
+                /* The prior AFE epoch's current must not survive recovery as
+                 * a consumable latest-CC mailbox value. */
+                s_latest_cc.valid = false;
+            }
+            s_xready_state.active = true;
+            s_xready_recovery_pending = true;
+        }
         (void)xTaskResumeAll();
         if (BMS_Protect_HasFaultBits(stat) && (xSysEvents != NULL))
         {
@@ -479,11 +563,6 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         {
             BMS_Protect_HandleCcReady(device, &clear_mask);
         }
-        if ((stat & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
-        {
-            s_xready_recovery_pending = true;
-        }
-
         /* Never replay a W1C whose previous finalization is unresolved. Other
          * newly captured bits in the same snapshot may still be cleared. */
         clear_mask = (uint8_t)(clear_mask &
