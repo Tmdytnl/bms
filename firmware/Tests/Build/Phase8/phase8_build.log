@@ -1,6 +1,6 @@
 ﻿BMS V1 Phase 8 reproducible hard-gate build
 Repository-relative input paths; absolute tool paths only
-RUN_STARTED_UTC=2026-08-20T17:33:30.2128371Z
+RUN_STARTED_UTC=2026-08-21T13:12:02.3272073Z
 ARMCC5_TOOL=D:\Keil_v5\ARM\Version5.06\bin\armcc.exe
 UVISION_TOOL=D:\Keil_v5\UV4\UV4.exe
 UVOPTX_ORIGINAL_SHA256 ebbd08c91d5942f90ff2491f12c2caf5ee3ac3d8b0f59db00f0908ba83152788 firmware/Project/Keil/BMS_V1.uvoptx
@@ -400,7 +400,7 @@ SIZE_REPORT_BEGIN phase8_afe_tests
 SIZE_REPORT_END phase8_afe_tests
 TEST_IMAGE_BUILD_PASS phase8_afe_tests
 PRODUCTION_CALLGRAPH_SOURCE firmware/Project/Keil/Objects/BMS_V1.htm
-PRODUCTION_CALLGRAPH_SHA256 1519dbd06d624b43e7d2ba429ad3069212193e0df11365da41f840aaf8c9e38d firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.callgraph.txt
+PRODUCTION_CALLGRAPH_SHA256 45dfa6fef044b884c9ff642403b247900d4f4b20203c75b0524c1738cd86de02 firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.callgraph.txt
 PRODUCTION_TASK_SAMPLE_MAX_DEPTH_BYTES 464
 PRODUCTION_TASK_SAMPLE_UNKNOWN 0
 UVOPTX_PATCH_TARGET_SIFILE ..\..\Tests\phase8_simulator.ini
