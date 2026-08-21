@@ -5,14 +5,14 @@
 ## Current Snapshot
 
 - Project: BMS V1 Reference Firmware — STM32F103C8T6 + BQ7694003, 13S/48 V
-- Phase: Phase 1–3 validated; Phase 4–7 Codex-reviewed/repaired; Phase 8 impl/evidence PASS but Hard Gate BLOCKED (2 unconditional policy blockers); Phase 9 not started
-- State: Phase 8 final hard gate ran twice (Codex + rerun), identical 780 PASS / 0 FAIL / 2 BLOCKER; pushed to `origin/codex/phase8-phase9`; HW deferred
-- Last updated: 2026-08-21T13:30:00Z
+- Phase: Phase 1–3 validated; Phase 4–7 Codex-reviewed/repaired; Phase 8 implementation PASS with WorkBuddy independent review ACCEPT (Hard Gate still BLOCKED by 2 unconditional policy blockers); Phase 9 not started
+- State: Phase 8 final hard gate ran twice (Codex + rerun), identical 780 PASS / 0 FAIL / 2 BLOCKER; pushed to `origin/codex/phase8-phase9`; WorkBuddy independent review ACCEPT FOR SAFETY REVIEW; Blocker Input Sheet completed; the two policy inputs remain MISSING; HW deferred
+- Last updated: 2026-08-21T15:05:00Z
 
 ## Current Goal and Scope
 
-- Goal: Preserve pushed Phase 8 candidate (`codex/phase8-phase9` @ `c9f1813`), keep the two unconditional policy blockers explicit, await user-approved NTC table and AFE/PROTECT3 policy revisions before any Hard Gate PASS claim or Phase 9 work.
-- In scope: Phase 8 measurement/SampleTask/AFE-startup implementation, test suites and reproducible gate; evidence, report, push state.
+- Goal: Preserve pushed Phase 8 candidate (`codex/phase8-phase9` @ `c9f1813`), keep the two unconditional policy blockers explicit; Blocker Input Sheet (art-036) defines the required inputs; await user-approved NTC table and AFE/PROTECT3 policy revisions before any Hard Gate PASS claim or Phase 9 work.
+- In scope: Phase 8 measurement/SampleTask/AFE-startup implementation, test suites and reproducible gate; evidence, report, push state; blocker input sheet and independent review documentation.
 - Out of scope: Phase 9+ implementation, debug UART, target-board execution, hardware acceptance, docs modification.
 
 ## Confirmed Facts and Decisions
@@ -41,6 +41,9 @@
 | fact-026 | Phase 8 gate ran twice identically: production 0/0 (Code=24324 RO=284 RW=268 ZI=10588), six images, Simulator zero failures, verifier 780 PASS / 0 FAIL / 2 BLOCKER; TEST/EVIDENCE PASS, GATE BLOCKED. | Codex 2026-08-20T17:33:30Z + rerun 2026-08-21T13:12:02Z. | git:c9f1813096dcea23d7e9495a00c07e6414595c44 | 2026-08-21T13:30:00Z |
 | fact-027 | Two unconditional blockers: no user-approved immutable NTC table revision and no user-approved immutable AFE startup/PROTECT3 policy revision; gate revision phase8-hard-gate-redteam-r3-20260821 cannot be silently satisfied. | verify_phase8.py + log. | git:c9f1813096dcea23d7e9495a00c07e6414595c44 | 2026-08-21T13:30:00Z |
 | fact-028 | Phase 8 candidate pushed as `origin/codex/phase8-phase9` @ `c9f1813`; history preserved. | branch + ls-remote. | git:c9f1813096dcea23d7e9495a00c07e6414595c44 | 2026-08-21T13:30:00Z |
+| fact-029 | Phase 8 software implementation PASS per WorkBuddy independent review: ACCEPT FOR SAFETY REVIEW over `origin/codex/review-phase7..codex/phase8-phase9` (4cb25b6..08bf194); no Critical/High/Medium findings; one Low (L-01: Phase 8 report push/HEAD history state and Task_Sample priority text stale). | Review report + WorkBuddy memory. | sha256:db17cf13732bd88ed5028214a3184d9b0eaa97851f22ec5f5c3b6a2954f90fea | 2026-08-21T15:05:00Z |
+| fact-030 | Blocker Input Sheet completed: reverse requirement analysis of both blockers; blocker definitions sound but need refinement (NTC table must bind part/TS1 circuit/coverage/approval revision; AFE policy must cover full startup registers incl. SCD in PROTECT1, OCD in PROTECT2, RSNS, calibration handoff, XREADY/FET policy); no third blocker; minimum unblock input sets and future gate binding rules defined. | Sheet + WorkBuddy memory. | sha256:9b315f333090a49069cb1144d1757621a618b8f2f019490534a169e94ca5b0db | 2026-08-21T15:05:00Z |
+| fact-031 | Phase 8 Hard Gate remains BLOCKED(2): the two unconditional inputs (approved immutable NTC table revision; approved immutable AFE startup/PROTECT3 policy revision) remain MISSING; independent ACCEPT does not lift the verifier's unconditional `block()`. | Review verdict + verifier. | git:08bf1944d12ea57f439a8710718e7057ac7fe5e4 | 2026-08-21T15:05:00Z |
 
 ## Active Artifacts
 
@@ -70,6 +73,8 @@
 | art-033 | firmware/Tests/Build/Phase8/phase8_build.log | sha256:bb515952c29a255ac3d7ae816a1e9a5b8db13c2d91f08fb260968745d297aea4 | USABLE | RECHECK | Phase 8 test-image build + manifest. | 6 PASS, 144 inputs. | Exact candidate; rebuild on change. | 2026-08-21T13:30:00Z |
 | art-034 | firmware/Tests/Build/Phase8/phase8_simulator.log | sha256:58b7ce863a9fe685f55989d73b4bcbdefabb8293b2b2d3ec57e48452d517e16d | USABLE | RECHECK | Phase 8 Simulator evidence. | Six images completed=1/failures=0. | SW/Sim only. | 2026-08-21T13:30:00Z |
 | art-035 | firmware/Project/Keil/Build/BMS_V1_Phase8_build.log | sha256:a627324b9d47ace36e566cd2f37f31a01dba503af0f8b22c688a53e9e0a2a1f9 | USABLE | RECHECK | Phase 8 production ARMCC5 Clean/Rebuild. | 0/0; Code=24324 RO=284 RW=268 ZI=10588. | Exact candidate; rebuild on change. | 2026-08-21T13:30:00Z |
+| art-036 | deliverables/phase8/BMS_V1_Phase8_Blocker_Input_Sheet.md | sha256:9b315f333090a49069cb1144d1757621a618b8f2f019490534a169e94ca5b0db | VALIDATED | ALLOW | Blocker 1/2 required-input analysis, minimum unblock sets, future gate binding rules. | User-directed incorporation; content cross-checked vs production C + verifier. | Reference for future gate binding; not an approved policy artifact. | 2026-08-21T15:05:00Z |
+| art-037 | deliverables/review/BMS_V1_Phase8_Independent_Review.md | sha256:db17cf13732bd88ed5028214a3184d9b0eaa97851f22ec5f5c3b6a2954f90fea | VALIDATED | ALLOW | WorkBuddy independent review record (ACCEPT FOR SAFETY REVIEW). | WorkBuddy review + memory. | ACCEPT is not Hard Gate PASS; gate stays BLOCKED(2). | 2026-08-21T15:05:00Z |
 
 ## Invalidated Artifact Tombstones
 
@@ -84,15 +89,27 @@
 
 ## Open Work and Blockers
 
-- Phase 4–8 remains `USABLE / RECHECK`; independent acceptance required before `VALIDATED`.
+- Phase 4–7 remains `USABLE / RECHECK`; Phase 8 implementation independently reviewed ACCEPT FOR SAFETY REVIEW, but Hard Gate remains `BLOCKED(2)`; final acceptance awaits Codex Sol High safety review and gate PASS.
 - Debug UART is V1-required but missing; accept UART1 PA9/PA10 @115200 before V1 completion.
 - XREADY recovery state machine in `bms_afe_startup.c`, not connected in production until AFE startup/PROTECT3 policy approved; production fail-safe.
-- Phase 8 Hard Gate BLOCKED by two unconditional inputs: user-approved immutable NTC table revision + AFE startup/PROTECT3 policy revision; Phase 9 waits for both approvals.
+- Phase 8 Hard Gate BLOCKED by two unconditional inputs: user-approved immutable NTC table revision + AFE startup/PROTECT3 policy revision; Blocker Input Sheet (art-036) defines the required inputs; Phase 9 waits for both approvals.
+- Phase 8 report L-01 (independent review): push/HEAD history state and Task_Sample priority text stale; doc-hygiene fix pending, no gate rerun required.
 - Under a prolonged rejected CC W1C, old/new high CC_READY states cannot be distinguished; zero-loss not claimed.
 - Hardware validation and real preemptive/ISR/I2C-contention/stack stress remain required; Simulator is not board evidence.
 - Vendor pre-main HSE/PLL wait remains unbounded if startup never reaches main.
 
 ## Recent Task History
+
+### 2026-08-21T15:05:00Z | phase8-blocker-input-20260821 | Incorporate Phase 8 blocker input sheet and independent review into project docs
+
+- Request: Place `BMS_V1_Phase8_Blocker_Input_Sheet.md` under deliverables/phase8/; record in PROJECT_LOG: Phase 8 software implementation PASS, WorkBuddy independent review ACCEPT, Blocker Input Sheet completed, Hard Gate remains BLOCKED(2); no firmware/tests/verifier/Phase9 changes; no gate rerun; commit.
+- Outcome: Blocker input sheet confirmed at deliverables/phase8/ (requirements analysis only; no code change); WorkBuddy ACCEPT FOR SAFETY REVIEW recorded; Hard Gate stays BLOCKED(2); log updated and committed.
+- Artifacts: art-036@sha256:9b315f333090a49069cb1144d1757621a618b8f2f019490534a169e94ca5b0db; art-037@sha256:db17cf13732bd88ed5028214a3184d9b0eaa97851f22ec5f5c3b6a2954f90fea
+- Validation: Sheet/review content cross-checked against production C references and verifier blocker lines; SHA-256 computed; no firmware/tests/verifier modification; gate not rerun; legacy project-memory archive helper conflict, manual update applied
+- Decisions: Blocker 1 needs part-bound immutable NTC table with TS1 circuit/coverage/approval binding; Blocker 2 needs full AFE startup register policy (incl. SCD in PROTECT1, OCD in PROTECT2, RSNS, calibration handoff, XREADY/FET policy); no third blocker; both inputs remain MISSING.
+- Invalidated: none.
+- Remaining: Approved NTC table and AFE startup/PROTECT3 policy artifacts; Phase 8 report L-01 doc hygiene; Codex Sol High safety review; hardware validation.
+- Next: Await the two approved policy inputs before any Hard Gate PASS claim or Phase 9 start.
 
 ### 2026-08-21T13:30:00Z | phase8-handoff-20260821 | Complete Phase 8 handoff after Codex interruption
 
