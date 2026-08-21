@@ -1,0 +1,1342 @@
+Component: ARM Compiler 5.06 update 7 (build 960) Tool: armlink [4d3601]
+
+==============================================================================
+
+Section Cross References
+
+    startup_stm32f10x_md.o(STACK) refers (Special) to heapauxi.o(.text) for __use_two_region_memory
+    startup_stm32f10x_md.o(HEAP) refers (Special) to heapauxi.o(.text) for __use_two_region_memory
+    startup_stm32f10x_md.o(RESET) refers (Special) to heapauxi.o(.text) for __use_two_region_memory
+    startup_stm32f10x_md.o(RESET) refers to startup_stm32f10x_md.o(STACK) for __initial_sp
+    startup_stm32f10x_md.o(RESET) refers to startup_stm32f10x_md.o(.text) for Reset_Handler
+    startup_stm32f10x_md.o(.text) refers (Special) to heapauxi.o(.text) for __use_two_region_memory
+    startup_stm32f10x_md.o(.text) refers to phase8_sample_tests_test_main.o(i.SystemInit) for SystemInit
+    startup_stm32f10x_md.o(.text) refers to __main.o(!!!main) for __main
+    startup_stm32f10x_md.o(.text) refers to startup_stm32f10x_md.o(HEAP) for Heap_Mem
+    startup_stm32f10x_md.o(.text) refers to startup_stm32f10x_md.o(STACK) for Stack_Mem
+    phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveMetadataAge) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge) for BMS_Data_DeriveAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) for xQueueSemaphoreTake
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale) for BMS_Data_LatchStale
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_test_stub.o(i.xQueueGenericSend) for xQueueGenericSend
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveMetadataAge) for BMS_Data_DeriveMetadataAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_test_stub.o(.data) for xDataMutex
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) refers to phase8_sample_tests_bms_data.o(.bss) for g_bms_data
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) for xQueueSemaphoreTake
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale) for BMS_Data_LatchStale
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_test_stub.o(i.xQueueGenericSend) for xQueueGenericSend
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge) for BMS_Data_DeriveAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveMetadataAge) for BMS_Data_DeriveMetadataAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_test_stub.o(.data) for xDataMutex
+    phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) refers to phase8_sample_tests_bms_data.o(.bss) for g_bms_data
+    phase8_sample_tests_bms_data.o(i.BMS_Data_Init) refers to phase8_sample_tests_bms_fault.o(i.BMS_Fault_Init) for BMS_Fault_Init
+    phase8_sample_tests_bms_data.o(i.BMS_Data_Init) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_InitMeasurement) for BMS_Data_InitMeasurement
+    phase8_sample_tests_bms_data.o(i.BMS_Data_Init) refers to phase8_sample_tests_bms_data.o(.bss) for g_bms_data
+    phase8_sample_tests_bms_data.o(i.BMS_Data_LatchMetadataStale) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge) for BMS_Data_DeriveAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge) for BMS_Data_DeriveAge
+    phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_LatchMetadataStale) for BMS_Data_LatchMetadataStale
+    phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale) refers to phase8_sample_tests_bms_data.o(.bss) for g_bms_data
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_FrameIsValid) for BMS_Data_FrameIsValid
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) for xQueueSemaphoreTake
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_AgeAtPublication) for BMS_Data_AgeAtPublication
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMetadata) for BMS_Data_PublishMetadata
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_test_stub.o(i.xQueueGenericSend) for xQueueGenericSend
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_test_stub.o(.data) for xDataMutex
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) refers to phase8_sample_tests_bms_data.o(.bss) for g_bms_data
+    phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMetadata) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_AgeAtPublication) for BMS_Data_AgeAtPublication
+    phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate) refers to phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ValidateTable) for BMS_Ntc_ValidateTable
+    phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate) refers to phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ResistanceInSegment) for BMS_Ntc_ResistanceInSegment
+    phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate) refers to llsdiv.o(.text) for __aeabi_ldivmod
+    phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ValidateTable) refers to phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_IsAscendingResistance) for BMS_Ntc_IsAscendingResistance
+    phase8_sample_tests_bms_fault.o(i.BMS_Fault_Contains) refers to phase8_sample_tests_bms_fault.o(i.BMS_Fault_Mask) for BMS_Fault_Mask
+    phase8_sample_tests_bms_fault.o(i.BMS_Fault_Mask) refers to phase8_sample_tests_bms_fault.o(i.BMS_Fault_IdIsValid) for BMS_Fault_IdIsValid
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) refers to phase8_sample_tests_test_stub.o(i.xTaskGetSchedulerState) for xTaskGetSchedulerState
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) for BMS_Data_GetFreshnessSnapshot
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_IsFresh) for BMS_Data_IsFresh
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) refers to phase8_sample_tests_bms_sample.o(.data) for s_stale_observed
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_IncrementGroupFailure) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_IncrementGroupFailure) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init) refers to phase8_sample_tests_bms_sample.o(.data) for s_device
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_IncrementGroupFailure) for BMS_Sample_IncrementGroupFailure
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_StatusIsTransportFailure) for BMS_Sample_StatusIsTransportFailure
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement) for BMS_Sample_SaturatingIncrement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject) refers to phase8_sample_tests_bms_sample.o(.bss) for s_diagnostics
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_InitFrame) for BMS_Sample_InitFrame
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale) for BMS_Sample_CheckStale
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) for BMS_Protect_GetXreadyState
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure) for BMS_Sample_RecordFailure
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_CalibrationIsValid) for BMS_Sample_CalibrationIsValid
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BMS_Protect_XreadyBindingIsCurrent) for BMS_Protect_XreadyBindingIsCurrent
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject) for BMS_Sample_RecordXreadyReject
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_TemperatureIsDue) for BMS_Sample_TemperatureIsDue
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) for xQueueSemaphoreTake
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13) for BQ76940_ReadCellVoltages13
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.xQueueGenericSend) for xQueueGenericSend
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv) for BQ76940_ReadPackVoltageMv
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) for BMS_Protect_GetLatestCc
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa) for BQ76940_ConvertCcRawToCurrentMa
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_TickToTimestampMs) for BMS_Sample_TickToTimestampMs
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable) for BMS_Sample_RecordCcUnavailable
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw) for BQ76940_ReadTs1Raw
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.BQ76940_ConvertTs1RawToResistanceOhm) for BQ76940_ConvertTs1RawToResistanceOhm
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate) for BMS_Ntc_Interpolate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(.data) for s_device
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(.data) for xI2CMutex
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement) for BMS_Data_PublishMeasurement
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess) for BMS_Sample_RecordSuccess
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) refers to phase8_sample_tests_test_stub.o(i.xEventGroupSetBits) for xEventGroupSetBits
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_CalibrationIsValid) for BMS_Sample_CalibrationIsValid
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) for BMS_Sample_BeginConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) refers to phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) for BMS_Protect_GetXreadyState
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate) for BMS_Sample_EndConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) refers to phase8_sample_tests_bms_sample.o(.data) for s_calibration
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) for BMS_Sample_BeginConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) refers to phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) for BMS_Protect_GetLatestCc
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate) for BMS_Sample_EndConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) refers to phase8_sample_tests_bms_sample.o(.data) for s_device
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) for BMS_Sample_BeginConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate) for BMS_Sample_EndConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) refers to phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ValidateTable) for BMS_Ntc_ValidateTable
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) refers to phase8_sample_tests_bms_sample.o(.data) for s_ntc_points
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_TemperatureIsDue) refers to phase8_sample_tests_bms_sample.o(.data) for s_temperature_due
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate) for BMS_Sample_BeginConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate) for BMS_Sample_EndConfigUpdate
+    phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision) refers to phase8_sample_tests_bms_sample.o(.data) for s_configuration_revision
+    phase8_sample_tests_bms_sample.o(i.Task_Sample) refers to phase8_sample_tests_test_stub.o(i.xTaskGetTickCount) for xTaskGetTickCount
+    phase8_sample_tests_bms_sample.o(i.Task_Sample) refers to phase8_sample_tests_test_stub.o(i.xTaskDelayUntil) for xTaskDelayUntil
+    phase8_sample_tests_bms_sample.o(i.Task_Sample) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) refers to phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) for vTaskSuspendAll
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) refers to phase8_sample_tests_test_stub.o(i.xTaskResumeAll) for xTaskResumeAll
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState) refers to phase8_sample_tests_test_stub.o(.data) for s_scheduler_zero_depth_epoch
+    phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa) refers to llsdiv.o(.text) for __aeabi_ldivmod
+    phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BQ76940_ConvertTs1RawToResistanceOhm) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BQ76940_ConvertTs1RawToResistanceOhm) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt) for TestPhase8SampleStub_RunProtectI2cAttempt
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13) refers to phase8_sample_tests_test_stub.o(.data) for s_i2c_group
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv) refers to phase8_sample_tests_test_stub.o(.data) for s_i2c_group
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw) refers to phase8_sample_tests_test_stub.o(.data) for s_i2c_group
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcTableA) refers to phase8_sample_tests_test_stub.o(.constdata) for s_aba_ntc_table_a
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ActivateXready) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) refers to rt_memclr_w.o(.text) for __aeabi_memclr4
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) refers to phase8_sample_tests_test_stub.o(.data) for s_scheduler_depth
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device) refers to phase8_sample_tests_test_stub.o(.data) for s_device
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) refers to phase8_sample_tests_test_stub.o(.data) for s_scheduler_depth
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) refers to rt_memclr_w.o(.text) for __aeabi_memclr4
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) refers to phase8_sample_tests_test_stub.o(.data) for s_i2c_mutex_object
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt) refers to phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) for xQueueSemaphoreTake
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt) refers to phase8_sample_tests_test_stub.o(i.xQueueGenericSend) for xQueueGenericSend
+    phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt) refers to phase8_sample_tests_test_stub.o(.data) for s_protect_take_context
+    phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) refers to phase8_sample_tests_test_stub.o(.data) for s_scheduler_depth
+    phase8_sample_tests_test_stub.o(i.vTaskSuspendAll) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xEventGroupSetBits) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.xEventGroupSetBits) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xEventGroupSetBits) refers to phase8_sample_tests_test_stub.o(.data) for s_event_group_object
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ActivateXready) for TestPhase8SampleStub_ActivateXready
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt) for TestPhase8SampleStub_RunProtectI2cAttempt
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(.data) for s_i2c_group
+    phase8_sample_tests_test_stub.o(i.xQueueGenericSend) refers to phase8_sample_tests_test_stub.o(.constdata) for s_aba_ntc_table_b
+    phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake) refers to phase8_sample_tests_test_stub.o(.data) for s_protect_take_context
+    phase8_sample_tests_test_stub.o(i.xTaskDelayUntil) refers to phase8_sample_tests_test_stub.o(.data) for s_tick
+    phase8_sample_tests_test_stub.o(i.xTaskGetSchedulerState) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xTaskGetTickCount) refers to phase8_sample_tests_test_stub.o(.data) for s_tick
+    phase8_sample_tests_test_stub.o(i.xTaskResumeAll) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent) for TestPhase8SampleStub_NextEvent
+    phase8_sample_tests_test_stub.o(i.xTaskResumeAll) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ActivateXready) for TestPhase8SampleStub_ActivateXready
+    phase8_sample_tests_test_stub.o(i.xTaskResumeAll) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_stub.o(i.xTaskResumeAll) refers to phase8_sample_tests_test_stub.o(.data) for s_scheduler_depth
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot) for BMS_Data_GetFreshnessSnapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcPointCount) for TestPhase8SampleStub_AbaNtcPointCount
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcTableA) for TestPhase8SampleStub_AbaNtcTableA
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_SameCore) for TestSample_SameCore
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcPointCount) for TestPhase8SampleStub_AbaNtcPointCount
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcTableA) for TestPhase8SampleStub_AbaNtcTableA
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision) for BMS_Sample_TestSeedConfigurationRevision
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_SameCore) for TestSample_SameCore
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(i.TestSample_SameCore) for TestSample_SameCore
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) for BMS_Sample_SetCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration) for TestSample_ValidCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_sample.o(i.TestSample_SameCore) for TestSample_SameCore
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_ExpectedCellSum) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles) for TestSample_RunSevenSuccessfulCycles
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles) for TestSample_RunSevenSuccessfulCycles
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) for TestPhase8SampleStub_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_Init) for BMS_Data_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init) for BMS_Sample_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration) for TestSample_ValidCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device) for TestPhase8SampleStub_Device
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) for BMS_Sample_SetDevice
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) for BMS_Sample_SetCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_Reset) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_SetCc) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) for TestPhase8SampleStub_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_Init) for BMS_Data_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init) for BMS_Sample_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration) for TestSample_ValidCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device) for TestPhase8SampleStub_Device
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) for BMS_Sample_SetDevice
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) for BMS_Sample_SetCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) refers to phase8_sample_tests_test_sample.o(.constdata) for s_test_ntc_table
+    phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot) for BMS_Data_GetSnapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_control
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device) for TestPhase8SampleStub_Device
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) for BMS_Sample_SetDevice
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration) for TestSample_ValidCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) for BMS_Sample_SetCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced) for TestPhase8SampleStub_LocksBalanced
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(i.TestSample_ExpectedCellSum) for TestSample_ExpectedCellSum
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles) for TestSample_RunSevenSuccessfulCycles
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(i.TestSample_SameCore) for TestSample_SameCore
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) refers to phase8_sample_tests_test_sample.o(.constdata) for s_test_ntc_table
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Reset) for TestSample_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device) for TestPhase8SampleStub_Device
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice) for BMS_Sample_SetDevice
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation) for TestPhase8SampleStub_ClearObservation
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce) for BMS_Sample_RunOnce
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics) for BMS_Sample_GetDiagnostics
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetCc) for TestSample_SetCc
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_Snapshot) for TestSample_Snapshot
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration) for TestSample_ValidCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration) for BMS_Sample_SetCalibration
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_stub.o(.bss) for g_phase8_sample_stub_observation
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset) for TestPhase8SampleStub_Reset
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_data.o(i.BMS_Data_Init) for BMS_Data_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init) for BMS_Sample_Init
+    phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) refers to phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable) for BMS_Sample_SetNtcTable
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard) for TestSample_SetterSchedulerGuard
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent) for TestSample_StartupAndSignedCurrent
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges) for TestSample_CurrentFailureAndCellRanges
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious) for TestSample_CoreFailuresRetainPrevious
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts) for TestSample_MutexTimeouts
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve) for TestSample_TemperatureCadenceAndCurve
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending) for TestSample_PublishContentionKeepsPending
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering) for TestSample_StaleAndProtectOrdering
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection) for TestSample_BoundedStaleProjection
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard) for TestSample_ConfigurationRevisionGuard
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard) for TestSample_ConfigurationRevisionImmediateWrapGuard
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard) for TestSample_XreadyGenerationGuard
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery) for TestSample_RepeatedFailureRecovery
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel) for TestSample_ProtectI2cContentionModel
+    phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) refers to phase8_sample_tests_test_sample.o(.data) for g_phase8_sample_test_failures
+    phase8_sample_tests_test_main.o(i.main) refers to phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample) for Test_Phase8_Sample
+    phase8_sample_tests_test_main.o(i.main) refers to phase8_sample_tests_test_main.o(.data) for g_phase8_test_probe
+    llsdiv.o(.text) refers to lludivv7m.o(.text) for __aeabi_uldivmod
+    __main.o(!!!main) refers to __rtentry.o(.ARM.Collect$$rtentry$$00000000) for __rt_entry
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$0000000A) for __rt_entry_li
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$0000000D) for __rt_entry_main
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$0000000C) for __rt_entry_postli_1
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$00000009) for __rt_entry_postsh_1
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$00000002) for __rt_entry_presh_1
+    __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry4.o(.ARM.Collect$$rtentry$$00000004) for __rt_entry_sh
+    __rtentry2.o(.ARM.Collect$$rtentry$$00000008) refers to boardinit2.o(.text) for _platform_post_stackheap_init
+    __rtentry2.o(.ARM.Collect$$rtentry$$0000000A) refers to libinit.o(.ARM.Collect$$libinit$$00000000) for __rt_lib_init
+    __rtentry2.o(.ARM.Collect$$rtentry$$0000000B) refers to boardinit3.o(.text) for _platform_post_lib_init
+    __rtentry2.o(.ARM.Collect$$rtentry$$0000000D) refers to phase8_sample_tests_test_main.o(i.main) for main
+    __rtentry2.o(.ARM.Collect$$rtentry$$0000000D) refers to exit.o(.text) for exit
+    __rtentry2.o(.ARM.exidx) refers to __rtentry2.o(.ARM.Collect$$rtentry$$00000001) for .ARM.Collect$$rtentry$$00000001
+    __rtentry2.o(.ARM.exidx) refers to __rtentry2.o(.ARM.Collect$$rtentry$$00000008) for .ARM.Collect$$rtentry$$00000008
+    __rtentry2.o(.ARM.exidx) refers to __rtentry2.o(.ARM.Collect$$rtentry$$0000000A) for .ARM.Collect$$rtentry$$0000000A
+    __rtentry2.o(.ARM.exidx) refers to __rtentry2.o(.ARM.Collect$$rtentry$$0000000B) for .ARM.Collect$$rtentry$$0000000B
+    __rtentry2.o(.ARM.exidx) refers to __rtentry2.o(.ARM.Collect$$rtentry$$0000000D) for .ARM.Collect$$rtentry$$0000000D
+    __rtentry4.o(.ARM.Collect$$rtentry$$00000004) refers to sys_stackheap_outer.o(.text) for __user_setup_stackheap
+    __rtentry4.o(.ARM.exidx) refers to __rtentry4.o(.ARM.Collect$$rtentry$$00000004) for .ARM.Collect$$rtentry$$00000004
+    aeabi_ldiv0_sigfpe.o(.text) refers to rt_div0.o(.text) for __rt_div0
+    sys_stackheap_outer.o(.text) refers to libspace.o(.text) for __user_perproc_libspace
+    sys_stackheap_outer.o(.text) refers to startup_stm32f10x_md.o(.text) for __user_initial_stackheap
+    rt_div0.o(.text) refers to defsig_fpe_outer.o(.text) for __rt_SIGFPE
+    exit.o(.text) refers to rtexit.o(.ARM.Collect$$rtexit$$00000000) for __rt_exit
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000002E) for __rt_lib_init_alloca_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000002C) for __rt_lib_init_argv_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000001B) for __rt_lib_init_atexit_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000021) for __rt_lib_init_clock_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000032) for __rt_lib_init_cpp_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000030) for __rt_lib_init_exceptions_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000002) for __rt_lib_init_fp_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000001F) for __rt_lib_init_fp_trap_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000023) for __rt_lib_init_getenv_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000000A) for __rt_lib_init_heap_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000011) for __rt_lib_init_lc_collate_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000013) for __rt_lib_init_lc_ctype_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000015) for __rt_lib_init_lc_monetary_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000017) for __rt_lib_init_lc_numeric_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000019) for __rt_lib_init_lc_time_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000004) for __rt_lib_init_preinit_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000000E) for __rt_lib_init_rand_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000033) for __rt_lib_init_return
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000001D) for __rt_lib_init_signal_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$00000025) for __rt_lib_init_stdio_1
+    libinit.o(.ARM.Collect$$libinit$$00000000) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000000C) for __rt_lib_init_user_alloc_1
+    libspace.o(.text) refers to libspace.o(.bss) for __libspace_start
+    rtexit.o(.ARM.Collect$$rtexit$$00000000) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000004) for __rt_exit_exit
+    rtexit.o(.ARM.Collect$$rtexit$$00000000) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000003) for __rt_exit_ls
+    rtexit.o(.ARM.Collect$$rtexit$$00000000) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000002) for __rt_exit_prels_1
+    rtexit.o(.ARM.exidx) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000004) for __rt_exit_exit
+    rtexit.o(.ARM.exidx) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000003) for __rt_exit_ls
+    rtexit.o(.ARM.exidx) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000002) for __rt_exit_prels_1
+    rtexit.o(.ARM.exidx) refers to rtexit.o(.ARM.Collect$$rtexit$$00000000) for .ARM.Collect$$rtexit$$00000000
+    defsig_fpe_outer.o(.text) refers to defsig_fpe_inner.o(.text) for __rt_SIGFPE_inner
+    defsig_fpe_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
+    defsig_fpe_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
+    libinit2.o(.ARM.Collect$$libinit$$00000010) refers to libinit2.o(.ARM.Collect$$libinit$$0000000F) for .ARM.Collect$$libinit$$0000000F
+    libinit2.o(.ARM.Collect$$libinit$$00000012) refers to libinit2.o(.ARM.Collect$$libinit$$0000000F) for .ARM.Collect$$libinit$$0000000F
+    libinit2.o(.ARM.Collect$$libinit$$00000014) refers to libinit2.o(.ARM.Collect$$libinit$$0000000F) for .ARM.Collect$$libinit$$0000000F
+    libinit2.o(.ARM.Collect$$libinit$$00000016) refers to libinit2.o(.ARM.Collect$$libinit$$0000000F) for .ARM.Collect$$libinit$$0000000F
+    libinit2.o(.ARM.Collect$$libinit$$00000018) refers to libinit2.o(.ARM.Collect$$libinit$$0000000F) for .ARM.Collect$$libinit$$0000000F
+    libinit2.o(.ARM.Collect$$libinit$$00000026) refers to argv_veneer.o(.emb_text) for __ARM_argv_veneer
+    libinit2.o(.ARM.Collect$$libinit$$00000027) refers to argv_veneer.o(.emb_text) for __ARM_argv_veneer
+    rtexit2.o(.ARM.Collect$$rtexit$$00000003) refers to libshutdown.o(.ARM.Collect$$libshutdown$$00000000) for __rt_lib_shutdown
+    rtexit2.o(.ARM.Collect$$rtexit$$00000004) refers to sys_exit.o(.text) for _sys_exit
+    rtexit2.o(.ARM.exidx) refers to rtexit2.o(.ARM.Collect$$rtexit$$00000001) for .ARM.Collect$$rtexit$$00000001
+    rtexit2.o(.ARM.exidx) refers to rtexit2.o(.ARM.Collect$$rtexit$$00000003) for .ARM.Collect$$rtexit$$00000003
+    rtexit2.o(.ARM.exidx) refers to rtexit2.o(.ARM.Collect$$rtexit$$00000004) for .ARM.Collect$$rtexit$$00000004
+    rt_raise.o(.text) refers to __raise.o(.text) for __raise
+    rt_raise.o(.text) refers to sys_exit.o(.text) for _sys_exit
+    defsig_exit.o(.text) refers to sys_exit.o(.text) for _sys_exit
+    defsig_fpe_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    argv_veneer.o(.emb_text) refers to no_argv.o(.text) for __ARM_get_argv
+    sys_exit.o(.text) refers (Special) to use_no_semi.o(.text) for __I$use$semihosting
+    sys_exit.o(.text) refers (Special) to indicate_semi.o(.text) for __semihosting_library_function
+    __raise.o(.text) refers to defsig.o(CL$$defsig) for __default_signal_handler
+    defsig_general.o(.text) refers to sys_wrch.o(.text) for _ttywrch
+    _get_argv_nomalloc.o(.text) refers (Special) to hrguard.o(.text) for __heap_region$guard
+    _get_argv_nomalloc.o(.text) refers to defsig_rtmem_outer.o(.text) for __rt_SIGRTMEM
+    _get_argv_nomalloc.o(.text) refers to sys_command.o(.text) for _sys_command_string
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000004) for __rt_lib_shutdown_cpp_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000002) for __rt_lib_shutdown_fini_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000009) for __rt_lib_shutdown_fp_trap_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000011) for __rt_lib_shutdown_heap_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000012) for __rt_lib_shutdown_return
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$0000000C) for __rt_lib_shutdown_signal_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000006) for __rt_lib_shutdown_stdio_1
+    libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$0000000E) for __rt_lib_shutdown_user_alloc_1
+    sys_wrch.o(.text) refers (Special) to use_no_semi.o(.text) for __I$use$semihosting
+    sys_wrch.o(.text) refers (Special) to indicate_semi.o(.text) for __semihosting_library_function
+    sys_command.o(.text) refers (Special) to use_no_semi.o(.text) for __I$use$semihosting
+    sys_command.o(.text) refers (Special) to indicate_semi.o(.text) for __semihosting_library_function
+    defsig_rtmem_outer.o(.text) refers to defsig_rtmem_inner.o(.text) for __rt_SIGRTMEM_inner
+    defsig_rtmem_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
+    defsig_rtmem_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
+    defsig.o(CL$$defsig) refers to defsig_fpe_inner.o(.text) for __rt_SIGFPE_inner
+    defsig.o(CL$$defsig) refers to defsig_rtmem_inner.o(.text) for __rt_SIGRTMEM_inner
+    defsig_abrt_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_rtred_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_rtmem_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_stak_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_pvfn_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_cppl_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_segv_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_other.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+
+
+==============================================================================
+
+Removing Unused input sections from the image.
+
+    Removing phase8_sample_tests_bms_fault.o(i.BMS_Fault_Contains), (30 bytes).
+    Removing phase8_sample_tests_bms_fault.o(i.BMS_Fault_IdIsValid), (14 bytes).
+    Removing phase8_sample_tests_bms_fault.o(i.BMS_Fault_Mask), (22 bytes).
+    Removing phase8_sample_tests_bms_sample.o(i.Task_Sample), (36 bytes).
+    Removing phase8_sample_tests_test_stub.o(i.xTaskDelayUntil), (24 bytes).
+    Removing phase8_sample_tests_test_stub.o(i.xTaskGetTickCount), (12 bytes).
+
+6 unused section(s) (total 138 bytes) removed from the image.
+
+==============================================================================
+
+Image Symbol Table
+
+    Local Symbols
+
+    Symbol Name                              Value     Ov Type        Size  Object(Section)
+
+    ../clib/angel/boardlib.s                 0x00000000   Number         0  boardinit1.o ABSOLUTE
+    ../clib/angel/boardlib.s                 0x00000000   Number         0  boardinit2.o ABSOLUTE
+    ../clib/angel/boardlib.s                 0x00000000   Number         0  boardshut.o ABSOLUTE
+    ../clib/angel/boardlib.s                 0x00000000   Number         0  boardinit3.o ABSOLUTE
+    ../clib/angel/handlers.s                 0x00000000   Number         0  __scatter_copy.o ABSOLUTE
+    ../clib/angel/handlers.s                 0x00000000   Number         0  __scatter_zi.o ABSOLUTE
+    ../clib/angel/kernel.s                   0x00000000   Number         0  __rtentry4.o ABSOLUTE
+    ../clib/angel/kernel.s                   0x00000000   Number         0  __rtentry2.o ABSOLUTE
+    ../clib/angel/kernel.s                   0x00000000   Number         0  __rtentry.o ABSOLUTE
+    ../clib/angel/kernel.s                   0x00000000   Number         0  rtexit2.o ABSOLUTE
+    ../clib/angel/kernel.s                   0x00000000   Number         0  rtexit.o ABSOLUTE
+    ../clib/angel/rt.s                       0x00000000   Number         0  rt_div0.o ABSOLUTE
+    ../clib/angel/rt.s                       0x00000000   Number         0  aeabi_ldiv0_sigfpe.o ABSOLUTE
+    ../clib/angel/rt.s                       0x00000000   Number         0  aeabi_ldiv0.o ABSOLUTE
+    ../clib/angel/rt.s                       0x00000000   Number         0  rt_raise.o ABSOLUTE
+    ../clib/angel/scatter.s                  0x00000000   Number         0  __scatter.o ABSOLUTE
+    ../clib/angel/startup.s                  0x00000000   Number         0  __main.o ABSOLUTE
+    ../clib/angel/sys.s                      0x00000000   Number         0  sys_stackheap_outer.o ABSOLUTE
+    ../clib/angel/sys.s                      0x00000000   Number         0  use_no_semi.o ABSOLUTE
+    ../clib/angel/sys.s                      0x00000000   Number         0  indicate_semi.o ABSOLUTE
+    ../clib/angel/sys.s                      0x00000000   Number         0  libspace.o ABSOLUTE
+    ../clib/angel/sysapp.c                   0x00000000   Number         0  sys_exit.o ABSOLUTE
+    ../clib/angel/sysapp.c                   0x00000000   Number         0  sys_command.o ABSOLUTE
+    ../clib/angel/sysapp.c                   0x00000000   Number         0  sys_wrch.o ABSOLUTE
+    ../clib/armsys.c                         0x00000000   Number         0  _get_argv_nomalloc.o ABSOLUTE
+    ../clib/armsys.c                         0x00000000   Number         0  no_argv.o ABSOLUTE
+    ../clib/armsys.c                         0x00000000   Number         0  argv_veneer.o ABSOLUTE
+    ../clib/armsys.c                         0x00000000   Number         0  argv_veneer.o ABSOLUTE
+    ../clib/heapalloc.c                      0x00000000   Number         0  hrguard.o ABSOLUTE
+    ../clib/heapaux.c                        0x00000000   Number         0  heapauxi.o ABSOLUTE
+    ../clib/libinit.s                        0x00000000   Number         0  libshutdown2.o ABSOLUTE
+    ../clib/libinit.s                        0x00000000   Number         0  libinit.o ABSOLUTE
+    ../clib/libinit.s                        0x00000000   Number         0  libshutdown.o ABSOLUTE
+    ../clib/libinit.s                        0x00000000   Number         0  libinit2.o ABSOLUTE
+    ../clib/longlong.s                       0x00000000   Number         0  lludivv7m.o ABSOLUTE
+    ../clib/longlong.s                       0x00000000   Number         0  llsdiv.o ABSOLUTE
+    ../clib/memcpset.s                       0x00000000   Number         0  rt_memcpy_w.o ABSOLUTE
+    ../clib/memcpset.s                       0x00000000   Number         0  rt_memclr_w.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_abrt_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  __raise.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_other.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_cppl_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_fpe_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_exit.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_pvfn_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_stak_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_fpe_formal.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_fpe_outer.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_general.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_rtmem_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_rtred_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_segv_inner.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_rtmem_formal.o ABSOLUTE
+    ../clib/signal.c                         0x00000000   Number         0  defsig_rtmem_outer.o ABSOLUTE
+    ../clib/signal.s                         0x00000000   Number         0  defsig.o ABSOLUTE
+    ../clib/stdlib.c                         0x00000000   Number         0  exit.o ABSOLUTE
+    ../fplib/fpinit.s                        0x00000000   Number         0  fpinit.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\docs\reference\ST\STM32F10x Standard Peripheral Library\Start\startup_stm32f10x_md.s 0x00000000   Number         0  startup_stm32f10x_md.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\bms_data.c 0x00000000   Number         0  phase8_sample_tests_bms_data.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\bms_fault.c 0x00000000   Number         0  phase8_sample_tests_bms_fault.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\bms_ntc.c 0x00000000   Number         0  phase8_sample_tests_bms_ntc.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\App\bms_sample.c 0x00000000   Number         0  phase8_sample_tests_bms_sample.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase8_main.c 0x00000000   Number         0  phase8_sample_tests_test_main.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase8_sample.c 0x00000000   Number         0  phase8_sample_tests_test_sample.o ABSOLUTE
+    D:\AI\Codex\Bms_shop\firmware\Tests\test_phase8_sample_stub.c 0x00000000   Number         0  phase8_sample_tests_test_stub.o ABSOLUTE
+    dc.s                                     0x00000000   Number         0  dc.o ABSOLUTE
+    RESET                                    0x08000000   Section      236  startup_stm32f10x_md.o(RESET)
+    !!!main                                  0x080000ec   Section        8  __main.o(!!!main)
+    !!!scatter                               0x080000f4   Section       52  __scatter.o(!!!scatter)
+    !!handler_copy                           0x08000128   Section       26  __scatter_copy.o(!!handler_copy)
+    !!handler_zi                             0x08000144   Section       28  __scatter_zi.o(!!handler_zi)
+    .ARM.Collect$$libinit$$00000000          0x08000160   Section        2  libinit.o(.ARM.Collect$$libinit$$00000000)
+    .ARM.Collect$$libinit$$00000002          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000002)
+    .ARM.Collect$$libinit$$00000004          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000004)
+    .ARM.Collect$$libinit$$0000000A          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000000A)
+    .ARM.Collect$$libinit$$0000000C          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000000C)
+    .ARM.Collect$$libinit$$0000000E          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000000E)
+    .ARM.Collect$$libinit$$00000011          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000011)
+    .ARM.Collect$$libinit$$00000013          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000013)
+    .ARM.Collect$$libinit$$00000015          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000015)
+    .ARM.Collect$$libinit$$00000017          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000017)
+    .ARM.Collect$$libinit$$00000019          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000019)
+    .ARM.Collect$$libinit$$0000001B          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000001B)
+    .ARM.Collect$$libinit$$0000001D          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000001D)
+    .ARM.Collect$$libinit$$0000001F          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000001F)
+    .ARM.Collect$$libinit$$00000021          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000021)
+    .ARM.Collect$$libinit$$00000023          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000023)
+    .ARM.Collect$$libinit$$00000025          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000025)
+    .ARM.Collect$$libinit$$0000002C          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000002C)
+    .ARM.Collect$$libinit$$0000002E          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$0000002E)
+    .ARM.Collect$$libinit$$00000030          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000030)
+    .ARM.Collect$$libinit$$00000032          0x08000162   Section        0  libinit2.o(.ARM.Collect$$libinit$$00000032)
+    .ARM.Collect$$libinit$$00000033          0x08000162   Section        2  libinit2.o(.ARM.Collect$$libinit$$00000033)
+    .ARM.Collect$$libshutdown$$00000000      0x08000164   Section        2  libshutdown.o(.ARM.Collect$$libshutdown$$00000000)
+    .ARM.Collect$$libshutdown$$00000002      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000002)
+    .ARM.Collect$$libshutdown$$00000004      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000004)
+    .ARM.Collect$$libshutdown$$00000006      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000006)
+    .ARM.Collect$$libshutdown$$00000009      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000009)
+    .ARM.Collect$$libshutdown$$0000000C      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$0000000C)
+    .ARM.Collect$$libshutdown$$0000000E      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$0000000E)
+    .ARM.Collect$$libshutdown$$00000011      0x08000166   Section        0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000011)
+    .ARM.Collect$$libshutdown$$00000012      0x08000166   Section        2  libshutdown2.o(.ARM.Collect$$libshutdown$$00000012)
+    .ARM.Collect$$rtentry$$00000000          0x08000168   Section        0  __rtentry.o(.ARM.Collect$$rtentry$$00000000)
+    .ARM.Collect$$rtentry$$00000002          0x08000168   Section        0  __rtentry2.o(.ARM.Collect$$rtentry$$00000002)
+    .ARM.Collect$$rtentry$$00000004          0x08000168   Section        6  __rtentry4.o(.ARM.Collect$$rtentry$$00000004)
+    .ARM.Collect$$rtentry$$00000009          0x0800016e   Section        0  __rtentry2.o(.ARM.Collect$$rtentry$$00000009)
+    .ARM.Collect$$rtentry$$0000000A          0x0800016e   Section        4  __rtentry2.o(.ARM.Collect$$rtentry$$0000000A)
+    .ARM.Collect$$rtentry$$0000000C          0x08000172   Section        0  __rtentry2.o(.ARM.Collect$$rtentry$$0000000C)
+    .ARM.Collect$$rtentry$$0000000D          0x08000172   Section        8  __rtentry2.o(.ARM.Collect$$rtentry$$0000000D)
+    .ARM.Collect$$rtexit$$00000000           0x0800017a   Section        2  rtexit.o(.ARM.Collect$$rtexit$$00000000)
+    .ARM.Collect$$rtexit$$00000002           0x0800017c   Section        0  rtexit2.o(.ARM.Collect$$rtexit$$00000002)
+    .ARM.Collect$$rtexit$$00000003           0x0800017c   Section        4  rtexit2.o(.ARM.Collect$$rtexit$$00000003)
+    .ARM.Collect$$rtexit$$00000004           0x08000180   Section        6  rtexit2.o(.ARM.Collect$$rtexit$$00000004)
+    .text                                    0x08000188   Section       64  startup_stm32f10x_md.o(.text)
+    .text                                    0x080001c8   Section       72  llsdiv.o(.text)
+    .text                                    0x08000210   Section      100  rt_memcpy_w.o(.text)
+    .text                                    0x08000274   Section       78  rt_memclr_w.o(.text)
+    .text                                    0x080002c2   Section        0  heapauxi.o(.text)
+    .text                                    0x080002c8   Section      238  lludivv7m.o(.text)
+    .text                                    0x080003b6   Section       74  sys_stackheap_outer.o(.text)
+    .text                                    0x08000400   Section        0  exit.o(.text)
+    .text                                    0x08000414   Section        8  libspace.o(.text)
+    .text                                    0x0800041c   Section        0  sys_exit.o(.text)
+    .text                                    0x08000428   Section        2  use_no_semi.o(.text)
+    .text                                    0x0800042a   Section        0  indicate_semi.o(.text)
+    i.BMS_Data_AgeAtPublication              0x0800042a   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_AgeAtPublication)
+    BMS_Data_AgeAtPublication                0x0800042b   Thumb Code    14  phase8_sample_tests_bms_data.o(i.BMS_Data_AgeAtPublication)
+    i.BMS_Data_DeriveAge                     0x08000438   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge)
+    BMS_Data_DeriveAge                       0x08000439   Thumb Code    14  phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveAge)
+    i.BMS_Data_DeriveMetadataAge             0x08000446   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveMetadataAge)
+    BMS_Data_DeriveMetadataAge               0x08000447   Thumb Code    20  phase8_sample_tests_bms_data.o(i.BMS_Data_DeriveMetadataAge)
+    i.BMS_Data_FrameIsValid                  0x0800045a   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_FrameIsValid)
+    BMS_Data_FrameIsValid                    0x0800045b   Thumb Code   128  phase8_sample_tests_bms_data.o(i.BMS_Data_FrameIsValid)
+    i.BMS_Data_GetFreshnessSnapshot          0x080004dc   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot)
+    i.BMS_Data_GetSnapshot                   0x0800056c   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot)
+    i.BMS_Data_Init                          0x08000634   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_Init)
+    i.BMS_Data_InitMeasurement               0x080006d4   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_InitMeasurement)
+    BMS_Data_InitMeasurement                 0x080006d5   Thumb Code    18  phase8_sample_tests_bms_data.o(i.BMS_Data_InitMeasurement)
+    i.BMS_Data_IsFresh                       0x080006e6   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_IsFresh)
+    i.BMS_Data_LatchMetadataStale            0x08000702   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_LatchMetadataStale)
+    BMS_Data_LatchMetadataStale              0x08000703   Thumb Code    36  phase8_sample_tests_bms_data.o(i.BMS_Data_LatchMetadataStale)
+    i.BMS_Data_LatchStale                    0x08000728   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale)
+    BMS_Data_LatchStale                      0x08000729   Thumb Code   154  phase8_sample_tests_bms_data.o(i.BMS_Data_LatchStale)
+    i.BMS_Data_PublishMeasurement            0x080007c8   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement)
+    i.BMS_Data_PublishMetadata               0x08000948   Section        0  phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMetadata)
+    BMS_Data_PublishMetadata                 0x08000949   Thumb Code    44  phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMetadata)
+    i.BMS_Fault_Init                         0x08000974   Section        0  phase8_sample_tests_bms_fault.o(i.BMS_Fault_Init)
+    i.BMS_Ntc_Interpolate                    0x0800097e   Section        0  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate)
+    i.BMS_Ntc_IsAscendingResistance          0x08000a46   Section        0  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_IsAscendingResistance)
+    BMS_Ntc_IsAscendingResistance            0x08000a47   Thumb Code    18  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_IsAscendingResistance)
+    i.BMS_Ntc_ResistanceInSegment            0x08000a58   Section        0  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ResistanceInSegment)
+    BMS_Ntc_ResistanceInSegment              0x08000a59   Thumb Code    52  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ResistanceInSegment)
+    i.BMS_Ntc_ValidateTable                  0x08000a8c   Section        0  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ValidateTable)
+    i.BMS_Protect_GetLatestCc                0x08000b0c   Section        0  phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc)
+    i.BMS_Protect_GetXreadyState             0x08000b90   Section        0  phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState)
+    i.BMS_Protect_XreadyBindingIsCurrent     0x08000c20   Section        0  phase8_sample_tests_test_stub.o(i.BMS_Protect_XreadyBindingIsCurrent)
+    i.BMS_Sample_BeginConfigUpdate           0x08000c36   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate)
+    BMS_Sample_BeginConfigUpdate             0x08000c37   Thumb Code    22  phase8_sample_tests_bms_sample.o(i.BMS_Sample_BeginConfigUpdate)
+    i.BMS_Sample_CalibrationIsValid          0x08000c4c   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_CalibrationIsValid)
+    BMS_Sample_CalibrationIsValid            0x08000c4d   Thumb Code    50  phase8_sample_tests_bms_sample.o(i.BMS_Sample_CalibrationIsValid)
+    i.BMS_Sample_CheckStale                  0x08000c80   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale)
+    BMS_Sample_CheckStale                    0x08000c81   Thumb Code   198  phase8_sample_tests_bms_sample.o(i.BMS_Sample_CheckStale)
+    i.BMS_Sample_EndConfigUpdate             0x08000d50   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate)
+    BMS_Sample_EndConfigUpdate               0x08000d51   Thumb Code    12  phase8_sample_tests_bms_sample.o(i.BMS_Sample_EndConfigUpdate)
+    i.BMS_Sample_GetDiagnostics              0x08000d5c   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics)
+    i.BMS_Sample_IncrementGroupFailure       0x08000d88   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_IncrementGroupFailure)
+    BMS_Sample_IncrementGroupFailure         0x08000d89   Thumb Code    66  phase8_sample_tests_bms_sample.o(i.BMS_Sample_IncrementGroupFailure)
+    i.BMS_Sample_Init                        0x08000dd0   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init)
+    i.BMS_Sample_InitFrame                   0x08000e90   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_InitFrame)
+    BMS_Sample_InitFrame                     0x08000e91   Thumb Code    76  phase8_sample_tests_bms_sample.o(i.BMS_Sample_InitFrame)
+    i.BMS_Sample_RecordCcUnavailable         0x08000edc   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable)
+    BMS_Sample_RecordCcUnavailable           0x08000edd   Thumb Code    18  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordCcUnavailable)
+    i.BMS_Sample_RecordFailure               0x08000ef4   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure)
+    BMS_Sample_RecordFailure                 0x08000ef5   Thumb Code   152  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordFailure)
+    i.BMS_Sample_RecordSuccess               0x08000f90   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess)
+    BMS_Sample_RecordSuccess                 0x08000f91   Thumb Code    48  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordSuccess)
+    i.BMS_Sample_RecordXreadyReject          0x08000fc4   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject)
+    BMS_Sample_RecordXreadyReject            0x08000fc5   Thumb Code    32  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RecordXreadyReject)
+    i.BMS_Sample_RunOnce                     0x08000fe8   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce)
+    i.BMS_Sample_SaturatingIncrement         0x08001534   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement)
+    BMS_Sample_SaturatingIncrement           0x08001535   Thumb Code    14  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SaturatingIncrement)
+    i.BMS_Sample_SetCalibration              0x08001544   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration)
+    i.BMS_Sample_SetDevice                   0x080015c0   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice)
+    i.BMS_Sample_SetNtcTable                 0x08001654   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable)
+    i.BMS_Sample_StatusIsTransportFailure    0x080016c4   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_StatusIsTransportFailure)
+    BMS_Sample_StatusIsTransportFailure      0x080016c5   Thumb Code    38  phase8_sample_tests_bms_sample.o(i.BMS_Sample_StatusIsTransportFailure)
+    i.BMS_Sample_TemperatureIsDue            0x080016ec   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TemperatureIsDue)
+    BMS_Sample_TemperatureIsDue              0x080016ed   Thumb Code    44  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TemperatureIsDue)
+    i.BMS_Sample_TestSeedConfigurationRevision 0x08001720   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision)
+    i.BMS_Sample_TickToTimestampMs           0x0800173c   Section        0  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TickToTimestampMs)
+    BMS_Sample_TickToTimestampMs             0x0800173d   Thumb Code     2  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TickToTimestampMs)
+    i.BQ76940_ConvertCcRawToCurrentMa        0x08001740   Section        0  phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa)
+    i.BQ76940_ConvertTs1RawToResistanceOhm   0x080017dc   Section        0  phase8_sample_tests_test_stub.o(i.BQ76940_ConvertTs1RawToResistanceOhm)
+    i.BQ76940_ReadCellVoltages13             0x08001828   Section        0  phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13)
+    i.BQ76940_ReadPackVoltageMv              0x080018bc   Section        0  phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv)
+    i.BQ76940_ReadTs1Raw                     0x08001928   Section        0  phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw)
+    i.SystemInit                             0x0800198c   Section        0  phase8_sample_tests_test_main.o(i.SystemInit)
+    i.TestPhase8SampleStub_AbaNtcPointCount  0x0800198e   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcPointCount)
+    i.TestPhase8SampleStub_AbaNtcTableA      0x08001994   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcTableA)
+    i.TestPhase8SampleStub_ActivateXready    0x0800199c   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ActivateXready)
+    TestPhase8SampleStub_ActivateXready      0x0800199d   Thumb Code    46  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ActivateXready)
+    i.TestPhase8SampleStub_ClearObservation  0x080019d4   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation)
+    i.TestPhase8SampleStub_Device            0x08001a20   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device)
+    i.TestPhase8SampleStub_LocksBalanced     0x08001a28   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced)
+    i.TestPhase8SampleStub_NextEvent         0x08001a7c   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent)
+    TestPhase8SampleStub_NextEvent           0x08001a7d   Thumb Code    16  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_NextEvent)
+    i.TestPhase8SampleStub_Reset             0x08001a90   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset)
+    i.TestPhase8SampleStub_RunProtectI2cAttempt 0x08001b78   Section        0  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt)
+    TestPhase8SampleStub_RunProtectI2cAttempt 0x08001b79   Thumb Code    46  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_RunProtectI2cAttempt)
+    i.TestSample_BoundedStaleProjection      0x08001bb0   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection)
+    TestSample_BoundedStaleProjection        0x08001bb1   Thumb Code   356  phase8_sample_tests_test_sample.o(i.TestSample_BoundedStaleProjection)
+    i.TestSample_ConfigurationRevisionGuard  0x08001d20   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard)
+    TestSample_ConfigurationRevisionGuard    0x08001d21   Thumb Code   514  phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionGuard)
+    i.TestSample_ConfigurationRevisionImmediateWrapGuard 0x08001f30   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard)
+    TestSample_ConfigurationRevisionImmediateWrapGuard 0x08001f31   Thumb Code   522  phase8_sample_tests_test_sample.o(i.TestSample_ConfigurationRevisionImmediateWrapGuard)
+    i.TestSample_CoreFailuresRetainPrevious  0x08002148   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious)
+    TestSample_CoreFailuresRetainPrevious    0x08002149   Thumb Code   918  phase8_sample_tests_test_sample.o(i.TestSample_CoreFailuresRetainPrevious)
+    i.TestSample_CurrentFailureAndCellRanges 0x080024ec   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges)
+    TestSample_CurrentFailureAndCellRanges   0x080024ed   Thumb Code   658  phase8_sample_tests_test_sample.o(i.TestSample_CurrentFailureAndCellRanges)
+    i.TestSample_ExpectedCellSum             0x0800278c   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_ExpectedCellSum)
+    TestSample_ExpectedCellSum               0x0800278d   Thumb Code    22  phase8_sample_tests_test_sample.o(i.TestSample_ExpectedCellSum)
+    i.TestSample_MutexTimeouts               0x080027a8   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts)
+    TestSample_MutexTimeouts                 0x080027a9   Thumb Code   548  phase8_sample_tests_test_sample.o(i.TestSample_MutexTimeouts)
+    i.TestSample_ProtectI2cContentionModel   0x080029d8   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel)
+    TestSample_ProtectI2cContentionModel     0x080029d9   Thumb Code   552  phase8_sample_tests_test_sample.o(i.TestSample_ProtectI2cContentionModel)
+    i.TestSample_PublishContentionKeepsPending 0x08002c38   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending)
+    TestSample_PublishContentionKeepsPending 0x08002c39   Thumb Code   558  phase8_sample_tests_test_sample.o(i.TestSample_PublishContentionKeepsPending)
+    i.TestSample_RepeatedFailureRecovery     0x08002e7c   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery)
+    TestSample_RepeatedFailureRecovery       0x08002e7d   Thumb Code   336  phase8_sample_tests_test_sample.o(i.TestSample_RepeatedFailureRecovery)
+    i.TestSample_Reset                       0x08002fd4   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_Reset)
+    TestSample_Reset                         0x08002fd5   Thumb Code   100  phase8_sample_tests_test_sample.o(i.TestSample_Reset)
+    i.TestSample_RunSevenSuccessfulCycles    0x08003040   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles)
+    TestSample_RunSevenSuccessfulCycles      0x08003041   Thumb Code    40  phase8_sample_tests_test_sample.o(i.TestSample_RunSevenSuccessfulCycles)
+    i.TestSample_SameCore                    0x0800306c   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_SameCore)
+    TestSample_SameCore                      0x0800306d   Thumb Code    78  phase8_sample_tests_test_sample.o(i.TestSample_SameCore)
+    i.TestSample_SetCc                       0x080030bc   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_SetCc)
+    TestSample_SetCc                         0x080030bd   Thumb Code    20  phase8_sample_tests_test_sample.o(i.TestSample_SetCc)
+    i.TestSample_SetterSchedulerGuard        0x080030d4   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard)
+    TestSample_SetterSchedulerGuard          0x080030d5   Thumb Code   454  phase8_sample_tests_test_sample.o(i.TestSample_SetterSchedulerGuard)
+    i.TestSample_Snapshot                    0x080032ac   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_Snapshot)
+    TestSample_Snapshot                      0x080032ad   Thumb Code    22  phase8_sample_tests_test_sample.o(i.TestSample_Snapshot)
+    i.TestSample_StaleAndProtectOrdering     0x080032c8   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering)
+    TestSample_StaleAndProtectOrdering       0x080032c9   Thumb Code   600  phase8_sample_tests_test_sample.o(i.TestSample_StaleAndProtectOrdering)
+    i.TestSample_StartupAndSignedCurrent     0x08003530   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent)
+    TestSample_StartupAndSignedCurrent       0x08003531   Thumb Code  1250  phase8_sample_tests_test_sample.o(i.TestSample_StartupAndSignedCurrent)
+    i.TestSample_TemperatureCadenceAndCurve  0x08003a20   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve)
+    TestSample_TemperatureCadenceAndCurve    0x08003a21   Thumb Code   982  phase8_sample_tests_test_sample.o(i.TestSample_TemperatureCadenceAndCurve)
+    i.TestSample_ValidCalibration            0x08003e08   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration)
+    TestSample_ValidCalibration              0x08003e09   Thumb Code    34  phase8_sample_tests_test_sample.o(i.TestSample_ValidCalibration)
+    i.TestSample_XreadyGenerationGuard       0x08003e2c   Section        0  phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard)
+    TestSample_XreadyGenerationGuard         0x08003e2d   Thumb Code  2806  phase8_sample_tests_test_sample.o(i.TestSample_XreadyGenerationGuard)
+    i.Test_Phase8_Sample                     0x0800493c   Section        0  phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample)
+    i.main                                   0x08004a14   Section        0  phase8_sample_tests_test_main.o(i.main)
+    i.vTaskSuspendAll                        0x08004a50   Section        0  phase8_sample_tests_test_stub.o(i.vTaskSuspendAll)
+    i.xEventGroupSetBits                     0x08004a84   Section        0  phase8_sample_tests_test_stub.o(i.xEventGroupSetBits)
+    i.xQueueGenericSend                      0x08004aec   Section        0  phase8_sample_tests_test_stub.o(i.xQueueGenericSend)
+    i.xQueueSemaphoreTake                    0x08004cd4   Section        0  phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake)
+    i.xTaskGetSchedulerState                 0x08004ec8   Section        0  phase8_sample_tests_test_stub.o(i.xTaskGetSchedulerState)
+    i.xTaskResumeAll                         0x08004ee0   Section        0  phase8_sample_tests_test_stub.o(i.xTaskResumeAll)
+    .constdata                               0x08004f48   Section       48  phase8_sample_tests_test_stub.o(.constdata)
+    s_aba_ntc_table_a                        0x08004f48   Data          24  phase8_sample_tests_test_stub.o(.constdata)
+    s_aba_ntc_table_b                        0x08004f60   Data          24  phase8_sample_tests_test_stub.o(.constdata)
+    .constdata                               0x08004f78   Section       24  phase8_sample_tests_test_sample.o(.constdata)
+    s_test_ntc_table                         0x08004f78   Data          24  phase8_sample_tests_test_sample.o(.constdata)
+    .data                                    0x20000000   Section       57  phase8_sample_tests_bms_sample.o(.data)
+    s_device                                 0x20000000   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_calibration                            0x20000004   Data           6  phase8_sample_tests_bms_sample.o(.data)
+    s_calibration_xready_generation          0x2000000c   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_calibration_generation_bound           0x20000010   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    s_ntc_points                             0x20000014   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_ntc_point_count                        0x20000018   Data           2  phase8_sample_tests_bms_sample.o(.data)
+    s_temperature_cycles_remaining           0x2000001a   Data           2  phase8_sample_tests_bms_sample.o(.data)
+    s_temperature_due                        0x2000001c   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    s_last_published_cc_sequence             0x20000020   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_last_published_cc_xready_generation    0x20000024   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_cc_sequence_published                  0x20000028   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    s_last_published_core_xready_generation  0x2000002c   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_core_xready_generation_published       0x20000030   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    s_current_epoch_invalidation_pending     0x20000031   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    s_configuration_revision                 0x20000034   Data           4  phase8_sample_tests_bms_sample.o(.data)
+    s_stale_observed                         0x20000038   Data           1  phase8_sample_tests_bms_sample.o(.data)
+    .data                                    0x2000003c   Section       64  phase8_sample_tests_test_stub.o(.data)
+    s_i2c_mutex_object                       0x2000003c   Data           1  phase8_sample_tests_test_stub.o(.data)
+    s_data_mutex_object                      0x2000003d   Data           1  phase8_sample_tests_test_stub.o(.data)
+    s_event_group_object                     0x20000040   Data           4  phase8_sample_tests_test_stub.o(.data)
+    s_device                                 0x20000044   Data           8  phase8_sample_tests_test_stub.o(.data)
+    s_i2c_group                              0x2000004c   Data           1  phase8_sample_tests_test_stub.o(.data)
+    s_scheduler_depth                        0x20000050   Data           4  phase8_sample_tests_test_stub.o(.data)
+    s_scheduler_zero_depth_epoch             0x20000054   Data           4  phase8_sample_tests_test_stub.o(.data)
+    s_tick                                   0x20000058   Data           4  phase8_sample_tests_test_stub.o(.data)
+    s_protect_take_context                   0x2000005c   Data           1  phase8_sample_tests_test_stub.o(.data)
+    s_protect_owns_i2c                       0x2000005d   Data           1  phase8_sample_tests_test_stub.o(.data)
+    s_pending_xready_transition              0x2000005e   Data           1  phase8_sample_tests_test_stub.o(.data)
+    .data                                    0x2000007c   Section       72  phase8_sample_tests_test_sample.o(.data)
+    .data                                    0x200000c4   Section       16  phase8_sample_tests_test_main.o(.data)
+    .bss                                     0x200000d4   Section      260  phase8_sample_tests_bms_data.o(.bss)
+    .bss                                     0x200001d8   Section       88  phase8_sample_tests_bms_sample.o(.bss)
+    s_diagnostics                            0x200001d8   Data          88  phase8_sample_tests_bms_sample.o(.bss)
+    .bss                                     0x20000230   Section      356  phase8_sample_tests_test_stub.o(.bss)
+    .bss                                     0x20000394   Section       96  libspace.o(.bss)
+    HEAP                                     0x200003f8   Section      512  startup_stm32f10x_md.o(HEAP)
+    Heap_Mem                                 0x200003f8   Data         512  startup_stm32f10x_md.o(HEAP)
+    STACK                                    0x200005f8   Section     1024  startup_stm32f10x_md.o(STACK)
+    Stack_Mem                                0x200005f8   Data        1024  startup_stm32f10x_md.o(STACK)
+    __initial_sp                             0x200009f8   Data           0  startup_stm32f10x_md.o(STACK)
+
+    Global Symbols
+
+    Symbol Name                              Value     Ov Type        Size  Object(Section)
+
+    BuildAttributes$$THM_ISAv4$P$D$K$B$S$PE$A:L22UL41UL21$X:L11$S22US41US21$IEEE1$IW$USESV6$~STKCKD$USESV7$~SHL$OSPACE$ROPI$EBA8$UX$STANDARDLIB$REQ8$PRES8$EABIv2 0x00000000   Number         0  anon$$obj.o ABSOLUTE
+    __ARM_use_no_argv                        0x00000000   Number         0  phase8_sample_tests_test_main.o ABSOLUTE
+    __ARM_exceptions_init                     - Undefined Weak Reference
+    __alloca_initialize                       - Undefined Weak Reference
+    __arm_fini_                               - Undefined Weak Reference
+    __arm_preinit_                            - Undefined Weak Reference
+    __cpp_initialize__aeabi_                  - Undefined Weak Reference
+    __cxa_finalize                            - Undefined Weak Reference
+    __rt_locale                               - Undefined Weak Reference
+    __sigvec_lookup                           - Undefined Weak Reference
+    _atexit_init                              - Undefined Weak Reference
+    _call_atexit_fns                          - Undefined Weak Reference
+    _clock_init                               - Undefined Weak Reference
+    _fp_trap_init                             - Undefined Weak Reference
+    _fp_trap_shutdown                         - Undefined Weak Reference
+    _get_lc_collate                           - Undefined Weak Reference
+    _get_lc_ctype                             - Undefined Weak Reference
+    _get_lc_monetary                          - Undefined Weak Reference
+    _get_lc_numeric                           - Undefined Weak Reference
+    _get_lc_time                              - Undefined Weak Reference
+    _getenv_init                              - Undefined Weak Reference
+    _handle_redirection                       - Undefined Weak Reference
+    _init_alloc                               - Undefined Weak Reference
+    _init_user_alloc                          - Undefined Weak Reference
+    _initio                                   - Undefined Weak Reference
+    _rand_init                                - Undefined Weak Reference
+    _signal_finish                            - Undefined Weak Reference
+    _signal_init                              - Undefined Weak Reference
+    _terminate_alloc                          - Undefined Weak Reference
+    _terminate_user_alloc                     - Undefined Weak Reference
+    _terminateio                              - Undefined Weak Reference
+    __Vectors_Size                           0x000000ec   Number         0  startup_stm32f10x_md.o ABSOLUTE
+    __Vectors                                0x08000000   Data           4  startup_stm32f10x_md.o(RESET)
+    __Vectors_End                            0x080000ec   Data           0  startup_stm32f10x_md.o(RESET)
+    __main                                   0x080000ed   Thumb Code     8  __main.o(!!!main)
+    __scatterload                            0x080000f5   Thumb Code     0  __scatter.o(!!!scatter)
+    __scatterload_rt2                        0x080000f5   Thumb Code    44  __scatter.o(!!!scatter)
+    __scatterload_rt2_thumb_only             0x080000f5   Thumb Code     0  __scatter.o(!!!scatter)
+    __scatterload_null                       0x08000103   Thumb Code     0  __scatter.o(!!!scatter)
+    __scatterload_copy                       0x08000129   Thumb Code    26  __scatter_copy.o(!!handler_copy)
+    __scatterload_zeroinit                   0x08000145   Thumb Code    28  __scatter_zi.o(!!handler_zi)
+    __rt_lib_init                            0x08000161   Thumb Code     0  libinit.o(.ARM.Collect$$libinit$$00000000)
+    __rt_lib_init_alloca_1                   0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000002E)
+    __rt_lib_init_argv_1                     0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000002C)
+    __rt_lib_init_atexit_1                   0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000001B)
+    __rt_lib_init_clock_1                    0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000021)
+    __rt_lib_init_cpp_1                      0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000032)
+    __rt_lib_init_exceptions_1               0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000030)
+    __rt_lib_init_fp_1                       0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000002)
+    __rt_lib_init_fp_trap_1                  0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000001F)
+    __rt_lib_init_getenv_1                   0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000023)
+    __rt_lib_init_heap_1                     0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000000A)
+    __rt_lib_init_lc_collate_1               0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000011)
+    __rt_lib_init_lc_ctype_1                 0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000013)
+    __rt_lib_init_lc_monetary_1              0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000015)
+    __rt_lib_init_lc_numeric_1               0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000017)
+    __rt_lib_init_lc_time_1                  0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000019)
+    __rt_lib_init_preinit_1                  0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000004)
+    __rt_lib_init_rand_1                     0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000000E)
+    __rt_lib_init_return                     0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000033)
+    __rt_lib_init_signal_1                   0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000001D)
+    __rt_lib_init_stdio_1                    0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$00000025)
+    __rt_lib_init_user_alloc_1               0x08000163   Thumb Code     0  libinit2.o(.ARM.Collect$$libinit$$0000000C)
+    __rt_lib_shutdown                        0x08000165   Thumb Code     0  libshutdown.o(.ARM.Collect$$libshutdown$$00000000)
+    __rt_lib_shutdown_cpp_1                  0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000004)
+    __rt_lib_shutdown_fini_1                 0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000002)
+    __rt_lib_shutdown_fp_trap_1              0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000009)
+    __rt_lib_shutdown_heap_1                 0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000011)
+    __rt_lib_shutdown_return                 0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000012)
+    __rt_lib_shutdown_signal_1               0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$0000000C)
+    __rt_lib_shutdown_stdio_1                0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$00000006)
+    __rt_lib_shutdown_user_alloc_1           0x08000167   Thumb Code     0  libshutdown2.o(.ARM.Collect$$libshutdown$$0000000E)
+    __rt_entry                               0x08000169   Thumb Code     0  __rtentry.o(.ARM.Collect$$rtentry$$00000000)
+    __rt_entry_presh_1                       0x08000169   Thumb Code     0  __rtentry2.o(.ARM.Collect$$rtentry$$00000002)
+    __rt_entry_sh                            0x08000169   Thumb Code     0  __rtentry4.o(.ARM.Collect$$rtentry$$00000004)
+    __rt_entry_li                            0x0800016f   Thumb Code     0  __rtentry2.o(.ARM.Collect$$rtentry$$0000000A)
+    __rt_entry_postsh_1                      0x0800016f   Thumb Code     0  __rtentry2.o(.ARM.Collect$$rtentry$$00000009)
+    __rt_entry_main                          0x08000173   Thumb Code     0  __rtentry2.o(.ARM.Collect$$rtentry$$0000000D)
+    __rt_entry_postli_1                      0x08000173   Thumb Code     0  __rtentry2.o(.ARM.Collect$$rtentry$$0000000C)
+    __rt_exit                                0x0800017b   Thumb Code     0  rtexit.o(.ARM.Collect$$rtexit$$00000000)
+    __rt_exit_ls                             0x0800017d   Thumb Code     0  rtexit2.o(.ARM.Collect$$rtexit$$00000003)
+    __rt_exit_prels_1                        0x0800017d   Thumb Code     0  rtexit2.o(.ARM.Collect$$rtexit$$00000002)
+    __rt_exit_exit                           0x08000181   Thumb Code     0  rtexit2.o(.ARM.Collect$$rtexit$$00000004)
+    Reset_Handler                            0x08000189   Thumb Code     8  startup_stm32f10x_md.o(.text)
+    NMI_Handler                              0x08000191   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    HardFault_Handler                        0x08000193   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    MemManage_Handler                        0x08000195   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    BusFault_Handler                         0x08000197   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    UsageFault_Handler                       0x08000199   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    SVC_Handler                              0x0800019b   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    DebugMon_Handler                         0x0800019d   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    PendSV_Handler                           0x0800019f   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    SysTick_Handler                          0x080001a1   Thumb Code     2  startup_stm32f10x_md.o(.text)
+    ADC1_2_IRQHandler                        0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    CAN1_RX1_IRQHandler                      0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    CAN1_SCE_IRQHandler                      0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel1_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel2_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel3_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel4_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel5_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel6_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    DMA1_Channel7_IRQHandler                 0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI0_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI15_10_IRQHandler                     0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI1_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI2_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI3_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI4_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    EXTI9_5_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    FLASH_IRQHandler                         0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    I2C1_ER_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    I2C1_EV_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    I2C2_ER_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    I2C2_EV_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    PVD_IRQHandler                           0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    RCC_IRQHandler                           0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    RTCAlarm_IRQHandler                      0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    RTC_IRQHandler                           0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    SPI1_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    SPI2_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TAMPER_IRQHandler                        0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM1_BRK_IRQHandler                      0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM1_CC_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM1_TRG_COM_IRQHandler                  0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM1_UP_IRQHandler                       0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM2_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM3_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    TIM4_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USART1_IRQHandler                        0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USART2_IRQHandler                        0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USART3_IRQHandler                        0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USBWakeUp_IRQHandler                     0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USB_HP_CAN1_TX_IRQHandler                0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    USB_LP_CAN1_RX0_IRQHandler               0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    WWDG_IRQHandler                          0x080001a3   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    __user_initial_stackheap                 0x080001a5   Thumb Code     0  startup_stm32f10x_md.o(.text)
+    __aeabi_ldivmod                          0x080001c9   Thumb Code     0  llsdiv.o(.text)
+    _ll_sdiv                                 0x080001c9   Thumb Code    72  llsdiv.o(.text)
+    __aeabi_memcpy4                          0x08000211   Thumb Code     0  rt_memcpy_w.o(.text)
+    __aeabi_memcpy8                          0x08000211   Thumb Code     0  rt_memcpy_w.o(.text)
+    __rt_memcpy_w                            0x08000211   Thumb Code   100  rt_memcpy_w.o(.text)
+    _memcpy_lastbytes_aligned                0x08000259   Thumb Code     0  rt_memcpy_w.o(.text)
+    __aeabi_memclr4                          0x08000275   Thumb Code     0  rt_memclr_w.o(.text)
+    __aeabi_memclr8                          0x08000275   Thumb Code     0  rt_memclr_w.o(.text)
+    __rt_memclr_w                            0x08000275   Thumb Code    78  rt_memclr_w.o(.text)
+    _memset_w                                0x08000279   Thumb Code     0  rt_memclr_w.o(.text)
+    __use_two_region_memory                  0x080002c3   Thumb Code     2  heapauxi.o(.text)
+    __rt_heap_escrow$2region                 0x080002c5   Thumb Code     2  heapauxi.o(.text)
+    __rt_heap_expand$2region                 0x080002c7   Thumb Code     2  heapauxi.o(.text)
+    __aeabi_uldivmod                         0x080002c9   Thumb Code     0  lludivv7m.o(.text)
+    _ll_udiv                                 0x080002c9   Thumb Code   238  lludivv7m.o(.text)
+    __user_setup_stackheap                   0x080003b7   Thumb Code    74  sys_stackheap_outer.o(.text)
+    exit                                     0x08000401   Thumb Code    18  exit.o(.text)
+    __user_libspace                          0x08000415   Thumb Code     8  libspace.o(.text)
+    __user_perproc_libspace                  0x08000415   Thumb Code     0  libspace.o(.text)
+    __user_perthread_libspace                0x08000415   Thumb Code     0  libspace.o(.text)
+    _sys_exit                                0x0800041d   Thumb Code     8  sys_exit.o(.text)
+    __I$use$semihosting                      0x08000429   Thumb Code     0  use_no_semi.o(.text)
+    __use_no_semihosting_swi                 0x08000429   Thumb Code     2  use_no_semi.o(.text)
+    __semihosting_library_function           0x0800042b   Thumb Code     0  indicate_semi.o(.text)
+    BMS_Data_GetFreshnessSnapshot            0x080004dd   Thumb Code   136  phase8_sample_tests_bms_data.o(i.BMS_Data_GetFreshnessSnapshot)
+    BMS_Data_GetSnapshot                     0x0800056d   Thumb Code   190  phase8_sample_tests_bms_data.o(i.BMS_Data_GetSnapshot)
+    BMS_Data_Init                            0x08000635   Thumb Code   154  phase8_sample_tests_bms_data.o(i.BMS_Data_Init)
+    BMS_Data_IsFresh                         0x080006e7   Thumb Code    28  phase8_sample_tests_bms_data.o(i.BMS_Data_IsFresh)
+    BMS_Data_PublishMeasurement              0x080007c9   Thumb Code   374  phase8_sample_tests_bms_data.o(i.BMS_Data_PublishMeasurement)
+    BMS_Fault_Init                           0x08000975   Thumb Code    10  phase8_sample_tests_bms_fault.o(i.BMS_Fault_Init)
+    BMS_Ntc_Interpolate                      0x0800097f   Thumb Code   200  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_Interpolate)
+    BMS_Ntc_ValidateTable                    0x08000a8d   Thumb Code   126  phase8_sample_tests_bms_ntc.o(i.BMS_Ntc_ValidateTable)
+    BMS_Protect_GetLatestCc                  0x08000b0d   Thumb Code   124  phase8_sample_tests_test_stub.o(i.BMS_Protect_GetLatestCc)
+    BMS_Protect_GetXreadyState               0x08000b91   Thumb Code   122  phase8_sample_tests_test_stub.o(i.BMS_Protect_GetXreadyState)
+    BMS_Protect_XreadyBindingIsCurrent       0x08000c21   Thumb Code    22  phase8_sample_tests_test_stub.o(i.BMS_Protect_XreadyBindingIsCurrent)
+    BMS_Sample_GetDiagnostics                0x08000d5d   Thumb Code    38  phase8_sample_tests_bms_sample.o(i.BMS_Sample_GetDiagnostics)
+    BMS_Sample_Init                          0x08000dd1   Thumb Code   122  phase8_sample_tests_bms_sample.o(i.BMS_Sample_Init)
+    BMS_Sample_RunOnce                       0x08000fe9   Thumb Code  1318  phase8_sample_tests_bms_sample.o(i.BMS_Sample_RunOnce)
+    BMS_Sample_SetCalibration                0x08001545   Thumb Code   108  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetCalibration)
+    BMS_Sample_SetDevice                     0x080015c1   Thumb Code   110  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetDevice)
+    BMS_Sample_SetNtcTable                   0x08001655   Thumb Code   100  phase8_sample_tests_bms_sample.o(i.BMS_Sample_SetNtcTable)
+    BMS_Sample_TestSeedConfigurationRevision 0x08001721   Thumb Code    22  phase8_sample_tests_bms_sample.o(i.BMS_Sample_TestSeedConfigurationRevision)
+    BQ76940_ConvertCcRawToCurrentMa          0x08001741   Thumb Code   148  phase8_sample_tests_test_stub.o(i.BQ76940_ConvertCcRawToCurrentMa)
+    BQ76940_ConvertTs1RawToResistanceOhm     0x080017dd   Thumb Code    68  phase8_sample_tests_test_stub.o(i.BQ76940_ConvertTs1RawToResistanceOhm)
+    BQ76940_ReadCellVoltages13               0x08001829   Thumb Code   130  phase8_sample_tests_test_stub.o(i.BQ76940_ReadCellVoltages13)
+    BQ76940_ReadPackVoltageMv                0x080018bd   Thumb Code    92  phase8_sample_tests_test_stub.o(i.BQ76940_ReadPackVoltageMv)
+    BQ76940_ReadTs1Raw                       0x08001929   Thumb Code    82  phase8_sample_tests_test_stub.o(i.BQ76940_ReadTs1Raw)
+    SystemInit                               0x0800198d   Thumb Code     2  phase8_sample_tests_test_main.o(i.SystemInit)
+    TestPhase8SampleStub_AbaNtcPointCount    0x0800198f   Thumb Code     4  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcPointCount)
+    TestPhase8SampleStub_AbaNtcTableA        0x08001995   Thumb Code     4  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_AbaNtcTableA)
+    TestPhase8SampleStub_ClearObservation    0x080019d5   Thumb Code    42  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_ClearObservation)
+    TestPhase8SampleStub_Device              0x08001a21   Thumb Code     4  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Device)
+    TestPhase8SampleStub_LocksBalanced       0x08001a29   Thumb Code    72  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_LocksBalanced)
+    TestPhase8SampleStub_Reset               0x08001a91   Thumb Code   178  phase8_sample_tests_test_stub.o(i.TestPhase8SampleStub_Reset)
+    Test_Phase8_Sample                       0x0800493d   Thumb Code   144  phase8_sample_tests_test_sample.o(i.Test_Phase8_Sample)
+    main                                     0x08004a15   Thumb Code    44  phase8_sample_tests_test_main.o(i.main)
+    vTaskSuspendAll                          0x08004a51   Thumb Code    42  phase8_sample_tests_test_stub.o(i.vTaskSuspendAll)
+    xEventGroupSetBits                       0x08004a85   Thumb Code    94  phase8_sample_tests_test_stub.o(i.xEventGroupSetBits)
+    xQueueGenericSend                        0x08004aed   Thumb Code   462  phase8_sample_tests_test_stub.o(i.xQueueGenericSend)
+    xQueueSemaphoreTake                      0x08004cd5   Thumb Code   476  phase8_sample_tests_test_stub.o(i.xQueueSemaphoreTake)
+    xTaskGetSchedulerState                   0x08004ec9   Thumb Code    16  phase8_sample_tests_test_stub.o(i.xTaskGetSchedulerState)
+    xTaskResumeAll                           0x08004ee1   Thumb Code    86  phase8_sample_tests_test_stub.o(i.xTaskResumeAll)
+    Region$$Table$$Base                      0x08004f90   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x08004fb0   Number         0  anon$$obj.o(Region$$Table)
+    xI2CMutex                                0x20000060   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xDataMutex                               0x20000064   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xAfeAlertSem                             0x20000068   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xCanTxQueue                              0x2000006c   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xCanRxQueue                              0x20000070   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xCcSampleQueue                           0x20000074   Data           4  phase8_sample_tests_test_stub.o(.data)
+    xSysEvents                               0x20000078   Data           4  phase8_sample_tests_test_stub.o(.data)
+    g_phase8_sample_test_failures            0x2000007c   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_test_completed           0x20000080   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_completed     0x20000084   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_attempts      0x20000088   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_timeouts      0x2000008c   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_successes     0x20000090   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_gives         0x20000094   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_wait_ticks    0x20000098   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_first_take_order 0x2000009c   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_cell_give_order 0x200000a0   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_retry_take_order 0x200000a4   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_retry_give_order 0x200000a8   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_contention_pack_call_order 0x200000ac   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_xready_guard_completed   0x200000b0   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_xready_cell_rejects      0x200000b4   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_xready_pack_rejects      0x200000b8   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_xready_wrap_rejects      0x200000bc   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_sample_xready_atomic_publishes  0x200000c0   Data           4  phase8_sample_tests_test_sample.o(.data)
+    g_phase8_test_suite_id                   0x200000c4   Data           4  phase8_sample_tests_test_main.o(.data)
+    g_phase8_test_failures                   0x200000c8   Data           4  phase8_sample_tests_test_main.o(.data)
+    g_phase8_test_completed                  0x200000cc   Data           4  phase8_sample_tests_test_main.o(.data)
+    g_phase8_test_probe                      0x200000d0   Data           4  phase8_sample_tests_test_main.o(.data)
+    g_bms_data                               0x200000d4   Data         260  phase8_sample_tests_bms_data.o(.bss)
+    g_phase8_sample_stub_control             0x20000230   Data         120  phase8_sample_tests_test_stub.o(.bss)
+    g_phase8_sample_stub_observation         0x200002a8   Data         236  phase8_sample_tests_test_stub.o(.bss)
+    __libspace_start                         0x20000394   Data          96  libspace.o(.bss)
+    __temporary_stack_top$libspace           0x200003f4   Data           0  libspace.o(.bss)
+
+
+
+==============================================================================
+
+Memory Map of the image
+
+  Image Entry point : 0x080000ed
+
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00005084, Max: 0x00010000, ABSOLUTE)
+
+    Execution Region ER_IROM1 (Base: 0x08000000, Size: 0x00004fb0, Max: 0x00010000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x08000000   0x000000ec   Data   RO            3    RESET               startup_stm32f10x_md.o
+    0x080000ec   0x00000008   Code   RO          716  * !!!main             c_w.l(__main.o)
+    0x080000f4   0x00000034   Code   RO          887    !!!scatter          c_w.l(__scatter.o)
+    0x08000128   0x0000001a   Code   RO          889    !!handler_copy      c_w.l(__scatter_copy.o)
+    0x08000142   0x00000002   PAD
+    0x08000144   0x0000001c   Code   RO          891    !!handler_zi        c_w.l(__scatter_zi.o)
+    0x08000160   0x00000002   Code   RO          751    .ARM.Collect$$libinit$$00000000  c_w.l(libinit.o)
+    0x08000162   0x00000000   Code   RO          762    .ARM.Collect$$libinit$$00000002  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          764    .ARM.Collect$$libinit$$00000004  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          767    .ARM.Collect$$libinit$$0000000A  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          769    .ARM.Collect$$libinit$$0000000C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          771    .ARM.Collect$$libinit$$0000000E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          774    .ARM.Collect$$libinit$$00000011  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          776    .ARM.Collect$$libinit$$00000013  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          778    .ARM.Collect$$libinit$$00000015  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          780    .ARM.Collect$$libinit$$00000017  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          782    .ARM.Collect$$libinit$$00000019  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          784    .ARM.Collect$$libinit$$0000001B  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          786    .ARM.Collect$$libinit$$0000001D  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          788    .ARM.Collect$$libinit$$0000001F  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          790    .ARM.Collect$$libinit$$00000021  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          792    .ARM.Collect$$libinit$$00000023  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          794    .ARM.Collect$$libinit$$00000025  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          798    .ARM.Collect$$libinit$$0000002C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          800    .ARM.Collect$$libinit$$0000002E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          802    .ARM.Collect$$libinit$$00000030  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          804    .ARM.Collect$$libinit$$00000032  c_w.l(libinit2.o)
+    0x08000162   0x00000002   Code   RO          805    .ARM.Collect$$libinit$$00000033  c_w.l(libinit2.o)
+    0x08000164   0x00000002   Code   RO          835    .ARM.Collect$$libshutdown$$00000000  c_w.l(libshutdown.o)
+    0x08000166   0x00000000   Code   RO          852    .ARM.Collect$$libshutdown$$00000002  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          854    .ARM.Collect$$libshutdown$$00000004  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          856    .ARM.Collect$$libshutdown$$00000006  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          859    .ARM.Collect$$libshutdown$$00000009  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          862    .ARM.Collect$$libshutdown$$0000000C  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          864    .ARM.Collect$$libshutdown$$0000000E  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          867    .ARM.Collect$$libshutdown$$00000011  c_w.l(libshutdown2.o)
+    0x08000166   0x00000002   Code   RO          868    .ARM.Collect$$libshutdown$$00000012  c_w.l(libshutdown2.o)
+    0x08000168   0x00000000   Code   RO          718    .ARM.Collect$$rtentry$$00000000  c_w.l(__rtentry.o)
+    0x08000168   0x00000000   Code   RO          722    .ARM.Collect$$rtentry$$00000002  c_w.l(__rtentry2.o)
+    0x08000168   0x00000006   Code   RO          734    .ARM.Collect$$rtentry$$00000004  c_w.l(__rtentry4.o)
+    0x0800016e   0x00000000   Code   RO          724    .ARM.Collect$$rtentry$$00000009  c_w.l(__rtentry2.o)
+    0x0800016e   0x00000004   Code   RO          725    .ARM.Collect$$rtentry$$0000000A  c_w.l(__rtentry2.o)
+    0x08000172   0x00000000   Code   RO          727    .ARM.Collect$$rtentry$$0000000C  c_w.l(__rtentry2.o)
+    0x08000172   0x00000008   Code   RO          728    .ARM.Collect$$rtentry$$0000000D  c_w.l(__rtentry2.o)
+    0x0800017a   0x00000002   Code   RO          755    .ARM.Collect$$rtexit$$00000000  c_w.l(rtexit.o)
+    0x0800017c   0x00000000   Code   RO          807    .ARM.Collect$$rtexit$$00000002  c_w.l(rtexit2.o)
+    0x0800017c   0x00000004   Code   RO          808    .ARM.Collect$$rtexit$$00000003  c_w.l(rtexit2.o)
+    0x08000180   0x00000006   Code   RO          809    .ARM.Collect$$rtexit$$00000004  c_w.l(rtexit2.o)
+    0x08000186   0x00000002   PAD
+    0x08000188   0x00000040   Code   RO            4    .text               startup_stm32f10x_md.o
+    0x080001c8   0x00000048   Code   RO          708    .text               c_w.l(llsdiv.o)
+    0x08000210   0x00000064   Code   RO          710    .text               c_w.l(rt_memcpy_w.o)
+    0x08000274   0x0000004e   Code   RO          712    .text               c_w.l(rt_memclr_w.o)
+    0x080002c2   0x00000006   Code   RO          714    .text               c_w.l(heapauxi.o)
+    0x080002c8   0x000000ee   Code   RO          719    .text               c_w.l(lludivv7m.o)
+    0x080003b6   0x0000004a   Code   RO          740    .text               c_w.l(sys_stackheap_outer.o)
+    0x08000400   0x00000012   Code   RO          744    .text               c_w.l(exit.o)
+    0x08000412   0x00000002   PAD
+    0x08000414   0x00000008   Code   RO          752    .text               c_w.l(libspace.o)
+    0x0800041c   0x0000000c   Code   RO          823    .text               c_w.l(sys_exit.o)
+    0x08000428   0x00000002   Code   RO          840    .text               c_w.l(use_no_semi.o)
+    0x0800042a   0x00000000   Code   RO          842    .text               c_w.l(indicate_semi.o)
+    0x0800042a   0x0000000e   Code   RO           10    i.BMS_Data_AgeAtPublication  phase8_sample_tests_bms_data.o
+    0x08000438   0x0000000e   Code   RO           11    i.BMS_Data_DeriveAge  phase8_sample_tests_bms_data.o
+    0x08000446   0x00000014   Code   RO           12    i.BMS_Data_DeriveMetadataAge  phase8_sample_tests_bms_data.o
+    0x0800045a   0x00000080   Code   RO           13    i.BMS_Data_FrameIsValid  phase8_sample_tests_bms_data.o
+    0x080004da   0x00000002   PAD
+    0x080004dc   0x00000090   Code   RO           14    i.BMS_Data_GetFreshnessSnapshot  phase8_sample_tests_bms_data.o
+    0x0800056c   0x000000c8   Code   RO           15    i.BMS_Data_GetSnapshot  phase8_sample_tests_bms_data.o
+    0x08000634   0x000000a0   Code   RO           16    i.BMS_Data_Init     phase8_sample_tests_bms_data.o
+    0x080006d4   0x00000012   Code   RO           17    i.BMS_Data_InitMeasurement  phase8_sample_tests_bms_data.o
+    0x080006e6   0x0000001c   Code   RO           18    i.BMS_Data_IsFresh  phase8_sample_tests_bms_data.o
+    0x08000702   0x00000024   Code   RO           19    i.BMS_Data_LatchMetadataStale  phase8_sample_tests_bms_data.o
+    0x08000726   0x00000002   PAD
+    0x08000728   0x000000a0   Code   RO           20    i.BMS_Data_LatchStale  phase8_sample_tests_bms_data.o
+    0x080007c8   0x00000180   Code   RO           21    i.BMS_Data_PublishMeasurement  phase8_sample_tests_bms_data.o
+    0x08000948   0x0000002c   Code   RO           22    i.BMS_Data_PublishMetadata  phase8_sample_tests_bms_data.o
+    0x08000974   0x0000000a   Code   RO          196    i.BMS_Fault_Init    phase8_sample_tests_bms_fault.o
+    0x0800097e   0x000000c8   Code   RO          163    i.BMS_Ntc_Interpolate  phase8_sample_tests_bms_ntc.o
+    0x08000a46   0x00000012   Code   RO          164    i.BMS_Ntc_IsAscendingResistance  phase8_sample_tests_bms_ntc.o
+    0x08000a58   0x00000034   Code   RO          165    i.BMS_Ntc_ResistanceInSegment  phase8_sample_tests_bms_ntc.o
+    0x08000a8c   0x0000007e   Code   RO          166    i.BMS_Ntc_ValidateTable  phase8_sample_tests_bms_ntc.o
+    0x08000b0a   0x00000002   PAD
+    0x08000b0c   0x00000084   Code   RO          377    i.BMS_Protect_GetLatestCc  phase8_sample_tests_test_stub.o
+    0x08000b90   0x00000090   Code   RO          378    i.BMS_Protect_GetXreadyState  phase8_sample_tests_test_stub.o
+    0x08000c20   0x00000016   Code   RO          379    i.BMS_Protect_XreadyBindingIsCurrent  phase8_sample_tests_test_stub.o
+    0x08000c36   0x00000016   Code   RO          224    i.BMS_Sample_BeginConfigUpdate  phase8_sample_tests_bms_sample.o
+    0x08000c4c   0x00000032   Code   RO          225    i.BMS_Sample_CalibrationIsValid  phase8_sample_tests_bms_sample.o
+    0x08000c7e   0x00000002   PAD
+    0x08000c80   0x000000d0   Code   RO          226    i.BMS_Sample_CheckStale  phase8_sample_tests_bms_sample.o
+    0x08000d50   0x0000000c   Code   RO          227    i.BMS_Sample_EndConfigUpdate  phase8_sample_tests_bms_sample.o
+    0x08000d5c   0x0000002c   Code   RO          228    i.BMS_Sample_GetDiagnostics  phase8_sample_tests_bms_sample.o
+    0x08000d88   0x00000048   Code   RO          229    i.BMS_Sample_IncrementGroupFailure  phase8_sample_tests_bms_sample.o
+    0x08000dd0   0x000000c0   Code   RO          230    i.BMS_Sample_Init   phase8_sample_tests_bms_sample.o
+    0x08000e90   0x0000004c   Code   RO          231    i.BMS_Sample_InitFrame  phase8_sample_tests_bms_sample.o
+    0x08000edc   0x00000018   Code   RO          232    i.BMS_Sample_RecordCcUnavailable  phase8_sample_tests_bms_sample.o
+    0x08000ef4   0x0000009c   Code   RO          233    i.BMS_Sample_RecordFailure  phase8_sample_tests_bms_sample.o
+    0x08000f90   0x00000034   Code   RO          234    i.BMS_Sample_RecordSuccess  phase8_sample_tests_bms_sample.o
+    0x08000fc4   0x00000024   Code   RO          235    i.BMS_Sample_RecordXreadyReject  phase8_sample_tests_bms_sample.o
+    0x08000fe8   0x0000054c   Code   RO          236    i.BMS_Sample_RunOnce  phase8_sample_tests_bms_sample.o
+    0x08001534   0x0000000e   Code   RO          237    i.BMS_Sample_SaturatingIncrement  phase8_sample_tests_bms_sample.o
+    0x08001542   0x00000002   PAD
+    0x08001544   0x0000007c   Code   RO          238    i.BMS_Sample_SetCalibration  phase8_sample_tests_bms_sample.o
+    0x080015c0   0x00000094   Code   RO          239    i.BMS_Sample_SetDevice  phase8_sample_tests_bms_sample.o
+    0x08001654   0x00000070   Code   RO          240    i.BMS_Sample_SetNtcTable  phase8_sample_tests_bms_sample.o
+    0x080016c4   0x00000026   Code   RO          241    i.BMS_Sample_StatusIsTransportFailure  phase8_sample_tests_bms_sample.o
+    0x080016ea   0x00000002   PAD
+    0x080016ec   0x00000034   Code   RO          242    i.BMS_Sample_TemperatureIsDue  phase8_sample_tests_bms_sample.o
+    0x08001720   0x0000001c   Code   RO          243    i.BMS_Sample_TestSeedConfigurationRevision  phase8_sample_tests_bms_sample.o
+    0x0800173c   0x00000002   Code   RO          244    i.BMS_Sample_TickToTimestampMs  phase8_sample_tests_bms_sample.o
+    0x0800173e   0x00000002   PAD
+    0x08001740   0x0000009c   Code   RO          380    i.BQ76940_ConvertCcRawToCurrentMa  phase8_sample_tests_test_stub.o
+    0x080017dc   0x0000004c   Code   RO          381    i.BQ76940_ConvertTs1RawToResistanceOhm  phase8_sample_tests_test_stub.o
+    0x08001828   0x00000094   Code   RO          382    i.BQ76940_ReadCellVoltages13  phase8_sample_tests_test_stub.o
+    0x080018bc   0x0000006c   Code   RO          383    i.BQ76940_ReadPackVoltageMv  phase8_sample_tests_test_stub.o
+    0x08001928   0x00000064   Code   RO          384    i.BQ76940_ReadTs1Raw  phase8_sample_tests_test_stub.o
+    0x0800198c   0x00000002   Code   RO          681    i.SystemInit        phase8_sample_tests_test_main.o
+    0x0800198e   0x00000004   Code   RO          385    i.TestPhase8SampleStub_AbaNtcPointCount  phase8_sample_tests_test_stub.o
+    0x08001992   0x00000002   PAD
+    0x08001994   0x00000008   Code   RO          386    i.TestPhase8SampleStub_AbaNtcTableA  phase8_sample_tests_test_stub.o
+    0x0800199c   0x00000038   Code   RO          387    i.TestPhase8SampleStub_ActivateXready  phase8_sample_tests_test_stub.o
+    0x080019d4   0x0000004c   Code   RO          388    i.TestPhase8SampleStub_ClearObservation  phase8_sample_tests_test_stub.o
+    0x08001a20   0x00000008   Code   RO          389    i.TestPhase8SampleStub_Device  phase8_sample_tests_test_stub.o
+    0x08001a28   0x00000054   Code   RO          390    i.TestPhase8SampleStub_LocksBalanced  phase8_sample_tests_test_stub.o
+    0x08001a7c   0x00000014   Code   RO          391    i.TestPhase8SampleStub_NextEvent  phase8_sample_tests_test_stub.o
+    0x08001a90   0x000000e8   Code   RO          392    i.TestPhase8SampleStub_Reset  phase8_sample_tests_test_stub.o
+    0x08001b78   0x00000038   Code   RO          393    i.TestPhase8SampleStub_RunProtectI2cAttempt  phase8_sample_tests_test_stub.o
+    0x08001bb0   0x00000170   Code   RO          553    i.TestSample_BoundedStaleProjection  phase8_sample_tests_test_sample.o
+    0x08001d20   0x00000210   Code   RO          554    i.TestSample_ConfigurationRevisionGuard  phase8_sample_tests_test_sample.o
+    0x08001f30   0x00000218   Code   RO          555    i.TestSample_ConfigurationRevisionImmediateWrapGuard  phase8_sample_tests_test_sample.o
+    0x08002148   0x000003a4   Code   RO          556    i.TestSample_CoreFailuresRetainPrevious  phase8_sample_tests_test_sample.o
+    0x080024ec   0x000002a0   Code   RO          557    i.TestSample_CurrentFailureAndCellRanges  phase8_sample_tests_test_sample.o
+    0x0800278c   0x0000001c   Code   RO          558    i.TestSample_ExpectedCellSum  phase8_sample_tests_test_sample.o
+    0x080027a8   0x00000230   Code   RO          559    i.TestSample_MutexTimeouts  phase8_sample_tests_test_sample.o
+    0x080029d8   0x00000260   Code   RO          560    i.TestSample_ProtectI2cContentionModel  phase8_sample_tests_test_sample.o
+    0x08002c38   0x00000244   Code   RO          561    i.TestSample_PublishContentionKeepsPending  phase8_sample_tests_test_sample.o
+    0x08002e7c   0x00000158   Code   RO          562    i.TestSample_RepeatedFailureRecovery  phase8_sample_tests_test_sample.o
+    0x08002fd4   0x0000006c   Code   RO          563    i.TestSample_Reset  phase8_sample_tests_test_sample.o
+    0x08003040   0x0000002c   Code   RO          564    i.TestSample_RunSevenSuccessfulCycles  phase8_sample_tests_test_sample.o
+    0x0800306c   0x0000004e   Code   RO          565    i.TestSample_SameCore  phase8_sample_tests_test_sample.o
+    0x080030ba   0x00000002   PAD
+    0x080030bc   0x00000018   Code   RO          566    i.TestSample_SetCc  phase8_sample_tests_test_sample.o
+    0x080030d4   0x000001d8   Code   RO          567    i.TestSample_SetterSchedulerGuard  phase8_sample_tests_test_sample.o
+    0x080032ac   0x0000001c   Code   RO          568    i.TestSample_Snapshot  phase8_sample_tests_test_sample.o
+    0x080032c8   0x00000268   Code   RO          569    i.TestSample_StaleAndProtectOrdering  phase8_sample_tests_test_sample.o
+    0x08003530   0x000004f0   Code   RO          570    i.TestSample_StartupAndSignedCurrent  phase8_sample_tests_test_sample.o
+    0x08003a20   0x000003e8   Code   RO          571    i.TestSample_TemperatureCadenceAndCurve  phase8_sample_tests_test_sample.o
+    0x08003e08   0x00000022   Code   RO          572    i.TestSample_ValidCalibration  phase8_sample_tests_test_sample.o
+    0x08003e2a   0x00000002   PAD
+    0x08003e2c   0x00000b10   Code   RO          573    i.TestSample_XreadyGenerationGuard  phase8_sample_tests_test_sample.o
+    0x0800493c   0x000000d8   Code   RO          574    i.Test_Phase8_Sample  phase8_sample_tests_test_sample.o
+    0x08004a14   0x0000003c   Code   RO          682    i.main              phase8_sample_tests_test_main.o
+    0x08004a50   0x00000034   Code   RO          394    i.vTaskSuspendAll   phase8_sample_tests_test_stub.o
+    0x08004a84   0x00000068   Code   RO          395    i.xEventGroupSetBits  phase8_sample_tests_test_stub.o
+    0x08004aec   0x000001e8   Code   RO          396    i.xQueueGenericSend  phase8_sample_tests_test_stub.o
+    0x08004cd4   0x000001f4   Code   RO          397    i.xQueueSemaphoreTake  phase8_sample_tests_test_stub.o
+    0x08004ec8   0x00000018   Code   RO          399    i.xTaskGetSchedulerState  phase8_sample_tests_test_stub.o
+    0x08004ee0   0x00000068   Code   RO          401    i.xTaskResumeAll    phase8_sample_tests_test_stub.o
+    0x08004f48   0x00000030   Data   RO          403    .constdata          phase8_sample_tests_test_stub.o
+    0x08004f78   0x00000018   Data   RO          575    .constdata          phase8_sample_tests_test_sample.o
+    0x08004f90   0x00000020   Data   RO          885    Region$$Table       anon$$obj.o
+
+
+    Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x000009f8, Max: 0x00005000, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x20000000   0x00000039   Data   RW          247    .data               phase8_sample_tests_bms_sample.o
+    0x20000039   0x00000003   PAD
+    0x2000003c   0x00000040   Data   RW          404    .data               phase8_sample_tests_test_stub.o
+    0x2000007c   0x00000048   Data   RW          576    .data               phase8_sample_tests_test_sample.o
+    0x200000c4   0x00000010   Data   RW          683    .data               phase8_sample_tests_test_main.o
+    0x200000d4   0x00000104   Zero   RW           23    .bss                phase8_sample_tests_bms_data.o
+    0x200001d8   0x00000058   Zero   RW          246    .bss                phase8_sample_tests_bms_sample.o
+    0x20000230   0x00000164   Zero   RW          402    .bss                phase8_sample_tests_test_stub.o
+    0x20000394   0x00000060   Zero   RW          753    .bss                c_w.l(libspace.o)
+    0x200003f4   0x00000004   PAD
+    0x200003f8   0x00000200   Zero   RW            2    HEAP                startup_stm32f10x_md.o
+    0x200005f8   0x00000400   Zero   RW            1    STACK               startup_stm32f10x_md.o
+
+
+==============================================================================
+
+Image component sizes
+
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
+
+      1350         40          0          0        260      22061   phase8_sample_tests_bms_data.o
+        10          0          0          0          0        753   phase8_sample_tests_bms_fault.o
+       396          0          0          0          0       3718   phase8_sample_tests_bms_ntc.o
+      2818        294          0         57         88      24443   phase8_sample_tests_bms_sample.o
+        62         16          0         16          0       1680   phase8_sample_tests_test_main.o
+     11872        402         24         72          0      19362   phase8_sample_tests_test_sample.o
+      2702        326         48         64        356      25450   phase8_sample_tests_test_stub.o
+        64         26        236          0       1536        940   startup_stm32f10x_md.o
+
+    ----------------------------------------------------------------------
+     19294       1104        340        212       2240      98407   Object Totals
+         0          0         32          0          0          0   (incl. Generated)
+        20          0          0          3          0          0   (incl. Padding)
+
+    ----------------------------------------------------------------------
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Library Member Name
+
+         8          0          0          0          0         68   __main.o
+         0          0          0          0          0          0   __rtentry.o
+        12          0          0          0          0          0   __rtentry2.o
+         6          0          0          0          0          0   __rtentry4.o
+        52          8          0          0          0          0   __scatter.o
+        26          0          0          0          0          0   __scatter_copy.o
+        28          0          0          0          0          0   __scatter_zi.o
+        18          0          0          0          0         80   exit.o
+         6          0          0          0          0        152   heapauxi.o
+         0          0          0          0          0          0   indicate_semi.o
+         2          0          0          0          0          0   libinit.o
+         2          0          0          0          0          0   libinit2.o
+         2          0          0          0          0          0   libshutdown.o
+         2          0          0          0          0          0   libshutdown2.o
+         8          4          0          0         96         68   libspace.o
+        72          0          0          0          0         76   llsdiv.o
+       238          0          0          0          0        100   lludivv7m.o
+        78          0          0          0          0         80   rt_memclr_w.o
+       100          0          0          0          0         80   rt_memcpy_w.o
+         2          0          0          0          0          0   rtexit.o
+        10          0          0          0          0          0   rtexit2.o
+        12          4          0          0          0         68   sys_exit.o
+        74          0          0          0          0         80   sys_stackheap_outer.o
+         2          0          0          0          0         68   use_no_semi.o
+
+    ----------------------------------------------------------------------
+       766         16          0          0        100        920   Library Totals
+         6          0          0          0          4          0   (incl. Padding)
+
+    ----------------------------------------------------------------------
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Library Name
+
+       760         16          0          0         96        920   c_w.l
+
+    ----------------------------------------------------------------------
+       766         16          0          0        100        920   Library Totals
+
+    ----------------------------------------------------------------------
+
+==============================================================================
+
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
+
+     20060       1120        340        212       2340      94747   Grand Totals
+     20060       1120        340        212       2340      94747   ELF Image Totals
+     20060       1120        340        212          0          0   ROM Totals
+
+==============================================================================
+
+    Total RO  Size (Code + RO Data)                20400 (  19.92kB)
+    Total RW  Size (RW Data + ZI Data)              2552 (   2.49kB)
+    Total ROM Size (Code + RO Data + RW Data)      20612 (  20.13kB)
+
+==============================================================================
+
