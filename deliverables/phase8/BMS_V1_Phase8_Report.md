@@ -12,7 +12,7 @@ BLOCKERS: 2
 PHASE 9: NOT STARTED
 ```
 
-## 1. 接管与 Git baseline
+## 1. 接管与 Git baseline（历史记录）
 
 本报告由接管 Codex 中断工作的会话生成。Codex 在启动 Phase 8 final full gate 后额度耗尽；接管后确认 gate 证据链已在本地完整生成，随后**从零独立重跑一次 final full gate**（见 §9），两轮证据一致。
 
@@ -21,11 +21,13 @@ PHASE 9: NOT STARTED
 | 工作分支 | `codex/phase8-phase9`（本地，未 push，接管时已存在） |
 | 接管前 HEAD | `efb2283`（fix: close Phase 7 safety boundaries，2026-08-20 22:39 +0800） |
 | 接管后新增 commits | `9f5a9a0`（实现）、`4699142`（tests/harness）、`35d8c15`（证据）、`eb791d2`（独立重跑证据刷新） |
-| 当前 HEAD | `eb791d2` |
-| 远端 | `origin/codex/review-phase7` = `4cb25b6`；`codex/phase8-phase9` 尚未 push |
+| 接管独立重跑完成时 HEAD | `eb791d2` |
+| 远端（接管当时） | `origin/codex/review-phase7` = `4cb25b6`；`codex/phase8-phase9` 尚未 push |
 | 禁止覆盖 | `main` / `dsh/phase4` / `dsh/phase5` / `dsh/phase6` / `dsh/phase7` / `codex/review-phase7` 均 UNCHANGED |
 
 现场恢复结论：`efb2283` 为唯一 local-only commit；无 staged changes；Phase 8 实现全部位于工作树（未提交但未覆盖）；reflog 无孤儿 commit；Codex 工作完整保留。
+
+本节记录 Phase 8 接管和独立重跑时的历史 Git 状态，不作为当前仓库 HEAD 的动态来源；当前分支与 HEAD 应以实时 Git 为准。
 
 ## 2. Phase 7 boundary fix（`efb2283`，保留，不重写）
 
@@ -97,7 +99,7 @@ main (startup, 调度器前)
   ├─ BMS_Data_Init() + BMS_Sample_Init()
   └─ BMS_Sample_SetDevice()               (调度器启动后立即，XREADY active 前)
 
-Task_Sample (250 ms 周期, priority 3)
+Task_Sample (250 ms 周期, priority 4)
   └─ BMS_Sample_RunOnce(now_ms)
        ├─ XREADY generation precheck      (active/mismatch → reject, 零 AFE 读)
        ├─ 13 组 cell 读 (xI2CMutex, 20 ms 超时) + BAT pack 读
