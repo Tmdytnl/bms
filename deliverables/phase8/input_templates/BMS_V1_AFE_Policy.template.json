@@ -1,0 +1,207 @@
+{
+  "artifact_type": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY",
+  "schema_version": 1,
+  "revision": "<REQUIRED>",
+  "device_basis": {
+    "part": "<REQUIRED: exact BQ7694003 variant>",
+    "datasheet_revision": "<REQUIRED>",
+    "errata_revision": "<REQUIRED or NONE>",
+    "board_schematic_revision": "<REQUIRED>",
+    "policy_revision": "<REQUIRED>"
+  },
+  "startup_policy": {
+    "wake_probe": {
+      "wake_probe_approved": false,
+      "wake_settle_ms": null,
+      "probe_attempt_policy": null,
+      "datasheet_basis": "<REQUIRED>"
+    },
+    "sys_ctrl1": {
+      "approved_value": null,
+      "value_mask_semantics": null,
+      "adc_temp_meaning": null,
+      "readback_rule": null,
+      "current_software_reference": {
+        "value": 24,
+        "status": "NOT APPROVED PRODUCTION VALUE",
+        "note": "BMS_AFE_STARTUP_SYS_CTRL1_REQUIRED = 0x18; current source constant only."
+      }
+    },
+    "sys_ctrl2_early": {
+      "fet_safe_off_approved": false,
+      "approved_value": null,
+      "cc_behavior": null,
+      "allowed_mask": null,
+      "readback_rule": null,
+      "current_software_reference": {
+        "value": 0,
+        "status": "NOT APPROVED PRODUCTION VALUE",
+        "note": "BMS_AFE_STARTUP_SYS_CTRL2_FET_OFF = 0x00; current source constant only."
+      }
+    },
+    "sys_ctrl2_final": {
+      "required_cc_state": null,
+      "chg_startup_state": null,
+      "dsg_startup_state": null,
+      "prohibited_delay_dis": true,
+      "prohibited_cc_oneshot": true,
+      "reserved_bit_policy": null,
+      "readback_rule": null,
+      "current_software_reference": {
+        "value": 64,
+        "status": "NOT APPROVED PRODUCTION VALUE",
+        "note": "BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF = 0x40 (CC_EN set, CHG/DSG off); current source constant only. DELAY_DIS/CC_ONESHOT prohibition is frozen architecture (FROZEN-05)."
+      }
+    },
+    "cellbal_startup": {
+      "all_zero_approved": false,
+      "cellbal1": 0,
+      "cellbal2": 0,
+      "cellbal3": 0,
+      "exact_readback_required": true,
+      "readback_rule": null
+    },
+    "cc_cfg": {
+      "approved_value": null,
+      "datasheet_basis": null,
+      "readback_rule": null,
+      "cc_enable_first_event_policy": null,
+      "current_software_reference": {
+        "value": 25,
+        "status": "NOT APPROVED PRODUCTION VALUE",
+        "note": "BQ76940_CC_CFG_REQUIRED_VALUE = 0x19; current source constant only."
+      }
+    }
+  },
+  "hardware_protection_policy": {
+    "ov": {
+      "target_cell_mv": null,
+      "hardware_delay_physical": null,
+      "delay_register": "PROTECT3",
+      "protect3_ov_delay_code": null,
+      "quantization_policy": null,
+      "ov_trip_encoding_policy": null,
+      "readback_policy": null
+    },
+    "uv": {
+      "target_cell_mv": null,
+      "hardware_delay_physical": null,
+      "delay_register": "PROTECT3",
+      "protect3_uv_delay_code": null,
+      "quantization_policy": null,
+      "uv_trip_encoding_policy": null,
+      "readback_policy": null
+    },
+    "ocd": {
+      "target_current_ma": null,
+      "target_sense_voltage_mv": null,
+      "rsns_selection": null,
+      "threshold_code": null,
+      "physical_delay": null,
+      "delay_register": "PROTECT2",
+      "protect2_delay_code": null,
+      "quantization_selection_policy": null,
+      "readback_policy": null
+    },
+    "scd": {
+      "target_current_ma": null,
+      "target_sense_voltage_mv": null,
+      "rsns_selection": null,
+      "threshold_code": null,
+      "physical_delay": null,
+      "delay_register": "PROTECT1",
+      "protect1_delay_code": null,
+      "quantization_selection_policy": null,
+      "readback_policy": null
+    }
+  },
+  "current_rsense_policy": {
+    "rsense_nominal_uohm": null,
+    "rsense_source": null,
+    "rsense_approval_basis": null,
+    "current_polarity": null,
+    "polarity_definition": null,
+    "rsns_bit": null,
+    "cc_conversion_basis": null,
+    "ocd_mapping_basis": null,
+    "scd_mapping_basis": null,
+    "current_software_reference": {
+      "rsense_reference_uohm": 4000,
+      "current_polarity_reference": 1,
+      "status": "NOT APPROVED PRODUCTION VALUE",
+      "note": "BMS_RSENSE_REFERENCE_UOHM and BMS_CURRENT_POLARITY in bms_config.h are reference constants and do NOT count as approval."
+    }
+  },
+  "runtime_calibration_contract": {
+    "adc_gain1_read_every_startup_recovery": true,
+    "adc_offset_read_every_startup_recovery": true,
+    "adc_gain2_read_every_startup_recovery": true,
+    "read_failure_behavior": null,
+    "invalid_decode_behavior": null,
+    "default_calibration_permitted": false,
+    "xready_generation_binding_required": true,
+    "post_clear_provenance_required": true,
+    "sample_handoff_owner": null,
+    "handoff_acceptance_conditions": null
+  },
+  "xready_recovery_contract": {
+    "full_reconfiguration_required": true,
+    "pre_clear_safe_preparation": null,
+    "runtime_w1c_owner": "ProtectTask",
+    "startup_w1c_exception": "BMS_AfeStartup",
+    "single_authorized_runtime_w1c_policy": null,
+    "w1c_ambiguity_policy": null,
+    "post_clear_full_configuration_readback": null,
+    "settle_policy": null,
+    "calibration_provenance": null,
+    "first_valid_current_generation_measurement": null,
+    "second_xready_policy": null,
+    "historical_latch_reset_policy": null,
+    "historical_latch_reset_status": "REQUIRED_POLICY_INPUT"
+  },
+  "fet_handoff_enable_policy": {
+    "startup_chg_state": null,
+    "startup_dsg_state": null,
+    "xready_recovery_inhibit": null,
+    "active_hw_fault_directional_inhibits": {
+      "ov": {
+        "chg": null,
+        "dsg": null
+      },
+      "uv": {
+        "chg": null,
+        "dsg": null
+      },
+      "ocd": {
+        "chg": null,
+        "dsg": null
+      },
+      "scd": {
+        "chg": null,
+        "dsg": null
+      },
+      "ovrd_alert": {
+        "chg": null,
+        "dsg": null
+      },
+      "xready": {
+        "chg": null,
+        "dsg": null
+      }
+    },
+    "latched_fault_handling": null,
+    "calibration_requirement": null,
+    "first_valid_frame_requirement": null,
+    "current_validity_requirement": null,
+    "temperature_validity_requirement": null,
+    "stale_data_behavior": null,
+    "afe_communication_failure_behavior": null
+  },
+  "approval": {
+    "status": "DRAFT",
+    "approved_by": null,
+    "approved_at": null,
+    "approval_record": null,
+    "artifact_sha256": null
+  }
+}

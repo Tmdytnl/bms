@@ -53,6 +53,14 @@ This does not lift the Hard Gate blockers.
 
 No guessed parameters are recorded.
 
+## Phase 8 Blocker Intake Package
+
+Phase8 blocker intake package: READY
+
+Meaning: machine-fillable templates + schemas + approval checklist + future gate binding plan exist under `deliverables/phase8/input_templates/` (P8-BLOCKER-PACK-001).
+
+This does NOT resolve Blocker-1 or Blocker-2.
+
 ## Phase 9 Open Product-Policy Items (UNFROZEN)
 
 - OP-01 XREADY historical latch reset authority/evidence
@@ -89,7 +97,8 @@ Note: the completion commit is task-closure evidence, not the dynamic repository
 3. Re-run future Phase8 gate only after approved artifacts exist.
 4. Perform later Codex Sol High Phase8 safety review as required by the project review flow.
 5. Resolve Phase9 OPEN product-policy items OP-01 … OP-10 via approved policy artifacts; do not guess values.
-6. Phase9 official implementation remains NOT STARTED until the Hard Gate/process rule permits it.
+6. Fill and approve the Phase8 blocker intake artifacts (templates/schemas in deliverables/phase8/input_templates/); approval does not itself pass the gate.
+7. Phase9 official implementation remains NOT STARTED until the Hard Gate/process rule permits it.
 
 ## Invariants
 

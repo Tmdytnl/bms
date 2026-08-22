@@ -1,0 +1,1201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/BMS_V1_AFE_Policy.schema.json",
+  "title": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY",
+  "description": "Final approved AFE startup/protection policy artifact (Blocker-2). Structural schema only; physical-target-to-register-code recomputation, placeholder rejection, and approval binding are future gate/tooling checks. SCD delay belongs to PROTECT1, OCD delay to PROTECT2, OV/UV delay to PROTECT3; delay_register fields enforce that classification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "revision",
+    "device_basis",
+    "startup_policy",
+    "hardware_protection_policy",
+    "current_rsense_policy",
+    "runtime_calibration_contract",
+    "xready_recovery_contract",
+    "fet_handoff_enable_policy",
+    "approval"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Exact immutable revision identifier; must match the stored artifact filename revision."
+    },
+    "device_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "part",
+        "datasheet_revision",
+        "errata_revision",
+        "board_schematic_revision",
+        "policy_revision"
+      ],
+      "properties": {
+        "part": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Exact BQ7694003 variant identifier."
+        },
+        "datasheet_revision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "errata_revision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Errata revision, or the explicit value NONE."
+        },
+        "board_schematic_revision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "startup_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wake_probe",
+        "sys_ctrl1",
+        "sys_ctrl2_early",
+        "sys_ctrl2_final",
+        "cellbal_startup",
+        "cc_cfg"
+      ],
+      "properties": {
+        "wake_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wake_probe_approved",
+            "wake_settle_ms",
+            "probe_attempt_policy",
+            "datasheet_basis"
+          ],
+          "properties": {
+            "wake_probe_approved": {
+              "type": "boolean",
+              "description": "Approver confirms wake/probe behavior; must be true in a final artifact."
+            },
+            "wake_settle_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295,
+              "description": "uint32_t domain."
+            },
+            "probe_attempt_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "datasheet_basis": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "sys_ctrl1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "approved_value",
+            "value_mask_semantics",
+            "adc_temp_meaning",
+            "readback_rule"
+          ],
+          "properties": {
+            "approved_value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain."
+            },
+            "value_mask_semantics": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "adc_temp_meaning": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "ADC enable / TEMP_SEL meaning for the approved byte."
+            },
+            "readback_rule": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "current_software_reference": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "status",
+                "note"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "status": {
+                  "const": "NOT APPROVED PRODUCTION VALUE"
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "sys_ctrl2_early": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fet_safe_off_approved",
+            "approved_value",
+            "cc_behavior",
+            "allowed_mask",
+            "readback_rule"
+          ],
+          "properties": {
+            "fet_safe_off_approved": {
+              "type": "boolean",
+              "description": "Approver confirms early safe-off behavior; must be true in a final artifact."
+            },
+            "approved_value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain."
+            },
+            "cc_behavior": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "allowed_mask": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; allowed readback mask."
+            },
+            "readback_rule": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "current_software_reference": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "status",
+                "note"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "status": {
+                  "const": "NOT APPROVED PRODUCTION VALUE"
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "sys_ctrl2_final": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required_cc_state",
+            "chg_startup_state",
+            "dsg_startup_state",
+            "prohibited_delay_dis",
+            "prohibited_cc_oneshot",
+            "reserved_bit_policy",
+            "readback_rule"
+          ],
+          "properties": {
+            "required_cc_state": {
+              "type": "boolean",
+              "description": "Whether CC_EN must be set in the final startup SYS_CTRL2 state."
+            },
+            "chg_startup_state": {
+              "enum": [
+                "OFF",
+                "ON"
+              ]
+            },
+            "dsg_startup_state": {
+              "enum": [
+                "OFF",
+                "ON"
+              ]
+            },
+            "prohibited_delay_dis": {
+              "const": true,
+              "description": "Frozen architecture (FROZEN-05): DELAY_DIS forced safe."
+            },
+            "prohibited_cc_oneshot": {
+              "const": true,
+              "description": "Frozen architecture (FROZEN-05): CC_ONESHOT forced safe."
+            },
+            "reserved_bit_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "readback_rule": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "current_software_reference": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "status",
+                "note"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "status": {
+                  "const": "NOT APPROVED PRODUCTION VALUE"
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "cellbal_startup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "all_zero_approved",
+            "cellbal1",
+            "cellbal2",
+            "cellbal3",
+            "exact_readback_required",
+            "readback_rule"
+          ],
+          "properties": {
+            "all_zero_approved": {
+              "type": "boolean",
+              "description": "Approver explicitly approves all-zero startup balancing; must be true in a final artifact."
+            },
+            "cellbal1": {
+              "const": 0,
+              "description": "Startup policy requires 0x00 (source contract)."
+            },
+            "cellbal2": {
+              "const": 0
+            },
+            "cellbal3": {
+              "const": 0
+            },
+            "exact_readback_required": {
+              "const": true,
+              "description": "Startup requires exact readback of the three balancing-off registers."
+            },
+            "readback_rule": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "cc_cfg": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "approved_value",
+            "datasheet_basis",
+            "readback_rule",
+            "cc_enable_first_event_policy"
+          ],
+          "properties": {
+            "approved_value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain."
+            },
+            "datasheet_basis": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "readback_rule": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "cc_enable_first_event_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "CC enable and first CC_READY expectation."
+            },
+            "current_software_reference": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "status",
+                "note"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "status": {
+                  "const": "NOT APPROVED PRODUCTION VALUE"
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hardware_protection_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ov",
+        "uv",
+        "ocd",
+        "scd"
+      ],
+      "properties": {
+        "ov": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_cell_mv",
+            "hardware_delay_physical",
+            "delay_register",
+            "protect3_ov_delay_code",
+            "quantization_policy",
+            "ov_trip_encoding_policy",
+            "readback_policy"
+          ],
+          "properties": {
+            "target_cell_mv": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535,
+              "description": "uint16_t domain; per-cell OV trip target."
+            },
+            "hardware_delay_physical": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295,
+              "description": "uint32_t domain; physical OV delay (unit declared in policy text)."
+            },
+            "delay_register": {
+              "const": "PROTECT3",
+              "description": "OV/UV delay belongs to PROTECT3, never PROTECT1/2."
+            },
+            "protect3_ov_delay_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; PROTECT3 OV_D code."
+            },
+            "quantization_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Approved BQ quantization/rounding policy for the trip encoding."
+            },
+            "ov_trip_encoding_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "How the physical mV target is encoded into OV_TRIP under runtime ADC calibration."
+            },
+            "readback_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "uv": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_cell_mv",
+            "hardware_delay_physical",
+            "delay_register",
+            "protect3_uv_delay_code",
+            "quantization_policy",
+            "uv_trip_encoding_policy",
+            "readback_policy"
+          ],
+          "properties": {
+            "target_cell_mv": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535,
+              "description": "uint16_t domain; per-cell UV trip target."
+            },
+            "hardware_delay_physical": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295,
+              "description": "uint32_t domain; physical UV delay (unit declared in policy text)."
+            },
+            "delay_register": {
+              "const": "PROTECT3",
+              "description": "OV/UV delay belongs to PROTECT3, never PROTECT1/2."
+            },
+            "protect3_uv_delay_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; PROTECT3 UV_D code."
+            },
+            "quantization_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Approved BQ quantization/rounding policy for the trip encoding."
+            },
+            "uv_trip_encoding_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "How the physical mV target is encoded into UV_TRIP under runtime ADC calibration."
+            },
+            "readback_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "ocd": {
+          "type": "object",
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "target_current_ma"
+              ]
+            },
+            {
+              "required": [
+                "target_sense_voltage_mv"
+              ]
+            }
+          ],
+          "required": [
+            "rsns_selection",
+            "threshold_code",
+            "physical_delay",
+            "delay_register",
+            "protect2_delay_code",
+            "quantization_selection_policy",
+            "readback_policy"
+          ],
+          "properties": {
+            "target_current_ma": {
+              "type": "integer",
+              "minimum": -2147483648,
+              "maximum": 2147483647,
+              "description": "int32_t domain; signed current target, OR provide target_sense_voltage_mv."
+            },
+            "target_sense_voltage_mv": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535,
+              "description": "uint16_t domain; SRP-SRN sense voltage target, OR provide target_current_ma."
+            },
+            "rsns_selection": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "RSNS bit value used for the sense threshold table."
+            },
+            "threshold_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; OCD threshold code."
+            },
+            "physical_delay": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295,
+              "description": "uint32_t domain; physical OCD delay (unit declared in policy text)."
+            },
+            "delay_register": {
+              "const": "PROTECT2",
+              "description": "OCD delay belongs to PROTECT2, never PROTECT1/3."
+            },
+            "protect2_delay_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; PROTECT2 OCD_D code."
+            },
+            "quantization_selection_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Approved selection rule (e.g. not-below-requested) and final code derivation."
+            },
+            "readback_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "scd": {
+          "type": "object",
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "target_current_ma"
+              ]
+            },
+            {
+              "required": [
+                "target_sense_voltage_mv"
+              ]
+            }
+          ],
+          "required": [
+            "rsns_selection",
+            "threshold_code",
+            "physical_delay",
+            "delay_register",
+            "protect1_delay_code",
+            "quantization_selection_policy",
+            "readback_policy"
+          ],
+          "properties": {
+            "target_current_ma": {
+              "type": "integer",
+              "minimum": -2147483648,
+              "maximum": 2147483647,
+              "description": "int32_t domain; signed current target, OR provide target_sense_voltage_mv."
+            },
+            "target_sense_voltage_mv": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535,
+              "description": "uint16_t domain; SRP-SRN sense voltage target, OR provide target_current_ma."
+            },
+            "rsns_selection": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "RSNS bit value used for the sense threshold table."
+            },
+            "threshold_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; SCD threshold code."
+            },
+            "physical_delay": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295,
+              "description": "uint32_t domain; physical SCD delay (unit declared in policy text)."
+            },
+            "delay_register": {
+              "const": "PROTECT1",
+              "description": "SCD delay belongs to PROTECT1, never PROTECT3."
+            },
+            "protect1_delay_code": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "uint8_t domain; PROTECT1 SCD_D code."
+            },
+            "quantization_selection_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Approved selection rule (e.g. not-below-requested) and final code derivation."
+            },
+            "readback_policy": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        }
+      }
+    },
+    "current_rsense_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rsense_nominal_uohm",
+        "rsense_source",
+        "rsense_approval_basis",
+        "current_polarity",
+        "polarity_definition",
+        "rsns_bit",
+        "cc_conversion_basis",
+        "ocd_mapping_basis",
+        "scd_mapping_basis"
+      ],
+      "properties": {
+        "rsense_nominal_uohm": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295,
+          "description": "uint32_t domain, positive. Approved board value; BMS_RSENSE_REFERENCE_UOHM alone is NOT approval."
+        },
+        "rsense_source": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Schematic/BOM/calibration source of the Rsense value."
+        },
+        "rsense_approval_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Explicit approval basis; the software reference constant must not silently count as approval."
+        },
+        "current_polarity": {
+          "enum": [
+            -1,
+            1
+          ],
+          "description": "Signed unit polarity per BMS_CURRENT_POLARITY contract."
+        },
+        "polarity_definition": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Defines what positive current means for the board."
+        },
+        "rsns_bit": {
+          "enum": [
+            0,
+            1
+          ],
+          "description": "Approved RSNS bit selection."
+        },
+        "cc_conversion_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "CC LSB/Rsense conversion basis for current measurement."
+        },
+        "ocd_mapping_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Basis for mapping product OCD target to PROTECT2 threshold code."
+        },
+        "scd_mapping_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Basis for mapping product SCD target to PROTECT1 threshold code."
+        },
+        "current_software_reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rsense_reference_uohm",
+            "current_polarity_reference",
+            "status",
+            "note"
+          ],
+          "properties": {
+            "rsense_reference_uohm": {
+              "type": "integer"
+            },
+            "current_polarity_reference": {
+              "type": "integer"
+            },
+            "status": {
+              "const": "NOT APPROVED PRODUCTION VALUE"
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "runtime_calibration_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adc_gain1_read_every_startup_recovery",
+        "adc_offset_read_every_startup_recovery",
+        "adc_gain2_read_every_startup_recovery",
+        "read_failure_behavior",
+        "invalid_decode_behavior",
+        "default_calibration_permitted",
+        "xready_generation_binding_required",
+        "post_clear_provenance_required",
+        "sample_handoff_owner",
+        "handoff_acceptance_conditions"
+      ],
+      "properties": {
+        "adc_gain1_read_every_startup_recovery": {
+          "const": true,
+          "description": "ADCGAIN1 is a runtime device read on every startup/recovery; never a source constant."
+        },
+        "adc_offset_read_every_startup_recovery": {
+          "const": true,
+          "description": "ADCOFFSET is a runtime device read on every startup/recovery; never a source constant."
+        },
+        "adc_gain2_read_every_startup_recovery": {
+          "const": true,
+          "description": "ADCGAIN2 is a runtime device read on every startup/recovery; never a source constant."
+        },
+        "read_failure_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "invalid_decode_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Invalid decode must not bind calibration (no default substitution)."
+        },
+        "default_calibration_permitted": {
+          "const": false,
+          "description": "Default calibration is never permitted; the artifact must resolve to false."
+        },
+        "xready_generation_binding_required": {
+          "const": true,
+          "description": "Calibration must bind to the current XREADY generation (FROZEN-09/10)."
+        },
+        "post_clear_provenance_required": {
+          "const": true,
+          "description": "Post-clear calibration provenance is required (FROZEN-09)."
+        },
+        "sample_handoff_owner": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Sole owner that performs the runtime handoff into BMS_Sample_SetCalibration."
+        },
+        "handoff_acceptance_conditions": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "xready_recovery_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "full_reconfiguration_required",
+        "pre_clear_safe_preparation",
+        "runtime_w1c_owner",
+        "startup_w1c_exception",
+        "single_authorized_runtime_w1c_policy",
+        "w1c_ambiguity_policy",
+        "post_clear_full_configuration_readback",
+        "settle_policy",
+        "calibration_provenance",
+        "first_valid_current_generation_measurement",
+        "second_xready_policy",
+        "historical_latch_reset_policy"
+      ],
+      "properties": {
+        "full_reconfiguration_required": {
+          "const": true,
+          "description": "Recovery requires full reconfiguration; old evidence is never reused."
+        },
+        "pre_clear_safe_preparation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "runtime_w1c_owner": {
+          "const": "ProtectTask",
+          "description": "Frozen architecture (FROZEN-07): ProtectTask is the sole runtime XREADY W1C owner."
+        },
+        "startup_w1c_exception": {
+          "const": "BMS_AfeStartup",
+          "description": "Frozen architecture (FROZEN-07): BMS_AfeStartup retains the pre-scheduler W1C exception."
+        },
+        "single_authorized_runtime_w1c_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "W1C authorized only from the current status read after PRE_CLEAR_READY; exactly once."
+        },
+        "w1c_ambiguity_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Ambiguous W1C finalization: no replay, no success claim."
+        },
+        "post_clear_full_configuration_readback": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "settle_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "calibration_provenance": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Provenance tuple carried by the recovered calibration (FROZEN-09)."
+        },
+        "first_valid_current_generation_measurement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "First accepted valid measurement of the current recovery generation (FROZEN-10)."
+        },
+        "second_xready_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Second XREADY action; current source contract is terminal fail-safe."
+        },
+        "historical_latch_reset_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "OP-01 (XREADY historical latch reset authority/evidence). Open product policy; a final artifact is invalid while this is null/placeholder."
+        },
+        "historical_latch_reset_status": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Optional status marker (e.g. REQUIRED_POLICY_INPUT while OP-01 is open)."
+        }
+      }
+    },
+    "fet_handoff_enable_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startup_chg_state",
+        "startup_dsg_state",
+        "xready_recovery_inhibit",
+        "active_hw_fault_directional_inhibits",
+        "latched_fault_handling",
+        "calibration_requirement",
+        "first_valid_frame_requirement",
+        "current_validity_requirement",
+        "temperature_validity_requirement",
+        "stale_data_behavior",
+        "afe_communication_failure_behavior"
+      ],
+      "properties": {
+        "startup_chg_state": {
+          "enum": [
+            "OFF",
+            "ON"
+          ],
+          "description": "Approved startup CHG state."
+        },
+        "startup_dsg_state": {
+          "enum": [
+            "OFF",
+            "ON"
+          ],
+          "description": "Approved startup DSG state."
+        },
+        "xready_recovery_inhibit": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "FROZEN-08: recovery-in-progress inhibits both FETs from first XREADY observation until COMPLETE."
+        },
+        "active_hw_fault_directional_inhibits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ov",
+            "uv",
+            "ocd",
+            "scd",
+            "ovrd_alert",
+            "xready"
+          ],
+          "properties": {
+            "ov": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            },
+            "uv": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            },
+            "ocd": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            },
+            "scd": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            },
+            "ovrd_alert": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            },
+            "xready": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chg",
+                "dsg"
+              ],
+              "properties": {
+                "chg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                },
+                "dsg": {
+                  "enum": [
+                    "INHIBIT",
+                    "ALLOW"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "latched_fault_handling": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Latch clear is source-specific, policy-specific, evidence-gated (FROZEN-16/17)."
+        },
+        "calibration_requirement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Calibration binding required before FET enable."
+        },
+        "first_valid_frame_requirement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "current_validity_requirement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "temperature_validity_requirement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "stale_data_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "OP-08: DATA_STALE directional FET action; open product policy."
+        },
+        "afe_communication_failure_behavior": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Behavior on AFE comm failure (FROZEN-18 hardware evidence boundary applies)."
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approved_by",
+        "approved_at",
+        "approval_record",
+        "artifact_sha256"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "APPROVED"
+          ],
+          "description": "Only APPROVED is valid in a final artifact; DRAFT or any other state is invalid."
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "approved_at": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "ISO-8601 timestamp."
+        },
+        "approval_record": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Immutable approval evidence ID binding the same revision."
+        },
+        "artifact_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "SHA-256 of the canonical artifact bytes; gate logic compares against the stored immutable copy."
+        }
+      }
+    }
+  }
+}

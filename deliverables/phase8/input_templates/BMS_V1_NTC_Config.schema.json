@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/BMS_V1_NTC_Config.schema.json",
+  "title": "BMS_V1_NTC_CONFIG",
+  "description": "Final approved NTC configuration artifact (Blocker-1). Structural schema only: it cannot prove strict monotonicity or cross-field consistency; those are future gate/tooling checks. Null, \"<REQUIRED>\", or non-APPROVED status are invalid in a final artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "revision",
+    "device",
+    "source",
+    "electrical_model",
+    "table",
+    "coverage",
+    "provenance",
+    "approval"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "BMS_V1_NTC_CONFIG"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Exact immutable revision identifier; must match the stored artifact filename revision."
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manufacturer",
+        "exact_part_number",
+        "variant",
+        "tolerance_basis"
+      ],
+      "properties": {
+        "manufacturer": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "exact_part_number": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "variant": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "tolerance_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Tolerance/lot assumption basis for the installed NTC part."
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_title",
+        "document_revision",
+        "source_location",
+        "source_type"
+      ],
+      "properties": {
+        "document_title": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "document_revision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "source_location": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Page/table/calibration record location of the authoritative R-T data."
+        },
+        "source_type": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "e.g. vendor datasheet table, vendor calibration record, approved fit."
+        }
+      }
+    },
+    "electrical_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ts_channel",
+        "topology",
+        "bias_resistor_nominal_ohm",
+        "bias_resistor_tolerance",
+        "regout_nominal_mv",
+        "schematic_reference",
+        "bom_reference",
+        "model_confirmed"
+      ],
+      "properties": {
+        "ts_channel": {
+          "const": "TS1",
+          "description": "Current software consumes only the BQ TS1 path (bq76940_measurement.h)."
+        },
+        "topology": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Divider topology; the current software contract assumes pull-up-to-REGOUT divider per the BQ TS equation. Gate logic must confirm schematic topology matches."
+        },
+        "bias_resistor_nominal_ohm": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295,
+          "description": "uint32_t domain, positive. Board-approved value; current software reference 10000 is NOT approval."
+        },
+        "bias_resistor_tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percent tolerance, e.g. 1 for +/-1%."
+        },
+        "regout_nominal_mv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "uint16_t domain, positive mV."
+        },
+        "schematic_reference": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "bom_reference": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "model_confirmed": {
+          "type": "boolean",
+          "description": "Approver confirms the schematic/BOM matches the current TS1 divider model."
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resistance_unit",
+        "temperature_unit",
+        "ordering",
+        "point_count",
+        "points"
+      ],
+      "properties": {
+        "resistance_unit": {
+          "const": "ohm"
+        },
+        "temperature_unit": {
+          "const": "deci_C"
+        },
+        "ordering": {
+          "enum": [
+            "resistance_ascending",
+            "resistance_descending"
+          ],
+          "description": "Either order is accepted by BMS_Ntc_ValidateTable; the declared order must match the data."
+        },
+        "point_count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 65535,
+          "description": "uint16_t domain. Gate logic must verify point_count == points.length."
+        },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 65535,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "resistance_ohm",
+              "temperature_decic"
+            ],
+            "properties": {
+              "resistance_ohm": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295,
+                "description": "uint32_t domain; positive. Strict monotonic resistance must be verified by gate/tooling, not by this schema."
+              },
+              "temperature_decic": {
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767,
+                "description": "int16_t domain. Strict opposite-direction monotonic temperature must be verified by gate/tooling, not by this schema."
+              }
+            }
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_temperature_decic",
+        "maximum_temperature_decic",
+        "out_of_range_behavior"
+      ],
+      "properties": {
+        "minimum_temperature_decic": {
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767,
+          "description": "int16_t domain. Gate logic must verify minimum < maximum."
+        },
+        "maximum_temperature_decic": {
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767,
+          "description": "int16_t domain. Gate logic must verify minimum < maximum."
+        },
+        "out_of_range_behavior": {
+          "const": "reject_no_extrapolation",
+          "description": "Current software contract: BMS_Ntc_Interpolate rejects out-of-range resistance; no extrapolation."
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_curve_identifier",
+        "generation_method",
+        "generation_tool_or_record",
+        "generated_table_hash"
+      ],
+      "properties": {
+        "source_curve_identifier": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "generation_method": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "How the discrete table was generated from the source (approved fit / vendor table), never firmware-inferred."
+        },
+        "generation_tool_or_record": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "generated_table_hash": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "SHA-256 of the generated canonical table bytes (if a generated C table is used); gate logic binds it."
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approved_by",
+        "approved_at",
+        "approval_record",
+        "artifact_sha256"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "APPROVED"
+          ],
+          "description": "Only APPROVED is valid in a final artifact; DRAFT or any other state is invalid."
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "approved_at": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "ISO-8601 timestamp."
+        },
+        "approval_record": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Immutable approval evidence ID binding the same revision."
+        },
+        "artifact_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "SHA-256 of the canonical artifact bytes; gate logic compares against the stored immutable copy."
+        }
+      }
+    },
+    "current_software_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Explanatory reference values only; never production approval.",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "const": "NOT APPROVED PRODUCTION VALUE"
+        },
+        "bias_resistor_reference_ohm": {
+          "type": "integer"
+        },
+        "regout_reference_uv": {
+          "type": "integer"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

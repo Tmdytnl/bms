@@ -32,6 +32,25 @@ WAITING
 
 ## Completed Tasks
 
+### P8-BLOCKER-PACK-001
+
+Goal:
+Create machine-fillable Phase 8 blocker intake package (templates + schemas + approval checklist + future gate binding plan).
+
+Scope:
+docs/schema only
+
+Status:
+COMPLETED
+
+Result:
+- intake package prepared (deliverables/phase8/input_templates/ + approval checklist + gate binding plan)
+- no approved values supplied
+- blockers unchanged
+
+Completion commit:
+`docs: add phase8 blocker intake package` (hash in git history)
+
 ### P9-ARCH-FREEZE-001
 
 Goal:

@@ -1,0 +1,67 @@
+{
+  "artifact_type": "BMS_V1_NTC_CONFIG",
+  "schema_version": 1,
+  "revision": "<REQUIRED>",
+  "device": {
+    "manufacturer": "<REQUIRED>",
+    "exact_part_number": "<REQUIRED>",
+    "variant": "<REQUIRED>",
+    "tolerance_basis": "<REQUIRED>"
+  },
+  "source": {
+    "document_title": "<REQUIRED>",
+    "document_revision": "<REQUIRED>",
+    "source_location": "<REQUIRED>",
+    "source_type": "<REQUIRED>"
+  },
+  "electrical_model": {
+    "ts_channel": "TS1",
+    "topology": "<REQUIRED: divider model matching BQ TS1 pull-up-to-REGOUT equation>",
+    "bias_resistor_nominal_ohm": null,
+    "bias_resistor_tolerance": null,
+    "regout_nominal_mv": null,
+    "schematic_reference": "<REQUIRED>",
+    "bom_reference": "<REQUIRED>",
+    "model_confirmed": false
+  },
+  "table": {
+    "resistance_unit": "ohm",
+    "temperature_unit": "deci_C",
+    "ordering": "<REQUIRED: resistance_ascending | resistance_descending>",
+    "point_count": 0,
+    "points": [
+      {
+        "resistance_ohm": null,
+        "temperature_decic": null
+      },
+      {
+        "resistance_ohm": null,
+        "temperature_decic": null
+      }
+    ]
+  },
+  "coverage": {
+    "minimum_temperature_decic": null,
+    "maximum_temperature_decic": null,
+    "out_of_range_behavior": "reject_no_extrapolation"
+  },
+  "provenance": {
+    "source_curve_identifier": "<REQUIRED>",
+    "generation_method": "<REQUIRED>",
+    "generation_tool_or_record": "<REQUIRED>",
+    "generated_table_hash": null
+  },
+  "approval": {
+    "status": "DRAFT",
+    "approved_by": null,
+    "approved_at": null,
+    "approval_record": null,
+    "artifact_sha256": null
+  },
+  "current_software_reference": {
+    "status": "NOT APPROVED PRODUCTION VALUE",
+    "bias_resistor_reference_ohm": 10000,
+    "regout_reference_uv": 3300000,
+    "note": "bq76940_measurement.h TS pull-up (BQ76940_MEASUREMENT_TS_PULLUP_OHM) and REGOUT (BQ76940_MEASUREMENT_TS_REGOUT_UV) constants. Reference only; they do not approve the board values."
+  }
+}
