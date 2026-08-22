@@ -44,23 +44,29 @@ This does not lift the Hard Gate blockers.
 
 No guessed parameters are recorded.
 
-## Open Documentation Finding
+## Documentation Review Status
 
-L-01 remains open:
+L-01: CLOSED
 
-Phase8 Report contains historical/stale Git-state wording and states Sample priority as 3, while production app_rtos.h defines Sample priority as 4.
+Closed by:
+P8-DOC-002
 
-- docs-only
-- non-blocking for this infrastructure migration
-- not fixed by BMS-INFRA-001
+Completion commit:
+f2b32e32e2e34c0819af7e330d731c32bf9ffc3c
+
+Summary:
+- historical Git-state wording clarified
+- Task_Sample priority corrected to production value 4
+
+Note: the completion commit is task-closure evidence, not the dynamic repository HEAD.
 
 ## Current Next Actions
 
-1. Fix Phase8 Report L-01 as separate docs-only task.
-2. Obtain approved immutable NTC artifact.
-3. Obtain approved immutable AFE startup/protection policy artifact.
-4. Re-run future Phase8 gate only after approved artifacts exist.
-5. Later Codex Sol High safety review.
+1. Obtain approved immutable NTC artifact.
+2. Obtain approved immutable AFE startup/protection policy artifact.
+3. Re-run future Phase8 gate only after approved artifacts exist.
+4. Perform later Codex Sol High Phase8 safety review as required by the project review flow.
+5. Phase9 implementation remains NOT STARTED until the Hard Gate/process rule permits it.
 
 ## Invariants
 

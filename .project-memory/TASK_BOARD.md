@@ -8,17 +8,6 @@ BMS-INFRA-001 is considered completed only after its commit passes validation be
 
 ## Open Queue
 
-### P8-DOC-002
-
-Goal:
-Correct Phase8 Report L-01 only.
-
-Scope:
-docs-only
-
-Status:
-READY
-
 ### P8-BLOCKER-NTC
 
 Goal:
@@ -41,7 +30,29 @@ Goal:
 Later Codex Sol High Phase8 safety review.
 
 Status:
-WAITING / NOT REQUIRED FOR CURRENT INFRA TASK
+WAITING
+
+## Completed Tasks
+
+### P8-DOC-002
+
+Goal:
+Correct Phase8 Report L-01 only.
+
+Scope:
+docs-only
+
+Status:
+COMPLETED
+
+Completion commit:
+f2b32e32e2e34c0819af7e330d731c32bf9ffc3c
+
+Result:
+- stale/historical Git-state wording clarified
+- Task_Sample priority corrected from 3 to 4
+- no firmware/test/verifier changes
+- Phase8 gate not rerun because task was docs-only
 
 ## Blocked Work
 
