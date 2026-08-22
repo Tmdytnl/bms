@@ -4,8 +4,6 @@
 
 NONE
 
-BMS-INFRA-001 is considered completed only after its commit passes validation below.
-
 ## Open Queue
 
 ### P8-BLOCKER-NTC
@@ -34,6 +32,49 @@ WAITING
 
 ## Completed Tasks
 
+### P9-ARCH-FREEZE-001
+
+Goal:
+Freeze Phase 9 Architecture Core v1 after Codex Sol High red-team.
+
+Scope:
+docs-only (architecture document + Project Memory V2)
+
+Status:
+COMPLETED
+
+Result:
+- Phase 9 Architecture Core v1 FROZEN (contracts FROZEN-01 … FROZEN-18 + snapshot model)
+- P9-ARCH-SR-001 change request accepted and incorporated
+- OPEN product-policy items OP-01 … OP-10 remain unfrozen
+- Phase8 Hard Gate remains BLOCKED(2); Phase9 official implementation remains NOT STARTED
+- no firmware/test/verifier changes
+
+Completion commit:
+`docs: freeze phase9 safety architecture core` (hash in git history)
+
+### P9-ARCH-SR-001
+
+Goal:
+Codex Sol High red-team of the Phase 9 architecture draft.
+
+Status:
+COMPLETED — CHANGE REQUEST
+
+Result:
+- change request accepted and incorporated into the frozen core (P9-ARCH-FREEZE-001)
+
+### P9-ARCH-BATCH-01
+
+Goal:
+Produce the Phase 9 architecture preparation draft.
+
+Status:
+DRAFT COMPLETED
+
+Result:
+- evidence-backed architecture draft produced; superseded by P9-ARCH-FREEZE-001 (frozen core)
+
 ### P8-DOC-002
 
 Goal:
@@ -60,6 +101,7 @@ Phase9 implementation
 
 Reason:
 Phase8 Hard Gate remains BLOCKED(2) under the current project process rule.
+The Phase9 architecture freeze (P9-ARCH-FREEZE-001) does not start implementation.
 
 ## Completed Infrastructure
 

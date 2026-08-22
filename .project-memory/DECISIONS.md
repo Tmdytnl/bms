@@ -85,3 +85,112 @@ Preserve already established architecture:
 - CHG/DSG control follows the established single-writer safety ownership.
 - StateTask remains the health supervisor / sole IWDG feeder unless changed by an explicit reviewed task.
 - ALERT/XREADY/CC safety semantics must not be casually changed by infrastructure tasks.
+
+## Phase 9 Architecture Core (Frozen)
+
+Freeze record: P9-ARCH-FREEZE-001 after Codex Sol High red-team
+(P9-ARCH-SR-001 CHANGE REQUEST accepted and incorporated). These are
+long-term architecture decisions. No numeric product-policy values are
+recorded here; policy items OP-01 … OP-10 remain OPEN (UNFROZEN).
+
+## D-011 State classification is not safety permission
+
+State (`BMS_State_t`) is operational classification; FAULT is not itself the
+FET action. Every potentially active safety source needs an explicit reviewed
+CHG/DSG action or an explicit reviewed no-FET-effect.
+
+## D-012 Authoritative source snapshots
+
+Each authoritative safety source (ProtectTask, StateTask, Recovery
+Coordinator) exposes its own coherent safety snapshot; the FET manager
+consumes these directly.
+
+## D-013 BMS_Data aggregate is diagnostic-only for FET authority
+
+`BMS_Data` aggregated faults are reporting/diagnostics only and must not be
+used as the FET manager's real-time safety authority.
+
+## D-014 Directional inhibit action model
+
+Safety outputs carry `inhibit_chg_reasons` / `inhibit_dsg_reasons`; a fault
+ID may be active with only one directional inhibit. The FET manager consumes
+directional actions and does not infer them from diagnostic fault bits.
+
+## D-015 StateTask execution context + sole scheduler FET writer module
+
+StateTask is the sole scheduler-era context that invokes the FET manager;
+the FET manager module is the only scheduler-era writer of SYS_CTRL2 CHG/DSG
+state. ProtectTask/Recovery publish safety inputs and may notify StateTask;
+they do not write SYS_CTRL2. Pre-scheduler BMS_AfeStartup remains the
+startup exception.
+
+## D-016 Protect is the sole runtime XREADY W1C owner
+
+Runtime XREADY W1C is ProtectTask-only; BMS_AfeStartup keeps its separate
+pre-scheduler W1C path. Runtime recovery is phaseful and StateTask-serviced;
+Protect performs the single W1C only after PRE_CLEAR_READY.
+
+## D-017 Phaseful runtime recovery inhibits both FETs
+
+From first XREADY observation until COMPLETE, recovery-in-progress is a
+safety condition with both FETs inhibited. XREADY inactive alone never
+releases FET permission; a new XREADY generation aborts and restarts
+recovery; failure leaves both inhibited.
+
+## D-018 Calibration provenance
+
+Runtime calibration handoff requires provenance (xready_generation,
+recovery_revision, post_clear_verified, calibration); only the Recovery
+Coordinator performs it, and Sample accepts it only when generation,
+XREADY-inactive, recovery revision, and recovery-state checks pass.
+
+## D-019 Generation-tagged measurements
+
+Measurement publication exposes AFE generation; a valid recovery sample
+acknowledgement is sample_sequence + afe_generation; recovery completes only
+on the first accepted valid measurement of the current recovery generation.
+
+## D-020 Sequence-tagged State decisions
+
+State/SW safety decisions are tagged with evaluated_sample_sequence and
+evaluated_afe_generation and use compare-and-publish; stale publications are
+rejected and reevaluated, and FET enable never relies on a decision from an
+older measurement generation.
+
+## D-021 Request/ack HW recovery identity
+
+HW_OV/HW_UV/HW_OCD recovery uses request/ack identity tied to request_id,
+source_generation, and Protect publication revision; Protect revalidates
+currency, performs a fresh SYS_STAT read, rejects on target/blocking status,
+clears only its own private active source, and any incompatible event,
+generation change, transport failure, or qualification expiry invalidates the
+exchange. SYS_STAT low alone is never physical recovery proof.
+
+## D-022 Generation-counter health model
+
+Health uses one naturally aligned uint32_t monotonic generation counter per
+required task; each task is sole writer of its own counter; StateTask
+snapshots and compares; no heartbeat-bit clear operation exists; counter
+inequality across one health window is the progress test.
+
+## D-023 StateTask remains sole IWDG feeder
+
+StateTask is the sole IWDG feeder; IWDG is armed only after the health
+baseline is captured and every required task has shown at least one valid
+advance; event-driven roster tasks must use bounded waits.
+
+## D-024 Generic latch clear is forbidden
+
+No generic clear-all-latched-fault production API; latch clear must be
+source-specific, policy-specific, and evidence-gated.
+
+## D-025 Unmapped active safety source defaults both inhibited
+
+An unknown/unmapped active safety source defaults to both FETs inhibited
+until a reviewed action or no-FET-effect exists.
+
+## D-026 Hardware evidence boundary
+
+When BQ I2C is unavailable, software may report requested OFF / enable
+inhibited / physical state UNVERIFIED — never physical MOS OFF; SYS_CTRL2
+readback proves AFE register-level state only, not physical MOS conduction.
