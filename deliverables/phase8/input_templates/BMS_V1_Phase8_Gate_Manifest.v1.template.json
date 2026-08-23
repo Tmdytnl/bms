@@ -1,0 +1,54 @@
+{
+  "artifact_type": "BMS_V1_PHASE8_GATE_MANIFEST",
+  "schema_version": 1,
+  "manifest_revision": "<REQUIRED>",
+  "hardware_identity": {
+    "project_id": "BMS_V1",
+    "hardware_variant": "<REQUIRED>",
+    "board_revision": "<REQUIRED>",
+    "schematic_revision": "<REQUIRED>",
+    "afe_part": "<REQUIRED: exact BQ7694003 ordering/variant code>"
+  },
+  "candidate": {
+    "repository": "<REQUIRED>",
+    "branch_or_reference": "<REQUIRED>",
+    "production_git_commit": "<REQUIRED>"
+  },
+  "schemas": {
+    "ntc": {
+      "schema_id": "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json",
+      "schema_version": 2,
+      "schema_repository_path": "deliverables/phase8/input_templates/BMS_V1_NTC_Config.v2.schema.json",
+      "schema_sha256": "<REQUIRED>",
+      "schema_git_commit": "<REQUIRED>",
+      "schema_git_blob_sha": "<REQUIRED>"
+    },
+    "afe": {
+      "schema_id": "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json",
+      "schema_version": 2,
+      "schema_repository_path": "deliverables/phase8/input_templates/BMS_V1_AFE_Policy.v2.schema.json",
+      "schema_sha256": "<REQUIRED>",
+      "schema_git_commit": "<REQUIRED>",
+      "schema_git_blob_sha": "<REQUIRED>"
+    }
+  },
+  "artifacts": {
+    "ntc": { "path": "<REQUIRED>", "revision": "<REQUIRED>", "canonical_projection_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" },
+    "afe": { "path": "<REQUIRED>", "revision": "<REQUIRED>", "canonical_projection_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" }
+  },
+  "approval_records": {
+    "ntc": { "path": "<REQUIRED>", "record_id": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" },
+    "afe": { "path": "<REQUIRED>", "record_id": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" }
+  },
+  "generated_outputs": {
+    "ntc": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" },
+    "afe": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" }
+  },
+  "evidence": {
+    "production_git_commit": "<REQUIRED>",
+    "build_revision": "<REQUIRED>",
+    "test_revision": "<REQUIRED>",
+    "verifier_revision": "<REQUIRED>",
+    "evidence_manifest_or_reference": "<REQUIRED>"
+  }
+}

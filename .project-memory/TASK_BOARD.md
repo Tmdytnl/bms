@@ -32,6 +32,35 @@ WAITING
 
 ## Completed Tasks
 
+### P8-BLOCKER-V2-001
+
+Goal:
+Implement Phase 8 artifact contract v2 and preflight trust tooling.
+
+Status:
+COMPLETED
+
+Result:
+- v2 NTC/AFE approved-artifact schemas and intentionally invalid templates
+- BMS_CANONICAL_JSON_V1 strict parser and canonical projection hash
+- detached approval record and candidate-binding gate manifest
+- offline validator, golden vectors, and synthetic regression tests
+- v1 package superseded for future gate use but preserved as historical evidence
+- Blocker-1 and Blocker-2 unchanged; Phase8 Hard Gate remains BLOCKED(2)
+
+### P8-BLOCKER-PACK-SR-001
+
+Goal:
+Independent safety review of the Phase 8 blocker intake package v1.
+
+Status:
+COMPLETED — BLOCK
+
+Result:
+- 3 Critical, 6 High, 2 Medium findings
+- v1 artifacts retained as historical Git evidence
+- v1 contract prohibited from becoming the future gate contract
+
 ### P8-BLOCKER-PACK-001
 
 Goal:
@@ -45,6 +74,7 @@ COMPLETED
 
 Result:
 - intake package prepared (deliverables/phase8/input_templates/ + approval checklist + gate binding plan)
+- SUPERSEDED FOR FUTURE GATE USE by P8-BLOCKER-V2-001
 - no approved values supplied
 - blockers unchanged
 

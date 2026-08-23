@@ -1,134 +1,138 @@
-# Phase 8 Future Gate Binding Plan
+# Phase 8 Future Gate Binding Plan — Artifact Contract v2
 
-> **Status: PLAN ONLY — NOT IMPLEMENTED.**
->
-> This document plans how approved blocker artifacts will be bound into a
-> future Phase 8 gate revision. It does not modify the verifier, does not
-> change the current gate, does not resolve Blocker-1 or Blocker-2, and
-> does not start Phase 9. Phase 8 Hard Gate remains `BLOCKED(2)`.
->
-> The current gate (`firmware/Tests/verify_phase8.py`) still unconditionally
-> blocks on both blockers; nothing in this plan changes that.
+Status: future gate plan only. The offline v2 validator is implemented, but the
+production Phase 8 verifier and firmware wiring are unchanged. A preflight
+pass is not a Phase 8 Hard Gate pass and hardware validation remains separate.
 
-## 1. Future flow (planned)
+The historical v1 artifact contract is **SUPERSEDED — DO NOT USE FOR FUTURE
+GATE**. The v2 schemas, detached approval record, and gate manifest are the
+current candidate trust chain.
+
+## Trust chain
 
 ```text
-approved artifact received
-        |
-        v
-artifact copied under immutable approved-input path
-        |
-        v
-exact bytes + SHA256 bound
-        |
-        v
-schema validation
-        |
-        v
-semantic validation
-        |
-        v
-production configuration/table generated or bound
-        |
-        v
-production startup/sample wiring implemented
-        |
-        v
-tests
-        |
-        v
-Clean/Rebuild
-        |
-        v
-manifest/evidence
-        |
-        v
-Phase8 full gate
-        |
-        v
-Codex Sol High safety review
+approved v2 artifact
+  -> BMS_CANONICAL_JSON_V1 canonical projection SHA-256
+  -> detached approval record (independent authority)
+  -> generated semantic output
+  -> production wiring at one Git candidate
+  -> build/test/verifier evidence
+  -> candidate-binding gate manifest
 ```
 
-Each step must record the exact artifact revision and hash it consumed;
-nothing may proceed on a revision mismatch.
+The artifact canonical projection hash excludes only
+`/approval/artifact_sha256`. Schema, approval-record, generated-file, and
+evidence identity uses raw-file SHA-256 and/or Git blob identity. These roles
+must never be conflated.
 
-## 2. Planned gate checks — NTC
+## Future gate stages
 
-For the approved `BMS_V1_NTC_CONFIG` artifact:
+1. Strict-parse both artifacts, both detached approval records, and the
+   manifest. Reject BOM, invalid UTF-8, duplicates, non-integer numeric tokens,
+   negative zero, interoperable-range violations, non-NFC strings, unpaired
+   surrogates, placeholders, or trailing JSON content.
+2. Validate all four contracts with Draft 2020-12 JSON Schema and the semantic
+   rules in `tools/phase8/validate_blocker_artifact.py`.
+3. Recompute each artifact canonical projection SHA-256. Require lowercase
+   declarations and exact detached approval record bindings.
+4. Require exact NTC/AFE common hardware identity and matching applicable BQ
+   datasheet revision.
+5. Validate the manifest against the supplied files: schema identities,
+   artifact revisions/hashes/blobs, approval records, generated outputs,
+   evidence, and one production Git candidate.
+6. Generate or ingest candidate C output, compare semantic values to the
+   artifacts, and verify production consumption at the manifest candidate.
+7. Run the production Keil build, regression tests, and the future revised
+   Phase 8 verifier at the exact candidate revision. Bind their evidence to the
+   manifest.
+8. Only the future integrated gate may evaluate whether both blockers are
+   resolved. Offline validation never prints or implies that result.
 
-- [ ] schema validation (`BMS_V1_NTC_Config.schema.json`)
-- [ ] no placeholder/null/DRAFT remains anywhere (in particular no
-  `"<REQUIRED>"`, no `null` required fields, approval status `APPROVED`)
-- [ ] point count: `point_count == points.length`, >= 2, within uint16_t
-- [ ] strict resistance monotonicity (ascending or descending as declared)
-- [ ] opposite strict temperature monotonicity
-- [ ] exact generated table equivalence: generated production
-  `BMS_NtcPoint_t` table bytes equal the artifact table exactly
-- [ ] artifact hash: canonical stored bytes SHA-256 matches
-  `approval.artifact_sha256`
-- [ ] approval binding: approval record/evidence binds the same revision
-  and hash
+## NTC semantic consumption
 
-## 3. Planned gate checks — AFE policy
+The future gate must prove:
 
-For the approved `BMS_V1_AFE_STARTUP_PROTECTION_POLICY` artifact:
+```text
+NTC v2 table
+  -> exact ordered (resistance_ohm, temperature_decic) values and count
+  -> BMS_NtcPoint_t generated/source initializer
+  -> immutable table lifetime
+  -> BMS_Sample_SetNtcTable production call
+```
 
-- [ ] schema validation (`BMS_V1_AFE_Policy.schema.json`)
-- [ ] no placeholder/null/DRAFT remains anywhere (approval status
-  `APPROVED`)
-- [ ] explicit presence of every protection group: OV, UV, OCD, SCD (with
-  `delay_register` PROTECT3 / PROTECT2 / PROTECT1 respectively)
-- [ ] recompute/verify physical target → code mapping: OV_TRIP/UV_TRIP
-  encoding under runtime calibration; PROTECT1/2/3 code derivation from
-  physical targets/RSNS; final register bytes reproducible
-- [ ] runtime calibration not replaced by constants: ADCGAIN1/ADCOFFSET/
-  ADCGAIN2 remain required device reads on every startup/recovery;
-  `default_calibration_permitted == false`
-- [ ] exact startup policy: SYS_CTRL1, SYS_CTRL2 early/final, CELLBAL
-  all-zero, CC_CFG approved values and readback rules as approved
-- [ ] readback policy present for every write
-- [ ] XREADY ownership matches the Phase 9 frozen contract: ProtectTask
-  sole runtime W1C owner, BMS_AfeStartup pre-scheduler exception
-  (FROZEN-07); recovery inhibits both FETs until COMPLETE (FROZEN-08)
-- [ ] FET handoff policy present and consistent with FROZEN-01…FROZEN-18
-- [ ] artifact hash: canonical stored bytes SHA-256 matches
-  `approval.artifact_sha256`
-- [ ] approval binding: approval record/evidence binds the same revision
-  and hash
+It must also prove:
 
-## 4. Planned gate checks — cross-artifact
+```text
+ts_conversion_basis
+  -> bias resistor nominal/tolerance basis
+  -> REGOUT and TS ADC LSB production constants
+  -> TS1 resistance conversion path
+```
 
-- [ ] same board/BQ revision across both artifacts
-- [ ] compatible current/temperature policy references (no contradiction
-  between Rsense/current basis and NTC/TS1 model)
-- [ ] no contradictory revision fields across datasheet/errata/schematic/
-  policy/NTC source
-- [ ] generated production candidate identifies the exact artifact
-  revisions (NTC revision + AFE policy revision) and their hashes
+Compare semantic integer fields and count. Do not compare raw C memory, struct
+padding, compiler layout, byte order, or a raw-struct hash.
 
-## 5. Evidence binding (planned)
+## AFE semantic consumption
 
-All of the following must bind to the same candidate:
+The future gate must use `production_mapping` to prove:
 
-- source revision (the approved artifacts)
-- build revision (production Clean/Rebuild)
-- test revision (test images/regression)
-- artifact revisions (NTC + AFE policy)
+```text
+AFE v2 OV/UV/OCD/SCD + single Rsense policy
+  -> every BMS_AfeStartupConfig_t initializer field
+  -> BQ76940 control encoding and source-native delay tables
+  -> BMS_AfeStartup_Init production invocation
+  -> BMS_AfeStartup_Step runtime execution
+```
 
-A single manifest records the mapping; the gate fails on any mismatch.
+Fixed startup policy must be compared against SYS_CTRL1, SYS_CTRL2 early/final,
+CELLBAL1/2/3, CC_CFG, SYS_STAT, initial-settle, and CC_READY source behavior.
+OCD/SCD threshold verification consumes the one `rsns_bit` and uses the same
+not-below-requested rule as `firmware/Driver/bq76940_control.c`. Current-basis
+targets use exact integer/rational arithmetic; no floating point is permitted.
 
-## 6. Explicit non-claims
+The future gate must additionally prove:
 
-- This plan is not implemented; no verifier code has changed.
-- No approved artifact exists yet; none is fabricated by this plan.
-- Filling a template is not approval; approval requires the evidence and
-  hash binding described here.
-- Placeholder/null/DRAFT artifacts never satisfy a gate check.
-- The planned gate verifies artifact→generated-configuration→production
-  wiring; text hits, comments, default arrays, or policy-looking
-  identifiers alone never unblock the gate.
-- Hardware validation remains separate and deferred; simulator/static
-  evidence is not hardware evidence.
+```text
+approved Rsense + polarity
+  -> BQ76940 current conversion production path
 
-Phase 8 Hard Gate remains `BLOCKED(2)`; Phase 9 official implementation
+runtime device ADCGAIN1/ADCOFFSET/ADCGAIN2 reads
+  -> valid decoded calibration + generation/provenance checks
+  -> RecoveryCoordinator-owned BMS_Sample_SetCalibration handoff
+  -> no static/default fallback
+```
+
+## Phase 8 / Phase 9 boundary
+
+Blocker-2 remains limited to AFE startup/protection, Rsense/current mapping,
+AFE hardware OV/UV/OCD/SCD, runtime calibration handoff, XREADY technical
+recovery, and startup/FET-safe handoff required by the frozen architecture.
+
+The Phase 8 artifact must not resolve Phase 9 OP-01 through OP-08. Until future
+policy exists, the frozen fallback remains action-bearing and fail-closed:
+recovery-in-progress plus historical XREADY, SCD, and OVRD_ALERT latches
+inhibit both FET directions. No artifact field may select `ALLOW` or generic
+latch clear.
+
+## Detached approval and manifest limits
+
+Artifact `approval` fields are declarations. External approval is verified
+only when the independent record matches every binding. Reviewed immutable Git
+evidence is sufficient; PKI is not required by this contract.
+
+The manifest binds a candidate but does not approve it, run Keil, inspect
+production calls, execute the Phase 8 verifier, or provide hardware evidence.
+Generated/evidence structural presence is necessary but insufficient; future
+gate execution must verify the referenced bytes and behavior.
+
+## Hardware-validation boundary
+
+The future software gate must not represent simulator, build, schema, or static
+mapping evidence as proof of physical NTC accuracy, Rsense tolerance/Kelvin
+routing, current polarity waveforms, OV/UV/OCD/SCD physical trip accuracy,
+ALERT/W1C commit behavior, MOS conduction, or environmental robustness.
+
+Until both approved artifacts, detached records, semantic production bindings,
+and integrated gate evidence exist, Blocker-1 and Blocker-2 remain blocked,
+Phase 8 Hard Gate remains `BLOCKED(2)`, and Phase 9 official implementation
 remains `NOT STARTED`.

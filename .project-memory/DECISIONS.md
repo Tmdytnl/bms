@@ -194,3 +194,54 @@ until a reviewed action or no-FET-effect exists.
 When BQ I2C is unavailable, software may report requested OFF / enable
 inhibited / physical state UNVERIFIED — never physical MOS OFF; SYS_CTRL2
 readback proves AFE register-level state only, not physical MOS conduction.
+
+## Phase 8 Artifact Contract v2
+
+## D-027 V1 is historical; v2 is the future gate contract
+
+The Phase 8 NTC/AFE v1 schema and template files remain immutable historical
+Git evidence. They are superseded for future gate use by the v2 contracts.
+
+## D-028 BMS canonical JSON v1
+
+`BMS_CANONICAL_JSON_V1` is the frozen artifact canonicalization algorithm.
+Strict input rejects duplicate keys, non-integer numeric tokens, negative zero,
+out-of-interoperable-range integers, BOM/invalid UTF-8, non-NFC strings, and
+unpaired surrogates.
+
+## D-029 Canonical projection hash
+
+Artifact identity is the SHA-256 of the canonical projection that excludes
+only `/approval/artifact_sha256`. All other artifact fields remain covered.
+This is distinct from raw-file and Git-blob identity.
+
+## D-030 Detached approval authority
+
+Approval fields inside an artifact are declarations, not self-authorization.
+External approval requires an independent matching approval record bound to the
+artifact revision, schema, canonical projection hash, hardware identity, and
+repository identity.
+
+## D-031 Candidate-binding gate manifest
+
+The Phase 8 gate manifest binds exact schemas, artifacts, detached approvals,
+generated outputs, evidence, and one production Git candidate. It is neither
+approval nor a Hard Gate result.
+
+## D-032 Common hardware identity
+
+NTC and AFE v2 artifacts carry the same structured project, hardware variant,
+board, schematic, and exact AFE-part tuple. Pair validation requires exact
+tuple equality and compatible BQ datasheet revision evidence.
+
+## D-033 Phase boundary for the AFE artifact
+
+The Phase 8 AFE artifact cannot resolve Phase 9 OPEN product-policy items.
+Frozen fail-closed behavior remains in force until separately approved future
+policy exists.
+
+## D-034 Source-native units and semantic generated output
+
+AFE delays remain in source-native seconds, milliseconds, or microseconds.
+Generated NTC/AFE C output is compared by semantic integer fields, ordering,
+and count, never raw struct bytes, padding, or endianness.

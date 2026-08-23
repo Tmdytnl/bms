@@ -1,124 +1,106 @@
-# Phase 8 Blocker Intake Package — README
+# Phase 8 Blocker Artifact Contract v2
 
-> This directory contains the **machine-fillable intake package** for the two
-> Phase 8 Hard Gate blockers. It is gate **preparation**, not gate resolution.
+This directory contains the current candidate intake contract for the two
+Phase 8 Hard Gate blockers. It provides offline **preflight** tooling; it does
+not resolve either blocker and cannot produce a Phase 8 Hard Gate result.
 
-## 1. These are templates, NOT approved inputs
+## Contract status
 
-The `.template.json` files in this directory are DRAFT fill-in forms. They
-contain `null`, `"<REQUIRED>"`, and `"DRAFT"` placeholders on purpose.
-Nothing in this directory is an approved production artifact. No template
-file, no schema file, and no markdown checklist is a production parameter.
-
-## 2. Completing a template does NOT itself pass the gate
-
-Filling every field of a template does not pass the Phase 8 Hard Gate. The
-gate remains `BLOCKED(2)` until, at minimum, the future gate revision
-explicitly binds the approved immutable artifact revision, its canonical
-hash, its approval evidence, and the production wiring that consumes it.
-See `BMS_V1_Phase8_Future_Gate_Binding_Plan.md`.
-
-## 3. Final artifacts require approval evidence and an immutable hash
-
-A final artifact must carry:
-
-- an immutable revision identifier;
-- the exact canonical bytes (UTF-8, LF, fixed key/order rules, no floating
-  point) and their SHA-256;
-- an approval record (approver identity, ISO-8601 time, evidence ID) that
-  binds the same revision.
-
-An unapproved or un-hashable file is not a final artifact.
-
-## 4. Blocker-1 vs Blocker-2 mapping
-
-| Blocker | Artifact | File pair |
+| Contract | Status | Use |
 |---|---|---|
-| Blocker-1: production NTC curve/table (incl. NTC conversion domain) | `BMS_V1_NTC_CONFIG` | `BMS_V1_NTC_Config.template.json` / `BMS_V1_NTC_Config.schema.json` |
-| Blocker-2: AFE startup/protection policy (Rsense/current, OV/UV/OCD/SCD, calibration handoff, XREADY recovery, FET policy) | `BMS_V1_AFE_STARTUP_PROTECTION_POLICY` | `BMS_V1_AFE_Policy.template.json` / `BMS_V1_AFE_Policy.schema.json` |
+| NTC/AFE schema and template v1 | **SUPERSEDED — DO NOT USE FOR FUTURE GATE** | Historical Git evidence only |
+| NTC/AFE schema and template v2 | Current candidate contract | Future blocker intake and preflight |
+| Detached approval record v1 | Current candidate contract | Independent approval authority |
+| Phase 8 gate manifest v1 | Current candidate contract | Bind one production candidate |
 
-Both blockers stay `MISSING`/`BLOCKED` until their own artifact is approved
-and bound; providing one does not resolve the other.
+The four original v1 JSON files remain byte-preserved at commit `525dfa0`.
+They are not redefined by v2.
 
-## 5. Which fields are product decisions
+## Files
 
-Product decisions (approver-supplied) include, but are not limited to:
+- `BMS_V1_NTC_Config.v2.template.json` and `.schema.json`: Blocker-1
+  approved-artifact contract.
+- `BMS_V1_AFE_Policy.v2.template.json` and `.schema.json`: Blocker-2
+  approved-artifact contract.
+- `BMS_V1_Artifact_Approval_Record.v1.template.json` and `.schema.json`:
+  detached approval evidence.
+- `BMS_V1_Phase8_Gate_Manifest.v1.template.json` and `.schema.json`:
+  candidate binding; not approval.
+- `CANONICALIZATION.md`: frozen `BMS_CANONICAL_JSON_V1` definition.
+- `tools/phase8/validate_blocker_artifact.py`: offline preflight validator.
 
-- NTC: exact device identity, source document revision, bias resistor and
-  REGOUT values, table points, coverage endpoints, provenance, approvals.
-- AFE: SYS_CTRL1/SYS_CTRL2/CELLBAL/CC_CFG approved values and readback
-  rules, OV/UV/OCD/SCD physical targets and codes, Rsense nominal and
-  polarity, calibration read-failure/invalid-decode behavior, XREADY
-  recovery details, FET handoff/enable conditions, all `null`/`"<REQUIRED>"`
-  policy fields.
+Every template is deliberately invalid against its final schema. `null`,
+`<REQUIRED...>`, and `DRAFT` values must be replaced only with reviewed
+hardware/product evidence. Do not insert guessed NTC, Rsense, OV/UV/OCD/SCD,
+or other production values.
 
-## 6. Which fields are hardware-validation-only
+## Artifact identity and repository identity
 
-These are deferred to hardware validation and are NOT satisfiable by a
-filled template:
+An NTC or AFE artifact is identified by its **canonical projection SHA-256**.
+`BMS_CANONICAL_JSON_V1` excludes only
+`/approval/artifact_sha256`; all other fields remain hash-covered. The hash is
+not the SHA-256 of the complete stored file bytes.
 
-- actual NTC temperature accuracy, lot variation, full-range error;
-- actual Rsense tolerance, Kelvin routing, copper resistance, current
-  gain/offset and polarity waveforms;
-- actual AFE OV/UV/OCD/SCD trip threshold/delay accuracy and ALERT/W1C
-  physical commit behavior;
-- actual FET/MOS turn-on/off timing and conduction;
-- IWDG physical timing/reset, brownout, EMI/ESD, thermal, power integrity.
+Approval records, schemas, generated files, and evidence files use Git-blob
+and/or raw-file SHA-256 identity. These identities have different roles and
+must not be substituted for one another.
 
-## 7. Reference values are not production approvals
+## Approval authority
 
-Where a template contains a `current_software_reference` section, the values
-there (e.g. 10000 Ω pull-up, 3.3 V REGOUT, SYS_CTRL1 `0x18`, SYS_CTRL2
-`0x00`/`0x40`, CC_CFG `0x19`, `BMS_RSENSE_REFERENCE_UOHM` = 4000 µΩ,
-`BMS_CURRENT_POLARITY` = +1) are current software/source constants only.
-Every such section is marked **NOT APPROVED PRODUCTION VALUE**. Reference
-values never satisfy an approved field; `BMS_RSENSE_REFERENCE_UOHM` does not
-silently count as approval.
+The artifact's `approval` object is a declaration. The artifact cannot
+self-authorize. External approval is established only when an independent
+`BMS_V1_ARTIFACT_APPROVAL_RECORD` matches the artifact type, schema, revision,
+canonicalization ID, canonical projection hash, repository identity, hardware
+identity, record ID, approver, and approval time.
 
-## 8. How final artifact files should be named
+The gate manifest is also not approval. It binds the two artifacts, two
+detached approval records, exact schemas, generated outputs, evidence, and one
+production Git candidate.
 
-Recommended immutable names once approved (stored under the future
-immutable approved-input path defined by the gate binding plan):
+## Strict approved-artifact rules
 
-- `BMS_V1_NTC_Config_<revision>.json`
-- `BMS_V1_AFE_Policy_<revision>.json`
+- UTF-8 without BOM; no duplicate keys at any depth.
+- Integer-only numeric tokens; no fractions, exponents, negative zero, or
+  non-JSON numeric constants.
+- Integers stay within the interoperable ±(2^53−1) range before tighter schema
+  domains apply.
+- Strings and keys are already Unicode NFC and contain no unpaired surrogate.
+- No placeholders; approval status is exactly `APPROVED`; hashes are lowercase.
+- Approval timestamps are strict RFC3339 UTC ending in `Z`.
+- Final artifacts contain no `current_software_reference` or other
+  reference-only section. Source constants remain documentation/evidence only.
 
-`<revision>` is the exact immutable revision identifier recorded inside the
-artifact. Do NOT create fake approved artifacts now.
+## AFE phase boundary
 
-## 9. Placeholders / null / DRAFT mean invalid for gate purposes
+The Phase 8 AFE artifact covers startup/protection input, Rsense/current
+mapping, AFE hardware OV/UV/OCD/SCD, runtime calibration handoff, XREADY
+technical recovery, and startup/FET-safe handoff required by the frozen
+architecture.
 
-A populated artifact is NOT valid for gate purposes while any of the
-following remains:
+It does **not** resolve Phase 9 product-policy items OP-01 through OP-08. The
+frozen fail-closed fallback remains machine-enforced: recovery in progress and
+the XREADY/SCD/OVRD_ALERT action-bearing historical latches inhibit both CHG
+and DSG until future policy. The product artifact cannot select `ALLOW`.
 
-- `null` anywhere in a required field;
-- a `"<REQUIRED>"` placeholder string;
-- `"DRAFT"` (or any non-`"APPROVED"`) approval status.
+## Offline use
 
-The schemas enforce most of this structurally (null and placeholders do not
-match the required types); the gate logic additionally checks every value
-semantically.
+```text
+python tools/phase8/validate_blocker_artifact.py --ntc <artifact.json>
+python tools/phase8/validate_blocker_artifact.py --afe <artifact.json>
+python tools/phase8/validate_blocker_artifact.py --pair --ntc <ntc.json> --afe <afe.json>
+python tools/phase8/validate_blocker_artifact.py --print-hash <artifact.json>
+python tools/phase8/validate_blocker_artifact.py --artifact <artifact.json> --approval-record <record.json>
+python tools/phase8/validate_blocker_artifact.py --manifest <manifest.json> --ntc <ntc.json> --ntc-approval <record.json> --afe <afe.json> --afe-approval <record.json>
+```
 
-## 10. Schemas validate structure, but semantic checks still require gate logic
+Full schema validation requires Python `jsonschema`. Missing dependency is
+reported explicitly; it is never treated as a pass.
 
-The JSON Schemas validate structure: required sections, types, integer
-ranges taken only from the C type/domain of the consuming source APIs, and
-forbidden extra sections. They cannot prove semantics, for example:
+Preflight success is not a Phase 8 Hard Gate pass. It does not execute the
+Keil build, production wiring verification, the Phase 8 verifier, or hardware
+validation. Generated NTC and AFE C outputs are compared by semantic field
+values and counts, never raw C struct bytes, padding, or endianness.
 
-- strict resistance monotonicity + opposite strict temperature
-  monotonicity of the NTC table (JSON Schema cannot express this; the
-  future gate/tooling must verify it);
-- `point_count == points.length`;
-- `minimum_temperature_decic < maximum_temperature_decic`;
-- that physical targets recompute to the approved register codes;
-- that approval evidence and hashes match external records.
-
-Those checks belong to the future gate logic
-(`BMS_V1_Phase8_Future_Gate_Binding_Plan.md`), which is a plan, not
-implemented code.
-
----
-
-Status of this package: **READY** (intake preparation only). It does NOT
-resolve Blocker-1 or Blocker-2. Phase 8 Hard Gate remains `BLOCKED(2)`;
-Phase 9 official implementation remains `NOT STARTED`.
+Blocker-1 and Blocker-2 remain blocked on user/hardware input. Phase 8 Hard
+Gate remains `BLOCKED(2)`, and Phase 9 official implementation remains
+`NOT STARTED`. Hardware validation remains separate.

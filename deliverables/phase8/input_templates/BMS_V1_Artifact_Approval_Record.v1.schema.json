@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/v1/BMS_V1_Artifact_Approval_Record.schema.json",
+  "title": "BMS V1 detached artifact approval record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "schema_version", "record_id", "decision", "artifact", "hardware_identity", "approver", "review"],
+  "properties": {
+    "artifact_type": { "const": "BMS_V1_ARTIFACT_APPROVAL_RECORD" },
+    "schema_version": { "const": 1 },
+    "record_id": { "$ref": "#/$defs/revision" },
+    "decision": { "const": "APPROVED" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_schema_version",
+        "artifact_schema_id",
+        "artifact_revision",
+        "artifact_canonicalization_id",
+        "artifact_canonical_projection_sha256",
+        "artifact_repository_path",
+        "artifact_git_blob_sha"
+      ],
+      "properties": {
+        "artifact_type": { "enum": ["BMS_V1_NTC_CONFIG", "BMS_V1_AFE_STARTUP_PROTECTION_POLICY"] },
+        "artifact_schema_version": { "const": 2 },
+        "artifact_schema_id": {
+          "enum": [
+            "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json",
+            "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json"
+          ]
+        },
+        "artifact_revision": { "$ref": "#/$defs/revision" },
+        "artifact_canonicalization_id": { "const": "BMS_CANONICAL_JSON_V1" },
+        "artifact_canonical_projection_sha256": { "$ref": "#/$defs/sha256" },
+        "artifact_repository_path": { "$ref": "#/$defs/repository_path" },
+        "artifact_git_blob_sha": { "$ref": "#/$defs/git_oid" }
+      }
+    },
+    "hardware_identity": { "$ref": "#/$defs/hardware_identity" },
+    "approver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "approved_at"],
+      "properties": {
+        "identity": { "$ref": "#/$defs/nonempty_string" },
+        "approved_at": { "$ref": "#/$defs/rfc3339_utc" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_reference", "decision_notes_or_reference"],
+      "properties": {
+        "evidence_reference": { "$ref": "#/$defs/nonempty_string" },
+        "decision_notes_or_reference": { "$ref": "#/$defs/nonempty_string" }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/no_placeholders" },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "artifact": {
+              "properties": {
+                "artifact_type": { "const": "BMS_V1_NTC_CONFIG" },
+                "artifact_schema_id": { "const": "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json" }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "artifact": {
+              "properties": {
+                "artifact_type": { "const": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY" },
+                "artifact_schema_id": { "const": "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "no_placeholders": {
+      "if": { "type": "string" },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "pattern": "^<REQUIRED" },
+            { "enum": ["DRAFT", "TBD", "TODO", "PLACEHOLDER"] }
+          ]
+        }
+      },
+      "else": {
+        "if": { "type": "array" },
+        "then": { "items": { "$ref": "#/$defs/no_placeholders" } },
+        "else": {
+          "if": { "type": "object" },
+          "then": { "additionalProperties": { "$ref": "#/$defs/no_placeholders" } }
+        }
+      }
+    },
+    "nonempty_string": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "revision": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "repository_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "git_oid": { "type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$" },
+    "rfc3339_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?Z$"
+    },
+    "hardware_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "hardware_variant", "board_revision", "schematic_revision", "afe_part"],
+      "properties": {
+        "project_id": { "const": "BMS_V1" },
+        "hardware_variant": { "$ref": "#/$defs/nonempty_string" },
+        "board_revision": { "$ref": "#/$defs/nonempty_string" },
+        "schematic_revision": { "$ref": "#/$defs/nonempty_string" },
+        "afe_part": { "type": "string", "pattern": "^BQ7694003[A-Za-z0-9._-]*$" }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "artifact_type": "BMS_V1_ARTIFACT_APPROVAL_RECORD",
+  "schema_version": 1,
+  "record_id": "<REQUIRED>",
+  "decision": "DRAFT",
+  "artifact": {
+    "artifact_type": "<REQUIRED>",
+    "artifact_schema_version": 2,
+    "artifact_schema_id": "<REQUIRED>",
+    "artifact_revision": "<REQUIRED>",
+    "artifact_canonicalization_id": "BMS_CANONICAL_JSON_V1",
+    "artifact_canonical_projection_sha256": "<REQUIRED>",
+    "artifact_repository_path": "<REQUIRED>",
+    "artifact_git_blob_sha": "<REQUIRED>"
+  },
+  "hardware_identity": {
+    "project_id": "BMS_V1",
+    "hardware_variant": "<REQUIRED>",
+    "board_revision": "<REQUIRED>",
+    "schematic_revision": "<REQUIRED>",
+    "afe_part": "<REQUIRED: exact BQ7694003 ordering/variant code>"
+  },
+  "approver": {
+    "identity": "<REQUIRED>",
+    "approved_at": "<REQUIRED>"
+  },
+  "review": {
+    "evidence_reference": "<REQUIRED>",
+    "decision_notes_or_reference": "<REQUIRED>"
+  }
+}

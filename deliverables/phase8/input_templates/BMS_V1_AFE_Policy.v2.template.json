@@ -1,0 +1,206 @@
+{
+  "artifact_type": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY",
+  "schema_version": 2,
+  "schema_id": "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json",
+  "revision": "<REQUIRED>",
+  "hardware_identity": {
+    "project_id": "BMS_V1",
+    "hardware_variant": "<REQUIRED>",
+    "board_revision": "<REQUIRED>",
+    "schematic_revision": "<REQUIRED>",
+    "afe_part": "<REQUIRED: exact BQ7694003 ordering/variant code>"
+  },
+  "device_basis": {
+    "datasheet_revision": "<REQUIRED>",
+    "errata_revision": "<REQUIRED or NONE>",
+    "policy_revision": "<REQUIRED>"
+  },
+  "startup_policy": {
+    "wake_probe": {
+      "approved": true,
+      "settle_ms": 10,
+      "max_attempts": 3,
+      "failure_action": "FAIL_CLOSED_SAFE_OFF",
+      "datasheet_basis": "<REQUIRED>"
+    },
+    "sys_ctrl1": {
+      "desired_byte": 24,
+      "readback_mask": 255,
+      "expected_masked_value": 24,
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "sys_ctrl2_early": {
+      "desired_byte": 0,
+      "readback_mask": 255,
+      "expected_masked_value": 0,
+      "chg_state": "OFF",
+      "dsg_state": "OFF",
+      "fet_safe_off_invariant": true,
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "sys_ctrl2_final": {
+      "desired_byte": 64,
+      "readback_mask": 255,
+      "expected_masked_value": 64,
+      "cc_en_required": true,
+      "chg_state": "OFF",
+      "dsg_state": "OFF",
+      "delay_dis_permitted": false,
+      "cc_oneshot_permitted": false,
+      "reserved_bits_safe": true,
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "cellbal_startup": {
+      "approved": true,
+      "cellbal1_desired_byte": 0,
+      "cellbal2_desired_byte": 0,
+      "cellbal3_desired_byte": 0,
+      "exact_readback_required": true,
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "cc_cfg": {
+      "desired_byte": 25,
+      "readback_mask": 255,
+      "expected_masked_value": 25,
+      "datasheet_basis": "<REQUIRED>",
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "sys_stat": {
+      "initial_blocking_mask": 31,
+      "final_blocking_mask": 31,
+      "read_owner": "BMS_AfeStartup",
+      "failure_action": "FAIL_CLOSED_SAFE_OFF",
+      "xready_handling_identity": "CURRENT_FINAL_STATUS_READ_SINGLE_W1C_THEN_FULL_RECONFIGURE"
+    },
+    "initial_data_settle": {
+      "duration_ms": 800,
+      "transition_semantics": "ELAPSED_TIME_THEN_READ_FINAL_SYS_STAT",
+      "failure_action": "FAIL_CLOSED_SAFE_OFF"
+    },
+    "cc_ready_ownership": {
+      "w1c_owner": "ProtectTask",
+      "startup_behavior": "PRESERVE",
+      "runtime_consumer": "ProtectTask"
+    }
+  },
+  "hardware_protection_policy": {
+    "ov": {
+      "target_cell_mv": null,
+      "hardware_delay": { "value": null, "unit": "s" },
+      "delay_register": "PROTECT3",
+      "delay_code": null,
+      "trip_encoding_driver": "BQ76940_Control_EncodeOvTrip",
+      "runtime_calibration_required": true,
+      "readback_required": true
+    },
+    "uv": {
+      "target_cell_mv": null,
+      "hardware_delay": { "value": null, "unit": "s" },
+      "delay_register": "PROTECT3",
+      "delay_code": null,
+      "trip_encoding_driver": "BQ76940_Control_EncodeUvTrip",
+      "runtime_calibration_required": true,
+      "readback_required": true
+    },
+    "ocd": {
+      "target": { "basis": "<REQUIRED>" },
+      "threshold_code": null,
+      "selected_sense_voltage_mv": null,
+      "hardware_delay": { "value": null, "unit": "ms" },
+      "delay_register": "PROTECT2",
+      "delay_code": null,
+      "selection_policy": "NOT_BELOW_REQUESTED",
+      "readback_required": true
+    },
+    "scd": {
+      "target": { "basis": "<REQUIRED>" },
+      "threshold_code": null,
+      "selected_sense_voltage_mv": null,
+      "hardware_delay": { "value": null, "unit": "us" },
+      "delay_register": "PROTECT1",
+      "delay_code": null,
+      "selection_policy": "NOT_BELOW_REQUESTED",
+      "readback_required": true
+    }
+  },
+  "current_rsense_policy": {
+    "rsense_nominal_uohm": null,
+    "rsense_source": "<REQUIRED>",
+    "rsense_approval_basis": "<REQUIRED>",
+    "current_polarity": null,
+    "polarity_definition": "<REQUIRED>",
+    "rsns_bit": null,
+    "cc_conversion_basis": "<REQUIRED>"
+  },
+  "runtime_ownership_invariants": {
+    "runtime_xready_w1c_owner": "ProtectTask",
+    "startup_xready_w1c_exception": "BMS_AfeStartup",
+    "runtime_recovery_coordinator": "RecoveryCoordinator",
+    "runtime_recovery_serviced_by": "StateTask",
+    "runtime_calibration_handoff_owner": "RecoveryCoordinator",
+    "default_calibration_permitted": false,
+    "xready_generation_binding_required": true,
+    "post_clear_provenance_required": true,
+    "first_valid_measurement_proof": {
+      "sample_sequence": true,
+      "afe_generation": true,
+      "event_only_proof_permitted": false
+    },
+    "generic_latch_clear_permitted": false
+  },
+  "runtime_calibration_contract": {
+    "adc_gain1_read_every_startup_recovery": true,
+    "adc_offset_read_every_startup_recovery": true,
+    "adc_gain2_read_every_startup_recovery": true,
+    "read_failure_action": "FAIL_CLOSED_NO_HANDOFF",
+    "invalid_decode_action": "FAIL_CLOSED_NO_HANDOFF",
+    "handoff_api": "BMS_Sample_SetCalibration",
+    "static_fallback_permitted": false
+  },
+  "fail_closed_fallback": {
+    "recovery_in_progress": { "chg_inhibit": true, "dsg_inhibit": true },
+    "xready_historical_latch": { "action_bearing": true, "chg_inhibit": true, "dsg_inhibit": true, "duration": "UNTIL_FUTURE_POLICY" },
+    "scd_historical_latch": { "action_bearing": true, "chg_inhibit": true, "dsg_inhibit": true, "duration": "UNTIL_FUTURE_POLICY" },
+    "ovrd_alert_historical_latch": { "action_bearing": true, "chg_inhibit": true, "dsg_inhibit": true, "duration": "UNTIL_FUTURE_POLICY" }
+  },
+  "production_mapping": {
+    "target_type": "BMS_AfeStartupConfig_t",
+    "initializer_bindings": [
+      { "artifact_pointer": "/hardware_protection_policy", "target_field": "ov_uv_trip_present", "transform": "constant_true_after_validation" },
+      { "artifact_pointer": "/hardware_protection_policy/ov/target_cell_mv", "target_field": "ov_trip_mv", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/uv/target_cell_mv", "target_field": "uv_trip_mv", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/scd", "target_field": "protect1_present", "transform": "constant_true_after_validation" },
+      { "artifact_pointer": "/current_rsense_policy/rsns_bit", "target_field": "protect1_rsns", "transform": "zero_false_one_true" },
+      { "artifact_pointer": "/hardware_protection_policy/scd/delay_code", "target_field": "protect1_scd_delay_code", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/scd/threshold_code", "target_field": "protect1_scd_threshold_code", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/ocd", "target_field": "protect2_present", "transform": "constant_true_after_validation" },
+      { "artifact_pointer": "/hardware_protection_policy/ocd/delay_code", "target_field": "protect2_ocd_delay_code", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/ocd/threshold_code", "target_field": "protect2_ocd_threshold_code", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy", "target_field": "protect3_present", "transform": "constant_true_after_validation" },
+      { "artifact_pointer": "/hardware_protection_policy/uv/delay_code", "target_field": "protect3_uv_delay_code", "transform": "identity_integer" },
+      { "artifact_pointer": "/hardware_protection_policy/ov/delay_code", "target_field": "protect3_ov_delay_code", "transform": "identity_integer" }
+    ],
+    "fixed_register_policy_bindings": [
+      { "artifact_pointer": "/startup_policy/sys_ctrl1/desired_byte", "production_symbol_or_register": "BMS_AFE_STARTUP_SYS_CTRL1_REQUIRED", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/sys_ctrl2_early/desired_byte", "production_symbol_or_register": "BMS_AFE_STARTUP_SYS_CTRL2_FET_OFF", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/sys_ctrl2_final/desired_byte", "production_symbol_or_register": "BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/cellbal_startup/cellbal1_desired_byte", "production_symbol_or_register": "CELLBAL1", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/cellbal_startup/cellbal2_desired_byte", "production_symbol_or_register": "CELLBAL2", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/cellbal_startup/cellbal3_desired_byte", "production_symbol_or_register": "CELLBAL3", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/cc_cfg/desired_byte", "production_symbol_or_register": "BQ76940_CC_CFG_REQUIRED_VALUE", "comparison": "INTEGER_SEMANTIC_VALUE" },
+      { "artifact_pointer": "/startup_policy/sys_stat/final_blocking_mask", "production_symbol_or_register": "BMS_AFE_STARTUP_STAT_BLOCKING_MASK", "comparison": "INTEGER_SEMANTIC_VALUE" }
+    ],
+    "runtime_invocation": {
+      "initializer_api": "BMS_AfeStartup_Init",
+      "step_api": "BMS_AfeStartup_Step",
+      "production_call_required": true
+    }
+  },
+  "approval": {
+    "status": "DRAFT",
+    "approved_by": "<REQUIRED>",
+    "approved_at": "<REQUIRED>",
+    "approval_record": "<REQUIRED>",
+    "artifact_sha256": "<REQUIRED>"
+  }
+}

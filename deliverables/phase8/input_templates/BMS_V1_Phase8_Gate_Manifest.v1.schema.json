@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/v1/BMS_V1_Phase8_Gate_Manifest.schema.json",
+  "title": "BMS V1 Phase 8 candidate-binding gate manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "schema_version", "manifest_revision", "hardware_identity", "candidate", "schemas", "artifacts", "approval_records", "generated_outputs", "evidence"],
+  "properties": {
+    "artifact_type": { "const": "BMS_V1_PHASE8_GATE_MANIFEST" },
+    "schema_version": { "const": 1 },
+    "manifest_revision": { "$ref": "#/$defs/revision" },
+    "hardware_identity": { "$ref": "#/$defs/hardware_identity" },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch_or_reference", "production_git_commit"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/nonempty_string" },
+        "branch_or_reference": { "$ref": "#/$defs/nonempty_string" },
+        "production_git_commit": { "$ref": "#/$defs/git_oid" }
+      }
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ntc", "afe"],
+      "properties": {
+        "ntc": { "$ref": "#/$defs/schema_binding" },
+        "afe": { "$ref": "#/$defs/schema_binding" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ntc", "afe"],
+      "properties": {
+        "ntc": { "$ref": "#/$defs/artifact_binding" },
+        "afe": { "$ref": "#/$defs/artifact_binding" }
+      }
+    },
+    "approval_records": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ntc", "afe"],
+      "properties": {
+        "ntc": { "$ref": "#/$defs/approval_binding" },
+        "afe": { "$ref": "#/$defs/approval_binding" }
+      }
+    },
+    "generated_outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ntc", "afe"],
+      "properties": {
+        "ntc": { "$ref": "#/$defs/generated_binding" },
+        "afe": { "$ref": "#/$defs/generated_binding" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["production_git_commit", "build_revision", "test_revision", "verifier_revision", "evidence_manifest_or_reference"],
+      "properties": {
+        "production_git_commit": { "$ref": "#/$defs/git_oid" },
+        "build_revision": { "$ref": "#/$defs/nonempty_string" },
+        "test_revision": { "$ref": "#/$defs/nonempty_string" },
+        "verifier_revision": { "$ref": "#/$defs/nonempty_string" },
+        "evidence_manifest_or_reference": { "$ref": "#/$defs/nonempty_string" }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/no_placeholders" }
+  ],
+  "$defs": {
+    "no_placeholders": {
+      "if": { "type": "string" },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "pattern": "^<REQUIRED" },
+            { "enum": ["DRAFT", "TBD", "TODO", "PLACEHOLDER"] }
+          ]
+        }
+      },
+      "else": {
+        "if": { "type": "array" },
+        "then": { "items": { "$ref": "#/$defs/no_placeholders" } },
+        "else": {
+          "if": { "type": "object" },
+          "then": { "additionalProperties": { "$ref": "#/$defs/no_placeholders" } }
+        }
+      }
+    },
+    "nonempty_string": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "revision": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "repository_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "git_oid": { "type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$" },
+    "hardware_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "hardware_variant", "board_revision", "schematic_revision", "afe_part"],
+      "properties": {
+        "project_id": { "const": "BMS_V1" },
+        "hardware_variant": { "$ref": "#/$defs/nonempty_string" },
+        "board_revision": { "$ref": "#/$defs/nonempty_string" },
+        "schematic_revision": { "$ref": "#/$defs/nonempty_string" },
+        "afe_part": { "type": "string", "pattern": "^BQ7694003[A-Za-z0-9._-]*$" }
+      }
+    },
+    "schema_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_id", "schema_version", "schema_repository_path", "schema_sha256", "schema_git_commit", "schema_git_blob_sha"],
+      "properties": {
+        "schema_id": { "$ref": "#/$defs/nonempty_string" },
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "schema_repository_path": { "$ref": "#/$defs/repository_path" },
+        "schema_sha256": { "$ref": "#/$defs/sha256" },
+        "schema_git_commit": { "$ref": "#/$defs/git_oid" },
+        "schema_git_blob_sha": { "$ref": "#/$defs/git_oid" }
+      }
+    },
+    "artifact_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "revision", "canonical_projection_sha256", "git_blob_sha"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repository_path" },
+        "revision": { "$ref": "#/$defs/revision" },
+        "canonical_projection_sha256": { "$ref": "#/$defs/sha256" },
+        "git_blob_sha": { "$ref": "#/$defs/git_oid" }
+      }
+    },
+    "approval_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "record_id", "raw_file_sha256", "git_blob_sha"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repository_path" },
+        "record_id": { "$ref": "#/$defs/revision" },
+        "raw_file_sha256": { "$ref": "#/$defs/sha256" },
+        "git_blob_sha": { "$ref": "#/$defs/git_oid" }
+      }
+    },
+    "generated_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "raw_file_sha256", "production_git_commit", "source_artifact_revision", "source_artifact_canonical_projection_sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repository_path" },
+        "raw_file_sha256": { "$ref": "#/$defs/sha256" },
+        "production_git_commit": { "$ref": "#/$defs/git_oid" },
+        "source_artifact_revision": { "$ref": "#/$defs/revision" },
+        "source_artifact_canonical_projection_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

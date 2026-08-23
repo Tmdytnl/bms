@@ -1,284 +1,115 @@
-# Phase 8 Blocker Approval Checklist
+# Phase 8 Blocker Approval Checklist — Artifact Contract v2
 
-> Purpose: human-executable review checklist for the two Phase 8 Hard Gate
-> blockers. It mirrors the intake templates and schemas in
-> `deliverables/phase8/input_templates/`.
->
-> **ALL required items must pass before the corresponding blocker may move
-> from MISSING/BLOCKED to candidate-for-gate-validation.**
->
-> This checklist does not approve anything by itself. It does not resolve
-> Blocker-1 or Blocker-2. Phase 8 Hard Gate remains `BLOCKED(2)`; Phase 9
-> official implementation remains `NOT STARTED`.
+This checklist reviews v2 inputs. The original v1 intake contract is
+**SUPERSEDED — DO NOT USE FOR FUTURE GATE**. Checking every item creates a
+candidate for later gate evaluation; this document grants no approval and no
+Hard Gate result.
 
-Legend:
+## Common artifact checks
 
-- `[ ]` unchecked item
-- Evidence/reference: where the reviewer proves the requirement
-- Pass condition: what must be true to tick the box
+- [ ] Exact `hardware_identity` tuple is present: `BMS_V1`, hardware variant,
+  board revision, schematic revision, and exact BQ7694003 ordering/variant
+  code.
+- [ ] NTC and AFE tuples are byte-for-byte equal as JSON string values.
+- [ ] NTC TS and AFE device bases name the same BQ datasheet revision.
+- [ ] File passes strict `BMS_CANONICAL_JSON_V1` parsing: UTF-8/no BOM,
+  integer-only numbers, no duplicate keys, interoperable integer range,
+  Unicode NFC, and no unpaired surrogate.
+- [ ] No placeholder (`<REQUIRED...>`, `DRAFT`, `TBD`, `TODO`, or
+  `PLACEHOLDER`) remains anywhere.
+- [ ] Approval status is `APPROVED`, timestamp is strict RFC3339 UTC, and the
+  declared lowercase hash equals the recomputed **canonical projection
+  SHA-256**.
+- [ ] A detached approval record independently matches the artifact revision,
+  schema, canonical projection hash, hardware identity, repository path/blob,
+  record ID, approver, and approval time.
+- [ ] The final artifact contains no `current_software_reference` or other
+  reference-only section.
 
----
+## Blocker-1 — NTC v2
 
-## Part A — Blocker-1 checklist (NTC configuration artifact)
+- [ ] Exact NTC manufacturer, part, variant, tolerance/curve basis, source
+  title/revision/location/type, schematic net, and BOM references are reviewed.
+- [ ] TS1 conversion basis includes approved bias nominal Ω, integer tolerance
+  ppm, REGOUT µV, TS ADC LSB µV, and `model_confirmed = true`.
+- [ ] `point_count` equals the number of points and is at least two.
+- [ ] Resistance is strictly monotonic in the declared direction; temperature
+  is strictly monotonic in the opposite direction; no point is duplicated.
+- [ ] Units are `ohm` and `deci_C`; every numeric value is an integer in its
+  schema domain.
+- [ ] Coverage minimum is below maximum and both equal the table's actual
+  temperature extremes.
+- [ ] Out-of-range behavior is `reject_no_extrapolation`.
+- [ ] Provenance identifies the source curve, generation method, and tool or
+  record. The artifact table itself is authoritative.
+- [ ] Future generated `BMS_NtcPoint_t` output matches ordered resistance,
+  temperature, and count semantic values exactly and reaches
+  `BMS_Sample_SetNtcTable`.
+- [ ] Production TS conversion constants match the approved TS model.
+- [ ] Physical NTC accuracy and lot/full-range behavior remain separately
+  marked for hardware validation.
 
-Artifact: `BMS_V1_NTC_CONFIG` (final approved file, immutable revision).
+## Blocker-2 — AFE v2
 
-- [ ] **B1-01 — Exact NTC identity**
-  - Requirement: manufacturer, exact part number, variant.
-  - Evidence/reference: `device` section of the final artifact vs BOM.
-  - Pass condition: all three fields non-empty and matching the BOM part; no
-    generic "10 kΩ NTC" identity.
-- [ ] **B1-02 — Source revision**
-  - Requirement: authoritative R-T source with exact revision/location.
-  - Evidence/reference: `source` section (document title, revision,
-    location, type).
-  - Pass condition: source is a real vendor datasheet/calibration record at
-    a traceable revision; location is page/table/record specific.
-- [ ] **B1-03 — TS1 topology / schematic / BOM**
-  - Requirement: TS1 channel, divider topology, schematic and BOM
-    references.
-  - Evidence/reference: `electrical_model.ts_channel`,
-    `electrical_model.topology`, `schematic_reference`, `bom_reference`.
-  - Pass condition: TS1 path is used and the topology matches the current
-    software divider model (pull-up to REGOUT per the BQ TS equation);
-    schematic/BOM refs resolve.
-- [ ] **B1-04 — Bias resistor**
-  - Requirement: nominal value and tolerance.
-  - Evidence/reference: `electrical_model.bias_resistor_nominal_ohm`,
-    `bias_resistor_tolerance` vs schematic/BOM.
-  - Pass condition: approved board values supplied (reference constant
-    10000 Ω alone is NOT approval) and consistent with the schematic.
-- [ ] **B1-05 — REGOUT**
-  - Requirement: reference/REGOUT voltage for the divider model.
-  - Evidence/reference: `electrical_model.regout_nominal_mv` vs datasheet
-    and schematic.
-  - Pass condition: approved value supplied; consistent with the 3.3 V
-    model (reference only) or a documented, reviewed deviation.
-- [ ] **B1-06 — Integer table**
-  - Requirement: discrete points as integer ohm / deci-°C.
-  - Evidence/reference: `table.points[]` against the schema (integer,
-    positive `resistance_ohm` within uint32_t; `temperature_decic` within
-    int16_t).
-  - Pass condition: all points are integers in the declared units; no
-    floating point or Beta-string-only input.
-- [ ] **B1-07 — Monotonicity**
-  - Requirement: strictly monotonic resistance and strictly monotonic
-    temperature in the opposite direction.
-  - Evidence/reference: gate/tooling check (JSON Schema cannot prove it);
-    `table.ordering` declaration.
-  - Pass condition: tooling confirms strict monotonicity in both
-    directions; declared ordering matches the data.
-- [ ] **B1-08 — Coverage**
-  - Requirement: declared minimum/maximum temperature endpoints.
-  - Evidence/reference: `coverage.minimum_temperature_decic`,
-    `coverage.maximum_temperature_decic`.
-  - Pass condition: endpoints present, minimum < maximum, and they match
-    the table's own extremes (or the product decision is documented).
-- [ ] **B1-09 — No extrapolation**
-  - Requirement: out-of-range behavior = reject, no extrapolation.
-  - Evidence/reference: `coverage.out_of_range_behavior` and
-    `BMS_Ntc_Interpolate` contract.
-  - Pass condition: value is `reject_no_extrapolation`; the software
-    contract is confirmed.
-- [ ] **B1-10 — Approval identity**
-  - Requirement: approver, time, approval record.
-  - Evidence/reference: `approval.approved_by`, `approved_at`,
-    `approval_record`.
-  - Pass condition: identity/time/evidence present, evidence binds the same
-    revision, status is `APPROVED`.
-- [ ] **B1-11 — Artifact hash**
-  - Requirement: canonical bytes SHA-256 bound to revision.
-  - Evidence/reference: `approval.artifact_sha256` and the stored immutable
-    copy.
-  - Pass condition: computed hash of the canonical stored bytes matches the
-    artifact's declared hash and the approval record.
+- [ ] Wake probe, SYS_CTRL1, SYS_CTRL2 early/final, CELLBAL1/2/3, CC_CFG,
+  SYS_STAT, initial settle, and CC_READY ownership fields match reviewed source
+  and datasheet evidence.
+- [ ] Startup CHG and DSG are both `OFF`; CC_EN is required at final handoff;
+  DELAY_DIS and CC_ONESHOT are prohibited; reserved bits and readback are safe.
+- [ ] OV/UV targets are approved. Delay units are source-native seconds, and
+  values match the selected 0..3 register codes.
+- [ ] Exactly one authoritative `current_rsense_policy.rsns_bit` (0 or 1) is
+  supplied; OCD/SCD do not contain independent RSNS selections.
+- [ ] OCD and SCD each use exactly one discriminated target basis: positive
+  current mA or positive sense voltage mV, never both.
+- [ ] OCD delay is milliseconds/code 0..7; SCD delay is microseconds/code
+  0..3; threshold codes are OCD 0..15 and SCD 0..7.
+- [ ] OCD/SCD selected threshold values and codes match the source RSNS table
+  and the not-below-requested selection rule. Current-basis conversion uses
+  exact integer/rational arithmetic from approved Rsense.
+- [ ] Runtime XREADY W1C owner is ProtectTask; startup exception is
+  BMS_AfeStartup; recovery coordinator is RecoveryCoordinator and is serviced
+  by StateTask.
+- [ ] Runtime calibration handoff owner is RecoveryCoordinator; default/static
+  calibration is forbidden; generation binding and post-clear provenance are
+  required.
+- [ ] First-valid-measurement proof structurally requires both
+  `sample_sequence` and `afe_generation`; event-only proof is forbidden.
+- [ ] Generic latch clear is forbidden.
+- [ ] Recovery-in-progress and action-bearing historical XREADY, SCD, and
+  OVRD_ALERT latches inhibit both CHG and DSG until future policy.
+- [ ] The artifact does not attempt to resolve Phase 9 OP-01 through OP-08.
+- [ ] The machine mapping covers every `BMS_AfeStartupConfig_t` field, fixed
+  startup register policy, and required `BMS_AfeStartup_Init`/`Step` production
+  invocation.
+- [ ] Production current conversion consumes the same approved Rsense and
+  polarity; runtime calibration comes from device reads through
+  `BMS_Sample_SetCalibration`, with no static fallback.
+- [ ] Physical trip timing/threshold accuracy, current polarity waveforms,
+  Rsense/Kelvin behavior, ALERT/W1C behavior, and MOS conduction remain
+  separately marked for hardware validation.
 
-Blocker-1 moves to candidate-for-gate-validation only when B1-01 … B1-11
-all pass.
+## Candidate manifest checks
 
----
+- [ ] The manifest binds one non-placeholder production Git commit.
+- [ ] Exact NTC/AFE schema IDs, versions, repository paths, raw SHA-256 values,
+  Git commits, and Git blob identities are present.
+- [ ] Artifact paths, revisions, canonical projection hashes, and Git blob
+  identities match the supplied files.
+- [ ] Detached approval paths, record IDs, raw hashes, and Git blob identities
+  match the supplied records.
+- [ ] Generated NTC/AFE outputs bind the same artifact revisions/hashes and the
+  same production candidate.
+- [ ] Build, test, verifier, and evidence references bind that production
+  candidate.
+- [ ] Reviewer records that manifest preflight is neither approval nor Hard
+  Gate execution.
 
-## Part B — Blocker-2 checklist (AFE startup/protection policy artifact)
+## Status boundary
 
-Artifact: `BMS_V1_AFE_STARTUP_PROTECTION_POLICY` (final approved file,
-immutable revision).
-
-- [ ] **B2-01 — Exact BQ variant / datasheet basis**
-  - Requirement: exact BQ7694003 variant, datasheet revision, errata
-    revision or NONE, board/schematic revision, policy revision.
-  - Evidence/reference: `device_basis`.
-  - Pass condition: all fields present and traceable; policy revision
-    matches the artifact revision.
-- [ ] **B2-02 — Startup registers (SYS_CTRL1 / SYS_CTRL2 early/final)**
-  - Requirement: approved values, mask semantics, allowed masks, readback
-    rules.
-  - Evidence/reference: `startup_policy.sys_ctrl1`,
-    `startup_policy.sys_ctrl2_early`, `startup_policy.sys_ctrl2_final`.
-  - Pass condition: approved values and rules present (source constants
-    marked reference-only do not count); DELAY_DIS/CC_ONESHOT prohibition
-    and reserved-bit policy present; startup CHG/DSG states approved.
-- [ ] **B2-03 — CELLBAL startup zero**
-  - Requirement: explicit approval of all-zero startup balancing and exact
-    readback.
-  - Evidence/reference: `startup_policy.cellbal_startup`.
-  - Pass condition: `all_zero_approved = true`, all three registers 0,
-    `exact_readback_required = true`, readback rule present.
-- [ ] **B2-04 — CC_CFG**
-  - Requirement: approved value, datasheet basis, readback rule,
-    CC-enable/first-event policy.
-  - Evidence/reference: `startup_policy.cc_cfg`.
-  - Pass condition: value approved (0x19 reference alone is not approval),
-    basis and rules present.
-- [ ] **B2-05 — OV**
-  - Requirement: per-cell target mV, physical delay, PROTECT3 OV code,
-    quantization policy, OV_TRIP encoding policy, readback policy.
-  - Evidence/reference: `hardware_protection_policy.ov`.
-  - Pass condition: all fields present; `delay_register = "PROTECT3"`;
-    target→code recomputation (under runtime calibration) verified by gate
-    tooling.
-- [ ] **B2-06 — UV**
-  - Requirement: per-cell target mV, physical delay, PROTECT3 UV code,
-    quantization policy, UV_TRIP encoding policy, readback policy.
-  - Evidence/reference: `hardware_protection_policy.uv`.
-  - Pass condition: all fields present; `delay_register = "PROTECT3"`;
-    target→code recomputation verified.
-- [ ] **B2-07 — OCD**
-  - Requirement: target current or sense voltage, RSNS selection, threshold
-    code, physical delay, PROTECT2 code, selection policy, readback policy.
-  - Evidence/reference: `hardware_protection_policy.ocd`.
-  - Pass condition: at least one of target_current_ma /
-    target_sense_voltage_mv present; `delay_register = "PROTECT2"`;
-    recomputation of code from target verified (not-below-requested rule
-    documented).
-- [ ] **B2-08 — SCD**
-  - Requirement: target current or sense voltage, RSNS selection, threshold
-    code, physical delay, PROTECT1 code, selection policy, readback policy.
-  - Evidence/reference: `hardware_protection_policy.scd`.
-  - Pass condition: at least one target present; **`delay_register =
-    "PROTECT1"` (SCD delay is in PROTECT1, NOT PROTECT3)**; recomputation
-    verified.
-- [ ] **B2-09 — Rsense**
-  - Requirement: nominal µΩ, source, approval basis.
-  - Evidence/reference: `current_rsense_policy.rsense_nominal_uohm`,
-    `rsense_source`, `rsense_approval_basis`.
-  - Pass condition: approved board value from schematic/BOM/calibration;
-    `BMS_RSENSE_REFERENCE_UOHM` alone is explicitly NOT approval.
-- [ ] **B2-10 — Current polarity**
-  - Requirement: polarity (±1), polarity definition, RSNS bit, conversion
-    bases.
-  - Evidence/reference: `current_rsense_policy.current_polarity`,
-    `polarity_definition`, `rsns_bit`, `cc_conversion_basis`,
-    `ocd_mapping_basis`, `scd_mapping_basis`.
-  - Pass condition: polarity and definition approved (reference +1 is not
-    approval); bases documented.
-- [ ] **B2-11 — Runtime calibration**
-  - Requirement: read ADCGAIN1/ADCOFFSET/ADCGAIN2 on every startup and
-    XREADY recovery; read-failure and invalid-decode behavior; default
-    calibration not permitted; XREADY generation binding; post-clear
-    provenance; handoff owner and acceptance conditions.
-  - Evidence/reference: `runtime_calibration_contract`.
-  - Pass condition: all three reads required (`true`), default calibration
-    `false`, behaviors present, owner and acceptance conditions present;
-    runtime calibration is never replaced by constants.
-- [ ] **B2-12 — XREADY recovery**
-  - Requirement: full reconfiguration, pre-clear safe preparation, single
-    authorized runtime W1C (ProtectTask owner, BMS_AfeStartup startup
-    exception), ambiguity policy, post-clear full config/readback, settle,
-    calibration provenance, first valid current-generation measurement,
-    second-XREADY policy, historical latch reset policy.
-  - Evidence/reference: `xready_recovery_contract`.
-  - Pass condition: frozen FROZEN-07/08/09/10 alignments hold; all policy
-    fields present. **OP-01 (historical latch reset) is currently OPEN: the
-    field must still be supplied by an approved policy decision; a
-    null/placeholder/DRAFT artifact is invalid.**
-- [ ] **B2-13 — FET handoff / enable**
-  - Requirement: startup CHG/DSG states; XREADY recovery inhibit; active HW
-    fault directional inhibits (OV/UV/OCD/SCD/OVRD_ALERT/XREADY × CHG/DSG);
-    latched-fault handling; calibration, first-valid-frame, current and
-    temperature validity requirements; stale-data behavior; AFE comm
-    failure behavior.
-  - Evidence/reference: `fet_handoff_enable_policy`.
-  - Pass condition: every field present and consistent with frozen
-    architecture (FROZEN-01…FROZEN-18); open policy items (OP-01…OP-08) are
-    resolved only by approved policy, not guessed.
-- [ ] **B2-14 — Readback rules**
-  - Requirement: readback/verification rules for every startup and
-    protection register group.
-  - Evidence/reference: readback fields across `startup_policy` and
-    `hardware_protection_policy`.
-  - Pass condition: every write has a declared readback/acceptance rule.
-- [ ] **B2-15 — Approval identity**
-  - Requirement: approver, time, approval record.
-  - Evidence/reference: `approval.approved_by`, `approved_at`,
-    `approval_record`.
-  - Pass condition: identity/time/evidence present, evidence binds the same
-    revision, status is `APPROVED`.
-- [ ] **B2-16 — Artifact hash**
-  - Requirement: canonical bytes SHA-256 bound to revision.
-  - Evidence/reference: `approval.artifact_sha256` and the stored immutable
-    copy.
-  - Pass condition: computed hash of the canonical stored bytes matches the
-    artifact's declared hash and the approval record.
-
-Blocker-2 moves to candidate-for-gate-validation only when B2-01 … B2-16
-all pass.
-
----
-
-## Part C — Cross-artifact checks
-
-- [ ] **C-01 — Same board/BQ revision**
-  - Requirement: NTC and AFE artifacts reference the same
-    board/schematic revision and compatible BQ7694003 basis.
-  - Evidence/reference: NTC `electrical_model`/`source` vs AFE
-    `device_basis`.
-  - Pass condition: no revision mismatch between the two artifacts.
-- [ ] **C-02 — Compatible current/temperature policy references**
-  - Requirement: Rsense/current references in the AFE artifact and
-    NTC/TS1 model references are consistent.
-  - Evidence/reference: cross-read of both artifacts.
-  - Pass condition: no contradiction between electrical models and
-    current/temperature mapping bases.
-- [ ] **C-03 — No contradictory revisions**
-  - Requirement: datasheet, errata, schematic, policy and NTC source
-    revisions are mutually consistent.
-  - Evidence/reference: revision fields in both artifacts.
-  - Pass condition: no field references a revision that contradicts another
-    documented revision.
-- [ ] **C-04 — Generated production candidate identifies exact artifact
-  revisions**
-  - Requirement: any generated production configuration/table candidate
-    records the exact artifact revisions it derives from.
-  - Evidence/reference: future generation/binding step (see
-    `BMS_V1_Phase8_Future_Gate_Binding_Plan.md`).
-  - Pass condition: the candidate's manifest names the exact NTC and AFE
-    artifact revisions + hashes.
-
----
-
-## Part D — Hardware-validation deferred checks (NOT satisfied by artifacts)
-
-These remain `HARDWARE VALIDATION DEFERRED`. They are not part of the
-software gate blockers and are tracked for the hardware phase:
-
-- [ ] **HW-01** — actual NTC accuracy, full-range error, lot variation
-- [ ] **HW-02** — actual Rsense tolerance, Kelvin routing, copper
-  resistance, current gain/offset and polarity waveforms
-- [ ] **HW-03** — actual AFE OV/UV/OCD/SCD trip thresholds and delay timing
-- [ ] **HW-04** — actual IWDG timing/reset behavior
-- [ ] **HW-05** — physical MOS conduction / FET turn-on-off timing
-- [ ] **HW-06** — ALERT edge timing, W1C physical commit point, STOP
-  ambiguity waveforms
-- [ ] **HW-07** — I2C/brownout/thermal/EMI/ESD/power integrity behavior
-
----
-
-## Status block
-
-- [ ] Blocker-1 (NTC): all B1 items pass → candidate-for-gate-validation
-- [ ] Blocker-2 (AFE): all B2 items pass → candidate-for-gate-validation
-- [ ] Cross-artifact checks pass (C-01 … C-04)
-
-Until both blockers are candidates AND the future gate (schema + semantic +
-binding + wiring evidence) passes, the Phase 8 Hard Gate remains
-`BLOCKED(2)` and Phase 9 official implementation remains `NOT STARTED`.
+- Blocker-1: unchanged — blocked on user/hardware input.
+- Blocker-2: unchanged — blocked on user/hardware input.
+- Phase 8 Hard Gate: `BLOCKED(2)`.
+- Phase 9 Architecture Core v1: `FROZEN`.
+- Phase 9 official implementation: `NOT STARTED`.
+- Hardware validation: separate and deferred.

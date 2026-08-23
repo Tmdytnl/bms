@@ -1,0 +1,144 @@
+{
+  "algorithm_id": "BMS_CANONICAL_JSON_V1",
+  "vectors": [
+    {
+      "name": "key_ordering_a",
+      "raw_text": "{\"z\":1,\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"status\":\"APPROVED\"},\"array\":[1,2],\"message\":\"line\\nbreak\",\"name\":\"é\"}",
+      "expected_valid": true,
+      "expected_hash": "4edce2a1b0982690db95b42ef8c7b3bcfa681f24b3540d26d8a9d23443b6b812"
+    },
+    {
+      "name": "key_ordering_b",
+      "raw_text": "{\"name\":\"é\",\"message\":\"line\\nbreak\",\"array\":[1,2],\"approval\":{\"status\":\"APPROVED\",\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"z\":1}",
+      "expected_valid": true,
+      "expected_hash": "4edce2a1b0982690db95b42ef8c7b3bcfa681f24b3540d26d8a9d23443b6b812",
+      "expected_same_hash_as": "key_ordering_a"
+    },
+    {
+      "name": "outside_string_crlf_whitespace",
+      "raw_text": " \r\n { \"approval\" : { \"artifact_sha256\" : \"0000000000000000000000000000000000000000000000000000000000000000\", \"status\" : \"APPROVED\" }, \"array\" : [ 1, 2 ], \"message\" : \"line\\nbreak\", \"name\" : \"é\", \"z\" : 1 } \r\n ",
+      "expected_valid": true,
+      "expected_hash": "4edce2a1b0982690db95b42ef8c7b3bcfa681f24b3540d26d8a9d23443b6b812",
+      "expected_same_hash_as": "key_ordering_a"
+    },
+    {
+      "name": "array_ordering_changed",
+      "raw_text": "{\"z\":1,\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"status\":\"APPROVED\"},\"array\":[2,1],\"message\":\"line\\nbreak\",\"name\":\"é\"}",
+      "expected_valid": true,
+      "expected_hash": "51137c036d3ee0856aeb1d338b0a61f22dec82afaeb27a742255fd37da4104c4",
+      "expected_different_hash_from": "key_ordering_a"
+    },
+    {
+      "name": "hash_field_mutation",
+      "raw_text": "{\"z\":1,\"approval\":{\"artifact_sha256\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"status\":\"APPROVED\"},\"array\":[1,2],\"message\":\"line\\nbreak\",\"name\":\"é\"}",
+      "expected_valid": true,
+      "expected_hash": "4edce2a1b0982690db95b42ef8c7b3bcfa681f24b3540d26d8a9d23443b6b812",
+      "expected_same_hash_as": "key_ordering_a"
+    },
+    {
+      "name": "non_hash_field_mutation",
+      "raw_text": "{\"z\":2,\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"status\":\"APPROVED\"},\"array\":[1,2],\"message\":\"line\\nbreak\",\"name\":\"é\"}",
+      "expected_valid": true,
+      "expected_hash": "94714ef501e36c73e42da6c25a91f70f1b65a4f38bb15d18cc7b5caedc7401d9",
+      "expected_different_hash_from": "key_ordering_a"
+    },
+    {
+      "name": "escaped_control_strings",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"message\":\"tab\\tnewline\\nquote\\\"backslash\\\\\"}",
+      "expected_valid": true,
+      "expected_hash": "f0cec8dda0cbb91f686d979c3a0cc22ef5b9ddffaeabd378d1781591f073b454"
+    },
+    {
+      "name": "paired_surrogate_escape",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"emoji\":\"\\ud83d\\ude00\"}",
+      "expected_valid": true,
+      "expected_hash": "8d9bbcb278bc164755caf94ac723116ca1fa604c9e74a1e998fadfcc955f2af0"
+    },
+    {
+      "name": "duplicate_root_key",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"a\":1,\"a\":2}",
+      "expected_valid": false
+    },
+    {
+      "name": "nested_duplicate_key",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"status\":\"x\",\"status\":\"y\"}}",
+      "expected_valid": false
+    },
+    {
+      "name": "utf8_bom",
+      "prepend_hex": "efbbbf",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_utf8",
+      "raw_hex": "ff",
+      "expected_valid": false
+    },
+    {
+      "name": "fraction",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":1.0}",
+      "expected_valid": false
+    },
+    {
+      "name": "exponent",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":1e0}",
+      "expected_valid": false
+    },
+    {
+      "name": "negative_zero",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":-0}",
+      "expected_valid": false
+    },
+    {
+      "name": "nan",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":NaN}",
+      "expected_valid": false
+    },
+    {
+      "name": "infinity",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":Infinity}",
+      "expected_valid": false
+    },
+    {
+      "name": "negative_infinity",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":-Infinity}",
+      "expected_valid": false
+    },
+    {
+      "name": "integer_above_interoperable_range",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"n\":9007199254740992}",
+      "expected_valid": false
+    },
+    {
+      "name": "unicode_nfc_mismatch",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"name\":\"e\\u0301\"}",
+      "expected_valid": false
+    },
+    {
+      "name": "unpaired_surrogate",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"name\":\"\\ud800\"}",
+      "expected_valid": false
+    },
+    {
+      "name": "approval_hash_missing",
+      "raw_text": "{\"approval\":{\"status\":\"APPROVED\"},\"n\":1}",
+      "expected_valid": false
+    },
+    {
+      "name": "approval_hash_duplicate",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"artifact_sha256\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\"}}",
+      "expected_valid": false
+    },
+    {
+      "name": "multiple_json_values",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}} {}",
+      "expected_valid": false
+    },
+    {
+      "name": "trailing_non_whitespace",
+      "raw_text": "{\"approval\":{\"artifact_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}x",
+      "expected_valid": false
+    }
+  ]
+}

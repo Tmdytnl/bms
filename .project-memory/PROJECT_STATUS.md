@@ -55,9 +55,18 @@ No guessed parameters are recorded.
 
 ## Phase 8 Blocker Intake Package
 
-Phase8 blocker intake package: READY
+P8-BLOCKER-PACK-SR-001: **BLOCK** (3 Critical, 6 High, 2 Medium).
 
-Meaning: machine-fillable templates + schemas + approval checklist + future gate binding plan exist under `deliverables/phase8/input_templates/` (P8-BLOCKER-PACK-001).
+The historical v1 intake package remains immutable Git evidence but is
+**SUPERSEDED FOR FUTURE GATE USE**.
+
+Phase8 artifact contract v2 and offline preflight tooling:
+**READY** (P8-BLOCKER-V2-001).
+
+Meaning: approved-artifact v2 schemas/templates, strict
+`BMS_CANONICAL_JSON_V1`, detached approval record, candidate gate manifest,
+offline validator, golden vectors, and synthetic regression tests exist under
+`deliverables/phase8/` and `tools/phase8/`.
 
 This does NOT resolve Blocker-1 or Blocker-2.
 
@@ -97,7 +106,7 @@ Note: the completion commit is task-closure evidence, not the dynamic repository
 3. Re-run future Phase8 gate only after approved artifacts exist.
 4. Perform later Codex Sol High Phase8 safety review as required by the project review flow.
 5. Resolve Phase9 OPEN product-policy items OP-01 … OP-10 via approved policy artifacts; do not guess values.
-6. Fill and approve the Phase8 blocker intake artifacts (templates/schemas in deliverables/phase8/input_templates/); approval does not itself pass the gate.
+6. Fill and independently approve the v2 Phase8 blocker artifacts; detached approval and preflight do not themselves pass the gate.
 7. Phase9 official implementation remains NOT STARTED until the Hard Gate/process rule permits it.
 
 ## Invariants

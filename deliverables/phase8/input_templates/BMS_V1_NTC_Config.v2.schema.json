@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json",
+  "title": "BMS V1 approved NTC configuration artifact v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "schema_id",
+    "revision",
+    "hardware_identity",
+    "device",
+    "source_document",
+    "ts_conversion_basis",
+    "table",
+    "coverage",
+    "provenance",
+    "approval"
+  ],
+  "properties": {
+    "artifact_type": { "const": "BMS_V1_NTC_CONFIG" },
+    "schema_version": { "const": 2 },
+    "schema_id": { "const": "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json" },
+    "revision": { "$ref": "#/$defs/revision" },
+    "hardware_identity": { "$ref": "#/$defs/hardware_identity" },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "exact_part", "variant", "ntc_tolerance_curve_basis"],
+      "properties": {
+        "manufacturer": { "$ref": "#/$defs/nonempty_string" },
+        "exact_part": { "$ref": "#/$defs/nonempty_string" },
+        "variant": { "$ref": "#/$defs/nonempty_string" },
+        "ntc_tolerance_curve_basis": { "$ref": "#/$defs/nonempty_string" }
+      }
+    },
+    "source_document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "revision", "source_location", "source_type"],
+      "properties": {
+        "title": { "$ref": "#/$defs/nonempty_string" },
+        "revision": { "$ref": "#/$defs/nonempty_string" },
+        "source_location": { "$ref": "#/$defs/nonempty_string" },
+        "source_type": { "$ref": "#/$defs/nonempty_string" }
+      }
+    },
+    "ts_conversion_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bq_datasheet_revision",
+        "ts_channel",
+        "bias_resistor_nominal_ohm",
+        "bias_resistor_tolerance_ppm",
+        "regout_nominal_uv",
+        "ts_adc_lsb_uv",
+        "schematic_net_reference",
+        "bom_reference",
+        "model_confirmed"
+      ],
+      "properties": {
+        "bq_datasheet_revision": { "$ref": "#/$defs/nonempty_string" },
+        "ts_channel": { "const": "TS1" },
+        "bias_resistor_nominal_ohm": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "bias_resistor_tolerance_ppm": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "regout_nominal_uv": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "ts_adc_lsb_uv": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "schematic_net_reference": { "$ref": "#/$defs/nonempty_string" },
+        "bom_reference": { "$ref": "#/$defs/nonempty_string" },
+        "model_confirmed": { "const": true }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resistance_unit", "temperature_unit", "ordering", "point_count", "points"],
+      "properties": {
+        "resistance_unit": { "const": "ohm" },
+        "temperature_unit": { "const": "deci_C" },
+        "ordering": { "enum": ["resistance_ascending", "resistance_descending"] },
+        "point_count": { "type": "integer", "minimum": 2, "maximum": 65535 },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 65535,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["resistance_ohm", "temperature_decic"],
+            "properties": {
+              "resistance_ohm": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+              "temperature_decic": { "type": "integer", "minimum": -32768, "maximum": 32767 }
+            }
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum_temperature_decic", "maximum_temperature_decic", "out_of_range_behavior"],
+      "properties": {
+        "minimum_temperature_decic": { "type": "integer", "minimum": -32768, "maximum": 32767 },
+        "maximum_temperature_decic": { "type": "integer", "minimum": -32768, "maximum": 32767 },
+        "out_of_range_behavior": { "const": "reject_no_extrapolation" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_curve_identifier", "generation_method", "generation_tool_or_record"],
+      "properties": {
+        "source_curve_identifier": { "$ref": "#/$defs/nonempty_string" },
+        "generation_method": { "$ref": "#/$defs/nonempty_string" },
+        "generation_tool_or_record": { "$ref": "#/$defs/nonempty_string" }
+      }
+    },
+    "approval": { "$ref": "#/$defs/approval" }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/no_placeholders" }
+  ],
+  "$defs": {
+    "no_placeholders": {
+      "if": { "type": "string" },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "pattern": "^<REQUIRED" },
+            { "enum": ["DRAFT", "TBD", "TODO", "PLACEHOLDER"] }
+          ]
+        }
+      },
+      "else": {
+        "if": { "type": "array" },
+        "then": { "items": { "$ref": "#/$defs/no_placeholders" } },
+        "else": {
+          "if": { "type": "object" },
+          "then": { "additionalProperties": { "$ref": "#/$defs/no_placeholders" } }
+        }
+      }
+    },
+    "nonempty_string": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "revision": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "hardware_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "hardware_variant", "board_revision", "schematic_revision", "afe_part"],
+      "properties": {
+        "project_id": { "const": "BMS_V1" },
+        "hardware_variant": { "$ref": "#/$defs/nonempty_string" },
+        "board_revision": { "$ref": "#/$defs/nonempty_string" },
+        "schematic_revision": { "$ref": "#/$defs/nonempty_string" },
+        "afe_part": { "type": "string", "pattern": "^BQ7694003[A-Za-z0-9._-]*$" }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_by", "approved_at", "approval_record", "artifact_sha256"],
+      "properties": {
+        "status": { "const": "APPROVED" },
+        "approved_by": { "$ref": "#/$defs/nonempty_string" },
+        "approved_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?Z$"
+        },
+        "approval_record": { "$ref": "#/$defs/revision" },
+        "artifact_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

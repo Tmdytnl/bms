@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json",
+  "title": "BMS V1 approved AFE startup/protection policy artifact v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "schema_id",
+    "revision",
+    "hardware_identity",
+    "device_basis",
+    "startup_policy",
+    "hardware_protection_policy",
+    "current_rsense_policy",
+    "runtime_ownership_invariants",
+    "runtime_calibration_contract",
+    "fail_closed_fallback",
+    "production_mapping",
+    "approval"
+  ],
+  "properties": {
+    "artifact_type": { "const": "BMS_V1_AFE_STARTUP_PROTECTION_POLICY" },
+    "schema_version": { "const": 2 },
+    "schema_id": { "const": "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json" },
+    "revision": { "$ref": "#/$defs/revision" },
+    "hardware_identity": { "$ref": "#/$defs/hardware_identity" },
+    "device_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["datasheet_revision", "errata_revision", "policy_revision"],
+      "properties": {
+        "datasheet_revision": { "$ref": "#/$defs/nonempty_string" },
+        "errata_revision": { "$ref": "#/$defs/nonempty_string" },
+        "policy_revision": { "$ref": "#/$defs/revision" }
+      }
+    },
+    "startup_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wake_probe",
+        "sys_ctrl1",
+        "sys_ctrl2_early",
+        "sys_ctrl2_final",
+        "cellbal_startup",
+        "cc_cfg",
+        "sys_stat",
+        "initial_data_settle",
+        "cc_ready_ownership"
+      ],
+      "properties": {
+        "wake_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["approved", "settle_ms", "max_attempts", "failure_action", "datasheet_basis"],
+          "properties": {
+            "approved": { "const": true },
+            "settle_ms": { "const": 10 },
+            "max_attempts": { "const": 3 },
+            "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" },
+            "datasheet_basis": { "$ref": "#/$defs/nonempty_string" }
+          }
+        },
+        "sys_ctrl1": {
+          "$ref": "#/$defs/sys_ctrl1_register"
+        },
+        "sys_ctrl2_early": {
+          "$ref": "#/$defs/sys_ctrl2_early_register"
+        },
+        "sys_ctrl2_final": {
+          "$ref": "#/$defs/sys_ctrl2_final_register"
+        },
+        "cellbal_startup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["approved", "cellbal1_desired_byte", "cellbal2_desired_byte", "cellbal3_desired_byte", "exact_readback_required", "failure_action"],
+          "properties": {
+            "approved": { "const": true },
+            "cellbal1_desired_byte": { "const": 0 },
+            "cellbal2_desired_byte": { "const": 0 },
+            "cellbal3_desired_byte": { "const": 0 },
+            "exact_readback_required": { "const": true },
+            "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+          }
+        },
+        "cc_cfg": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["desired_byte", "readback_mask", "expected_masked_value", "datasheet_basis", "failure_action"],
+          "properties": {
+            "desired_byte": { "const": 25 },
+            "readback_mask": { "const": 255 },
+            "expected_masked_value": { "const": 25 },
+            "datasheet_basis": { "$ref": "#/$defs/nonempty_string" },
+            "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+          }
+        },
+        "sys_stat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["initial_blocking_mask", "final_blocking_mask", "read_owner", "failure_action", "xready_handling_identity"],
+          "properties": {
+            "initial_blocking_mask": { "const": 31 },
+            "final_blocking_mask": { "const": 31 },
+            "read_owner": { "const": "BMS_AfeStartup" },
+            "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" },
+            "xready_handling_identity": { "const": "CURRENT_FINAL_STATUS_READ_SINGLE_W1C_THEN_FULL_RECONFIGURE" }
+          }
+        },
+        "initial_data_settle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duration_ms", "transition_semantics", "failure_action"],
+          "properties": {
+            "duration_ms": { "const": 800 },
+            "transition_semantics": { "const": "ELAPSED_TIME_THEN_READ_FINAL_SYS_STAT" },
+            "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+          }
+        },
+        "cc_ready_ownership": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["w1c_owner", "startup_behavior", "runtime_consumer"],
+          "properties": {
+            "w1c_owner": { "const": "ProtectTask" },
+            "startup_behavior": { "const": "PRESERVE" },
+            "runtime_consumer": { "const": "ProtectTask" }
+          }
+        }
+      }
+    },
+    "hardware_protection_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ov", "uv", "ocd", "scd"],
+      "properties": {
+        "ov": { "$ref": "#/$defs/ov_policy" },
+        "uv": { "$ref": "#/$defs/uv_policy" },
+        "ocd": { "$ref": "#/$defs/ocd_policy" },
+        "scd": { "$ref": "#/$defs/scd_policy" }
+      }
+    },
+    "current_rsense_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rsense_nominal_uohm", "rsense_source", "rsense_approval_basis", "current_polarity", "polarity_definition", "rsns_bit", "cc_conversion_basis"],
+      "properties": {
+        "rsense_nominal_uohm": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "rsense_source": { "$ref": "#/$defs/nonempty_string" },
+        "rsense_approval_basis": { "$ref": "#/$defs/nonempty_string" },
+        "current_polarity": { "enum": [-1, 1] },
+        "polarity_definition": { "$ref": "#/$defs/nonempty_string" },
+        "rsns_bit": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "cc_conversion_basis": { "$ref": "#/$defs/nonempty_string" }
+      }
+    },
+    "runtime_ownership_invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_xready_w1c_owner",
+        "startup_xready_w1c_exception",
+        "runtime_recovery_coordinator",
+        "runtime_recovery_serviced_by",
+        "runtime_calibration_handoff_owner",
+        "default_calibration_permitted",
+        "xready_generation_binding_required",
+        "post_clear_provenance_required",
+        "first_valid_measurement_proof",
+        "generic_latch_clear_permitted"
+      ],
+      "properties": {
+        "runtime_xready_w1c_owner": { "const": "ProtectTask" },
+        "startup_xready_w1c_exception": { "const": "BMS_AfeStartup" },
+        "runtime_recovery_coordinator": { "const": "RecoveryCoordinator" },
+        "runtime_recovery_serviced_by": { "const": "StateTask" },
+        "runtime_calibration_handoff_owner": { "const": "RecoveryCoordinator" },
+        "default_calibration_permitted": { "const": false },
+        "xready_generation_binding_required": { "const": true },
+        "post_clear_provenance_required": { "const": true },
+        "first_valid_measurement_proof": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sample_sequence", "afe_generation", "event_only_proof_permitted"],
+          "properties": {
+            "sample_sequence": { "const": true },
+            "afe_generation": { "const": true },
+            "event_only_proof_permitted": { "const": false }
+          }
+        },
+        "generic_latch_clear_permitted": { "const": false }
+      }
+    },
+    "runtime_calibration_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adc_gain1_read_every_startup_recovery",
+        "adc_offset_read_every_startup_recovery",
+        "adc_gain2_read_every_startup_recovery",
+        "read_failure_action",
+        "invalid_decode_action",
+        "handoff_api",
+        "static_fallback_permitted"
+      ],
+      "properties": {
+        "adc_gain1_read_every_startup_recovery": { "const": true },
+        "adc_offset_read_every_startup_recovery": { "const": true },
+        "adc_gain2_read_every_startup_recovery": { "const": true },
+        "read_failure_action": { "const": "FAIL_CLOSED_NO_HANDOFF" },
+        "invalid_decode_action": { "const": "FAIL_CLOSED_NO_HANDOFF" },
+        "handoff_api": { "const": "BMS_Sample_SetCalibration" },
+        "static_fallback_permitted": { "const": false }
+      }
+    },
+    "fail_closed_fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recovery_in_progress", "xready_historical_latch", "scd_historical_latch", "ovrd_alert_historical_latch"],
+      "properties": {
+        "recovery_in_progress": { "$ref": "#/$defs/both_inhibit" },
+        "xready_historical_latch": { "$ref": "#/$defs/action_bearing_both_inhibit" },
+        "scd_historical_latch": { "$ref": "#/$defs/action_bearing_both_inhibit" },
+        "ovrd_alert_historical_latch": { "$ref": "#/$defs/action_bearing_both_inhibit" }
+      }
+    },
+    "production_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_type", "initializer_bindings", "fixed_register_policy_bindings", "runtime_invocation"],
+      "properties": {
+        "target_type": { "const": "BMS_AfeStartupConfig_t" },
+        "initializer_bindings": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "items": { "$ref": "#/$defs/initializer_binding" }
+        },
+        "fixed_register_policy_bindings": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/register_binding" }
+        },
+        "runtime_invocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["initializer_api", "step_api", "production_call_required"],
+          "properties": {
+            "initializer_api": { "const": "BMS_AfeStartup_Init" },
+            "step_api": { "const": "BMS_AfeStartup_Step" },
+            "production_call_required": { "const": true }
+          }
+        }
+      }
+    },
+    "approval": { "$ref": "#/$defs/approval" }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/no_placeholders" }
+  ],
+  "$defs": {
+    "no_placeholders": {
+      "if": { "type": "string" },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "pattern": "^<REQUIRED" },
+            { "enum": ["DRAFT", "TBD", "TODO", "PLACEHOLDER"] }
+          ]
+        }
+      },
+      "else": {
+        "if": { "type": "array" },
+        "then": { "items": { "$ref": "#/$defs/no_placeholders" } },
+        "else": {
+          "if": { "type": "object" },
+          "then": { "additionalProperties": { "$ref": "#/$defs/no_placeholders" } }
+        }
+      }
+    },
+    "nonempty_string": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "revision": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "byte": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "hardware_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "hardware_variant", "board_revision", "schematic_revision", "afe_part"],
+      "properties": {
+        "project_id": { "const": "BMS_V1" },
+        "hardware_variant": { "$ref": "#/$defs/nonempty_string" },
+        "board_revision": { "$ref": "#/$defs/nonempty_string" },
+        "schematic_revision": { "$ref": "#/$defs/nonempty_string" },
+        "afe_part": { "type": "string", "pattern": "^BQ7694003[A-Za-z0-9._-]*$" }
+      }
+    },
+    "sys_ctrl1_register": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desired_byte", "readback_mask", "expected_masked_value", "failure_action"],
+      "properties": {
+        "desired_byte": { "const": 24 },
+        "readback_mask": { "const": 255 },
+        "expected_masked_value": { "const": 24 },
+        "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+      }
+    },
+    "sys_ctrl2_early_register": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desired_byte", "readback_mask", "expected_masked_value", "chg_state", "dsg_state", "fet_safe_off_invariant", "failure_action"],
+      "properties": {
+        "desired_byte": { "const": 0 },
+        "readback_mask": { "const": 255 },
+        "expected_masked_value": { "const": 0 },
+        "chg_state": { "const": "OFF" },
+        "dsg_state": { "const": "OFF" },
+        "fet_safe_off_invariant": { "const": true },
+        "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+      }
+    },
+    "sys_ctrl2_final_register": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desired_byte", "readback_mask", "expected_masked_value", "cc_en_required", "chg_state", "dsg_state", "delay_dis_permitted", "cc_oneshot_permitted", "reserved_bits_safe", "failure_action"],
+      "properties": {
+        "desired_byte": { "const": 64 },
+        "readback_mask": { "const": 255 },
+        "expected_masked_value": { "const": 64 },
+        "cc_en_required": { "const": true },
+        "chg_state": { "const": "OFF" },
+        "dsg_state": { "const": "OFF" },
+        "delay_dis_permitted": { "const": false },
+        "cc_oneshot_permitted": { "const": false },
+        "reserved_bits_safe": { "const": true },
+        "failure_action": { "const": "FAIL_CLOSED_SAFE_OFF" }
+      }
+    },
+    "hardware_delay_s": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "s" }
+      }
+    },
+    "hardware_delay_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "ms" }
+      }
+    },
+    "hardware_delay_us": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "us" }
+      }
+    },
+    "ov_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_cell_mv", "hardware_delay", "delay_register", "delay_code", "trip_encoding_driver", "runtime_calibration_required", "readback_required"],
+      "properties": {
+        "target_cell_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "hardware_delay": { "$ref": "#/$defs/hardware_delay_s" },
+        "delay_register": { "const": "PROTECT3" },
+        "delay_code": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "trip_encoding_driver": { "const": "BQ76940_Control_EncodeOvTrip" },
+        "runtime_calibration_required": { "const": true },
+        "readback_required": { "const": true }
+      }
+    },
+    "uv_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_cell_mv", "hardware_delay", "delay_register", "delay_code", "trip_encoding_driver", "runtime_calibration_required", "readback_required"],
+      "properties": {
+        "target_cell_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "hardware_delay": { "$ref": "#/$defs/hardware_delay_s" },
+        "delay_register": { "const": "PROTECT3" },
+        "delay_code": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "trip_encoding_driver": { "const": "BQ76940_Control_EncodeUvTrip" },
+        "runtime_calibration_required": { "const": true },
+        "readback_required": { "const": true }
+      }
+    },
+    "threshold_target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["basis", "current_ma"],
+          "properties": {
+            "basis": { "const": "current_ma" },
+            "current_ma": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["basis", "sense_voltage_mv"],
+          "properties": {
+            "basis": { "const": "sense_voltage_mv" },
+            "sense_voltage_mv": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        }
+      ]
+    },
+    "ocd_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "threshold_code", "selected_sense_voltage_mv", "hardware_delay", "delay_register", "delay_code", "selection_policy", "readback_required"],
+      "properties": {
+        "target": { "$ref": "#/$defs/threshold_target" },
+        "threshold_code": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "selected_sense_voltage_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "hardware_delay": { "$ref": "#/$defs/hardware_delay_ms" },
+        "delay_register": { "const": "PROTECT2" },
+        "delay_code": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "selection_policy": { "const": "NOT_BELOW_REQUESTED" },
+        "readback_required": { "const": true }
+      }
+    },
+    "scd_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "threshold_code", "selected_sense_voltage_mv", "hardware_delay", "delay_register", "delay_code", "selection_policy", "readback_required"],
+      "properties": {
+        "target": { "$ref": "#/$defs/threshold_target" },
+        "threshold_code": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "selected_sense_voltage_mv": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "hardware_delay": { "$ref": "#/$defs/hardware_delay_us" },
+        "delay_register": { "const": "PROTECT1" },
+        "delay_code": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "selection_policy": { "const": "NOT_BELOW_REQUESTED" },
+        "readback_required": { "const": true }
+      }
+    },
+    "both_inhibit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chg_inhibit", "dsg_inhibit"],
+      "properties": {
+        "chg_inhibit": { "const": true },
+        "dsg_inhibit": { "const": true }
+      }
+    },
+    "action_bearing_both_inhibit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_bearing", "chg_inhibit", "dsg_inhibit", "duration"],
+      "properties": {
+        "action_bearing": { "const": true },
+        "chg_inhibit": { "const": true },
+        "dsg_inhibit": { "const": true },
+        "duration": { "const": "UNTIL_FUTURE_POLICY" }
+      }
+    },
+    "initializer_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_pointer", "target_field", "transform"],
+      "properties": {
+        "artifact_pointer": { "type": "string", "pattern": "^/" },
+        "target_field": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "transform": { "$ref": "#/$defs/nonempty_string" }
+      }
+    },
+    "register_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_pointer", "production_symbol_or_register", "comparison"],
+      "properties": {
+        "artifact_pointer": { "type": "string", "pattern": "^/" },
+        "production_symbol_or_register": { "$ref": "#/$defs/nonempty_string" },
+        "comparison": { "const": "INTEGER_SEMANTIC_VALUE" }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_by", "approved_at", "approval_record", "artifact_sha256"],
+      "properties": {
+        "status": { "const": "APPROVED" },
+        "approved_by": { "$ref": "#/$defs/nonempty_string" },
+        "approved_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?Z$"
+        },
+        "approval_record": { "$ref": "#/$defs/revision" },
+        "artifact_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

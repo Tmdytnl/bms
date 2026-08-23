@@ -1,0 +1,60 @@
+{
+  "artifact_type": "BMS_V1_NTC_CONFIG",
+  "schema_version": 2,
+  "schema_id": "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json",
+  "revision": "<REQUIRED>",
+  "hardware_identity": {
+    "project_id": "BMS_V1",
+    "hardware_variant": "<REQUIRED>",
+    "board_revision": "<REQUIRED>",
+    "schematic_revision": "<REQUIRED>",
+    "afe_part": "<REQUIRED: exact BQ7694003 ordering/variant code>"
+  },
+  "device": {
+    "manufacturer": "<REQUIRED>",
+    "exact_part": "<REQUIRED>",
+    "variant": "<REQUIRED>",
+    "ntc_tolerance_curve_basis": "<REQUIRED>"
+  },
+  "source_document": {
+    "title": "<REQUIRED>",
+    "revision": "<REQUIRED>",
+    "source_location": "<REQUIRED>",
+    "source_type": "<REQUIRED>"
+  },
+  "ts_conversion_basis": {
+    "bq_datasheet_revision": "<REQUIRED>",
+    "ts_channel": "TS1",
+    "bias_resistor_nominal_ohm": null,
+    "bias_resistor_tolerance_ppm": null,
+    "regout_nominal_uv": null,
+    "ts_adc_lsb_uv": null,
+    "schematic_net_reference": "<REQUIRED>",
+    "bom_reference": "<REQUIRED>",
+    "model_confirmed": false
+  },
+  "table": {
+    "resistance_unit": "ohm",
+    "temperature_unit": "deci_C",
+    "ordering": "resistance_ascending",
+    "point_count": 0,
+    "points": []
+  },
+  "coverage": {
+    "minimum_temperature_decic": null,
+    "maximum_temperature_decic": null,
+    "out_of_range_behavior": "reject_no_extrapolation"
+  },
+  "provenance": {
+    "source_curve_identifier": "<REQUIRED>",
+    "generation_method": "<REQUIRED>",
+    "generation_tool_or_record": "<REQUIRED>"
+  },
+  "approval": {
+    "status": "DRAFT",
+    "approved_by": "<REQUIRED>",
+    "approved_at": "<REQUIRED>",
+    "approval_record": "<REQUIRED>",
+    "artifact_sha256": "<REQUIRED>"
+  }
+}
