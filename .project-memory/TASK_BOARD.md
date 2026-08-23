@@ -2,15 +2,7 @@
 
 ## Active Task
 
-### BMS-SIM-CLOSED-LOOP-M1
-
-Goal:
-Complete the BMS V1 simulation software closed loop from Phase 8 integration
-through Phase 9, then continue into SOC, balancing, CAN, safe Flash scope, and
-full simulator integration.
-
-Status:
-ACTIVE — IN PROGRESS
+None.
 
 ## Open Queue
 
@@ -39,6 +31,27 @@ Status:
 WAITING
 
 ## Completed Tasks
+
+### BMS-SIM-CLOSED-LOOP-M1
+
+Goal:
+Complete the BMS V1 simulation software closed loop from Phase 8 integration
+through Phase 9, then continue into SOC, balancing, CAN, safe Flash scope, and
+full simulator integration.
+
+Status:
+COMPLETED — PASS FOR SIMULATION
+
+Result:
+- P8-V2-SR-N01 closed and SIM-HW-POLICY-V1 landed
+- centralized SIM_POLICY_V1 and Phase 8 simulation integration passed
+- Phase 9 safety/state/FET/recovery/health/IWDG closed loop passed
+- SOC and balancing passed
+- CAN protocol/core passed; physical peripheral binding deferred
+- persistence A/B format/codec passed; physical Flash writes deferred
+- 30 simulator scenarios and 3 targeted races completed with zero failures
+- ARMCC5 production rebuild passed with 0 errors and 0 warnings
+- no hardware-validation or production-certification claim
 
 ### P8-BLOCKER-V2-001
 

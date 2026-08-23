@@ -273,3 +273,31 @@ Simulation implementation uses a separate Phase 9 simulation gate.
 
 SIM_POLICY_V1 values are centralized and may later be replaced by verified
 hardware/product values without changing frozen Phase 9 ownership contracts.
+
+## D-040 Continuation ownership
+
+Task_SOC is the sole SOC-estimate writer. Task_Balance is the sole
+scheduler-era CELLBAL writer, with AFE startup all-zero as the pre-scheduler
+exception. CAN remains diagnostic/control-plane support and has no direct FET,
+CELLBAL, fault-bitmap, or IWDG authority.
+
+## D-041 Persistence physical writes remain evidence-gated
+
+The A/B record format, CRC32, corruption handling, and wrap-safe newest-slot
+selection are implemented. Proposed final-page slots are outside the current
+linked image, but physical erase/program scheduling remains deferred until
+target timing, power-loss, and endurance safety are demonstrated.
+
+## D-042 Split lower-phase simulator regression
+
+Phase 4, 6, 7, and Phase 8 data/sample/AFE simulator images run in fresh
+uVision processes through the split regression runner. This avoids a local
+uVision multi-LOAD hang and does not weaken or replace the frozen Phase 8
+real-hardware/evidence gate.
+
+## D-043 Simulation resource baseline
+
+The simulation-integrated FreeRTOS heap is 12 KiB. ARMCC5 callgraph evidence
+sets explicit task stack allocations, and the production link reports 15,632
+bytes of static RW+ZI RAM. These are target-build facts, not physical runtime
+high-water validation.

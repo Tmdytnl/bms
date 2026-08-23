@@ -15,10 +15,16 @@
 - Phase 8 regression/build evidence: PASS
 - Phase 8 Hard Gate: BLOCKED (2)
 - Phase 8 simulation profile: SIM-HW-POLICY-V1 ACTIVE
-- Phase 8 simulation integration: IN PROGRESS
+- Phase 8 simulation development readiness: PASS
+- Phase 8 simulation integration: PASS
 - Phase 8 real-hardware qualification: DEFERRED / REAL_HW_TBD
 - Phase 9 Architecture Core v1: FROZEN
-- Phase 9 simulation implementation: STARTED / IN PROGRESS
+- Phase 9 simulation implementation: PASS FOR SIMULATION
+- SOC simulation module: PASS
+- Balance simulation module: PASS
+- CAN protocol/core simulation module: PASS; target peripheral binding DEFERRED
+- Persistence A/B format/codec: PASS; physical Flash erase/program DEFERRED
+- Full simulation integration: PASS (30 scenarios + 3 targeted races, zero failures)
 - Hardware validation: DEFERRED / SEPARATE
 
 ## Active Development Branch
@@ -109,11 +115,13 @@ Note: the completion commit is task-closure evidence, not the dynamic repository
 
 ## Current Next Actions
 
-1. Complete BMS-SIM-CLOSED-LOOP-M1 through the separate simulation gate.
-2. Keep SIM_POLICY_V1 values centralized and preserve frozen Phase 9 ownership.
-3. Obtain approved immutable NTC and AFE artifacts later for real-hardware qualification.
-4. Re-run the real-hardware Phase 8 gate only after approved artifacts exist.
-5. Perform physical-hardware validation separately after real hardware is available.
+1. Keep SIM_POLICY_V1 values centralized and preserve frozen Phase 9 ownership.
+2. Add and validate the target CAN BSP when board/transceiver evidence is available.
+3. Add physical Flash erase/program scheduling only after target timing, power-loss,
+   and endurance safety are demonstrated.
+4. Obtain approved immutable NTC and AFE artifacts for real-hardware qualification.
+5. Re-run the real-hardware Phase 8 gate only after approved artifacts exist.
+6. Perform physical-hardware validation separately after real hardware is available.
 
 ## Invariants
 
