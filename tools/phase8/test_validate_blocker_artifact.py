@@ -12,8 +12,14 @@ import copy
 import hashlib
 import io
 import json
+import os
 import re
+import shutil
+import stat
+import subprocess
+import time
 import unittest
+import uuid
 from unittest import mock
 from pathlib import Path
 
@@ -23,7 +29,6 @@ import validate_blocker_artifact as validator
 SYNTHETIC = "SYNTHETIC TEST ONLY - NOT BMS POLICY"
 ZERO_HASH = "0" * 64
 ZERO_OID = "0" * 40
-TEST_COMMIT = "a" * 40
 
 
 def seal(artifact: dict) -> dict:
@@ -373,41 +378,126 @@ def make_record(artifact: dict, repository_path: str, artifact_raw: bytes | None
     }
 
 
-def schema_binding(kind: str) -> dict:
-    path = validator.SCHEMA_PATHS[kind]
+def run_git(repository_root: Path, *arguments: str) -> bytes:
+    completed = subprocess.run(
+        ["git", "-C", str(repository_root), *arguments],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return completed.stdout
+
+
+def remove_readonly(function, path, _error) -> None:
+    os.chmod(path, stat.S_IWRITE)
+    function(path)
+
+
+def write_fixture(repository_root: Path, relative_path: str, raw: bytes) -> None:
+    path = repository_root / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+
+
+def init_manifest_repository(repository_root: Path) -> tuple[str, str]:
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository_root),
+            "init",
+            "--initial-branch=synthetic-main",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    run_git(repository_root, "config", "user.name", "Synthetic Test")
+    run_git(repository_root, "config", "user.email", "synthetic@example.invalid")
+    run_git(repository_root, "remote", "add", "origin", "https://example.invalid/bms.git")
+    write_fixture(repository_root, "README.md", b"synthetic manifest repository\n")
+    run_git(repository_root, "add", "README.md")
+    run_git(repository_root, "commit", "-m", "synthetic initial")
+    initial_commit = run_git(repository_root, "rev-parse", "HEAD").decode("ascii").strip()
+
+    for kind in ("ntc", "afe"):
+        relative_path = validator.EXPECTED_SCHEMA_BINDINGS[kind]["schema_repository_path"]
+        write_fixture(repository_root, relative_path, validator.SCHEMA_PATHS[kind].read_bytes())
+    write_fixture(repository_root, "synthetic/ntc_generated.c", b"const int synthetic_ntc = 1;\n")
+    write_fixture(repository_root, "synthetic/afe_generated.c", b"const int synthetic_afe = 1;\n")
+    write_fixture(repository_root, "evidence/build.log", b"synthetic build evidence\n")
+    write_fixture(repository_root, "evidence/test.log", b"synthetic test evidence\n")
+    write_fixture(repository_root, "evidence/verifier.log", b"synthetic verifier evidence\n")
+    write_fixture(repository_root, "evidence/manifest.json", b'{"synthetic":true}\n')
+    run_git(repository_root, "add", "deliverables", "synthetic", "evidence")
+    run_git(repository_root, "commit", "-m", "synthetic candidate")
+    candidate_commit = run_git(repository_root, "rev-parse", "HEAD").decode("ascii").strip()
+    return initial_commit, candidate_commit
+
+
+def committed_binding(repository_root: Path, commit: str, path: str) -> dict:
+    raw = run_git(repository_root, "show", f"{commit}:{path}")
+    oid = run_git(repository_root, "rev-parse", f"{commit}:{path}").decode("ascii").strip()
+    return {
+        "path": path,
+        "raw_file_sha256": hashlib.sha256(raw).hexdigest(),
+        "git_commit": commit,
+        "git_blob_sha": oid,
+    }
+
+
+def schema_binding(kind: str, repository_root: Path, commit: str) -> dict:
+    relative_path = validator.EXPECTED_SCHEMA_BINDINGS[kind]["schema_repository_path"]
+    path = repository_root / relative_path
     raw = path.read_bytes()
     return {
         "schema_id": validator.NTC_SCHEMA_ID if kind == "ntc" else validator.AFE_SCHEMA_ID,
         "schema_version": 2,
-        "schema_repository_path": path.relative_to(validator.REPO_ROOT).as_posix(),
+        "schema_repository_path": relative_path,
         "schema_sha256": hashlib.sha256(raw).hexdigest(),
-        "schema_git_commit": TEST_COMMIT,
-        "schema_git_blob_sha": validator.git_blob_oid(raw),
+        "schema_git_commit": commit,
+        "schema_git_blob_sha": run_git(
+            repository_root,
+            "rev-parse",
+            f"{commit}:{relative_path}",
+        ).decode("ascii").strip(),
     }
 
 
 def make_manifest(ntc: dict, ntc_raw: bytes, ntc_record: dict, ntc_record_raw: bytes,
-                  afe: dict, afe_raw: bytes, afe_record: dict, afe_record_raw: bytes) -> dict:
+                  afe: dict, afe_raw: bytes, afe_record: dict, afe_record_raw: bytes,
+                  repository_root: Path, candidate_commit: str) -> dict:
     manifest = {
         "artifact_type": "BMS_V1_PHASE8_GATE_MANIFEST",
         "schema_version": 1,
         "manifest_revision": "synthetic-manifest-r1",
         "hardware_identity": copy.deepcopy(ntc["hardware_identity"]),
         "candidate": {
-            "repository": SYNTHETIC,
-            "branch_or_reference": "synthetic-test-branch",
-            "production_git_commit": TEST_COMMIT,
+            "repository": "https://example.invalid/bms.git",
+            "branch_or_reference": "HEAD",
+            "production_git_commit": candidate_commit,
         },
-        "schemas": {"ntc": schema_binding("ntc"), "afe": schema_binding("afe")},
+        "schemas": {
+            "ntc": schema_binding("ntc", repository_root, candidate_commit),
+            "afe": schema_binding("afe", repository_root, candidate_commit),
+        },
         "artifacts": {},
         "approval_records": {},
         "generated_outputs": {},
         "evidence": {
-            "production_git_commit": TEST_COMMIT,
-            "build_revision": SYNTHETIC,
-            "test_revision": SYNTHETIC,
-            "verifier_revision": SYNTHETIC,
-            "evidence_manifest_or_reference": SYNTHETIC,
+            "production_git_commit": candidate_commit,
+            "build": committed_binding(
+                repository_root, candidate_commit, "evidence/build.log"
+            ),
+            "test": committed_binding(
+                repository_root, candidate_commit, "evidence/test.log"
+            ),
+            "verifier": committed_binding(
+                repository_root, candidate_commit, "evidence/verifier.log"
+            ),
+            "manifest": committed_binding(
+                repository_root, candidate_commit, "evidence/manifest.json"
+            ),
         },
     }
     values = {
@@ -427,10 +517,17 @@ def make_manifest(ntc: dict, ntc_raw: bytes, ntc_record: dict, ntc_record_raw: b
             "raw_file_sha256": hashlib.sha256(record_raw).hexdigest(),
             "git_blob_sha": validator.git_blob_oid(record_raw),
         }
+        generated_path = f"synthetic/{name}_generated.c"
+        generated_raw = (repository_root / generated_path).read_bytes()
         manifest["generated_outputs"][name] = {
-            "path": f"synthetic/{name}_generated.c",
-            "raw_file_sha256": "c" * 64,
-            "production_git_commit": TEST_COMMIT,
+            "path": generated_path,
+            "raw_file_sha256": hashlib.sha256(generated_raw).hexdigest(),
+            "git_blob_sha": run_git(
+                repository_root,
+                "rev-parse",
+                f"{candidate_commit}:{generated_path}",
+            ).decode("ascii").strip(),
+            "production_git_commit": candidate_commit,
             "source_artifact_revision": artifact["revision"],
             "source_artifact_canonical_projection_sha256": artifact["approval"]["artifact_sha256"],
         }
@@ -636,6 +733,27 @@ class SchemaAndArtifactTests(unittest.TestCase):
 
 
 class ApprovalAndManifestTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.repository_root = (
+            validator.REPO_ROOT / f".manifest-test-{uuid.uuid4().hex}"
+        )
+        cls.repository_root.mkdir()
+        cls.initial_commit, cls.candidate_commit = init_manifest_repository(
+            cls.repository_root
+        )
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        for attempt in range(5):
+            try:
+                shutil.rmtree(cls.repository_root, onexc=remove_readonly)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.1)
+
     def setUp(self) -> None:
         self.ntc = make_ntc()
         self.afe = make_afe()
@@ -682,6 +800,8 @@ class ApprovalAndManifestTests(unittest.TestCase):
             self.afe_raw,
             self.afe_record,
             self.afe_record_raw,
+            self.repository_root,
+            self.candidate_commit,
         )
 
     def _validate_manifest(self, manifest: dict) -> None:
@@ -691,6 +811,7 @@ class ApprovalAndManifestTests(unittest.TestCase):
             self.ntc_record,
             self.afe,
             self.afe_record,
+            repository_root=self.repository_root,
         )
 
     def test_manifest_preflight_valid(self) -> None:
@@ -711,6 +832,63 @@ class ApprovalAndManifestTests(unittest.TestCase):
     def test_manifest_wrong_candidate_binding(self) -> None:
         manifest = self._manifest()
         manifest["generated_outputs"]["ntc"]["production_git_commit"] = "b" * 40
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_readme_as_schema(self) -> None:
+        manifest = self._manifest()
+        manifest["schemas"]["ntc"]["schema_repository_path"] = "README.md"
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_schema_commit_without_path(self) -> None:
+        manifest = self._manifest()
+        manifest["schemas"]["ntc"]["schema_git_commit"] = self.initial_commit
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_wrong_repository_identity(self) -> None:
+        manifest = self._manifest()
+        manifest["candidate"]["repository"] = "https://example.invalid/other.git"
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_nonexistent_candidate(self) -> None:
+        manifest = self._manifest()
+        manifest["candidate"]["production_git_commit"] = "f" * 40
+        manifest["evidence"]["production_git_commit"] = "f" * 40
+        for name in ("ntc", "afe"):
+            manifest["generated_outputs"][name]["production_git_commit"] = "f" * 40
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_missing_generated_output(self) -> None:
+        manifest = self._manifest()
+        manifest["generated_outputs"]["ntc"]["path"] = "synthetic/NONEXISTENT.c"
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_generated_output_blob_mismatch(self) -> None:
+        manifest = self._manifest()
+        manifest["generated_outputs"]["afe"]["git_blob_sha"] = "f" * 40
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_arbitrary_evidence_strings(self) -> None:
+        manifest = self._manifest()
+        manifest["evidence"]["build"] = "NONEXISTENT"
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_evidence_not_in_declared_commit(self) -> None:
+        manifest = self._manifest()
+        manifest["evidence"]["test"]["git_commit"] = self.initial_commit
+        with self.assertRaises(validator.ValidationFailure):
+            self._validate_manifest(manifest)
+
+    def test_manifest_rejects_evidence_hash_mismatch(self) -> None:
+        manifest = self._manifest()
+        manifest["evidence"]["verifier"]["raw_file_sha256"] = "f" * 64
         with self.assertRaises(validator.ValidationFailure):
             self._validate_manifest(manifest)
 

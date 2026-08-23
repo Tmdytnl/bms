@@ -59,13 +59,13 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["production_git_commit", "build_revision", "test_revision", "verifier_revision", "evidence_manifest_or_reference"],
+      "required": ["production_git_commit", "build", "test", "verifier", "manifest"],
       "properties": {
         "production_git_commit": { "$ref": "#/$defs/git_oid" },
-        "build_revision": { "$ref": "#/$defs/nonempty_string" },
-        "test_revision": { "$ref": "#/$defs/nonempty_string" },
-        "verifier_revision": { "$ref": "#/$defs/nonempty_string" },
-        "evidence_manifest_or_reference": { "$ref": "#/$defs/nonempty_string" }
+        "build": { "$ref": "#/$defs/evidence_binding" },
+        "test": { "$ref": "#/$defs/evidence_binding" },
+        "verifier": { "$ref": "#/$defs/evidence_binding" },
+        "manifest": { "$ref": "#/$defs/evidence_binding" }
       }
     }
   },
@@ -147,13 +147,25 @@
     "generated_binding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "raw_file_sha256", "production_git_commit", "source_artifact_revision", "source_artifact_canonical_projection_sha256"],
+      "required": ["path", "raw_file_sha256", "git_blob_sha", "production_git_commit", "source_artifact_revision", "source_artifact_canonical_projection_sha256"],
       "properties": {
         "path": { "$ref": "#/$defs/repository_path" },
         "raw_file_sha256": { "$ref": "#/$defs/sha256" },
+        "git_blob_sha": { "$ref": "#/$defs/git_oid" },
         "production_git_commit": { "$ref": "#/$defs/git_oid" },
         "source_artifact_revision": { "$ref": "#/$defs/revision" },
         "source_artifact_canonical_projection_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "evidence_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "raw_file_sha256", "git_commit", "git_blob_sha"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repository_path" },
+        "raw_file_sha256": { "$ref": "#/$defs/sha256" },
+        "git_commit": { "$ref": "#/$defs/git_oid" },
+        "git_blob_sha": { "$ref": "#/$defs/git_oid" }
       }
     }
   }

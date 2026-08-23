@@ -41,14 +41,14 @@
     "afe": { "path": "<REQUIRED>", "record_id": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" }
   },
   "generated_outputs": {
-    "ntc": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" },
-    "afe": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" }
+    "ntc": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" },
+    "afe": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_blob_sha": "<REQUIRED>", "production_git_commit": "<REQUIRED>", "source_artifact_revision": "<REQUIRED>", "source_artifact_canonical_projection_sha256": "<REQUIRED>" }
   },
   "evidence": {
     "production_git_commit": "<REQUIRED>",
-    "build_revision": "<REQUIRED>",
-    "test_revision": "<REQUIRED>",
-    "verifier_revision": "<REQUIRED>",
-    "evidence_manifest_or_reference": "<REQUIRED>"
+    "build": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_commit": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" },
+    "test": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_commit": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" },
+    "verifier": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_commit": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" },
+    "manifest": { "path": "<REQUIRED>", "raw_file_sha256": "<REQUIRED>", "git_commit": "<REQUIRED>", "git_blob_sha": "<REQUIRED>" }
   }
 }

@@ -13,6 +13,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import unicodedata
 from pathlib import Path
@@ -32,6 +33,21 @@ SCHEMA_PATHS = {
 
 NTC_SCHEMA_ID = "https://bms-v1.local/schemas/v2/BMS_V1_NTC_Config.schema.json"
 AFE_SCHEMA_ID = "https://bms-v1.local/schemas/v2/BMS_V1_AFE_Policy.schema.json"
+
+EXPECTED_SCHEMA_BINDINGS = {
+    "ntc": {
+        "schema_id": NTC_SCHEMA_ID,
+        "schema_version": 2,
+        "schema_repository_path":
+            "deliverables/phase8/input_templates/BMS_V1_NTC_Config.v2.schema.json",
+    },
+    "afe": {
+        "schema_id": AFE_SCHEMA_ID,
+        "schema_version": 2,
+        "schema_repository_path":
+            "deliverables/phase8/input_templates/BMS_V1_AFE_Policy.v2.schema.json",
+    },
+}
 
 # Mirrored from firmware/Driver/bq76940_control.c. The regression test in
 # test_validate_blocker_artifact.py freezes both the values and source citation.
@@ -499,6 +515,172 @@ def _safe_repository_file(repository_path: str) -> Path:
     return candidate
 
 
+def _run_git(repository_root: Path, arguments: list[str]) -> bytes:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repository_root), *arguments],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as error:
+        raise ValidationFailure(f"local Git invocation failed: {error}") from error
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", "replace").strip()
+        raise ValidationFailure(
+            f"local Git verification failed for {' '.join(arguments)}: {detail}"
+        )
+    return completed.stdout
+
+
+def _normalize_repository_identity(value: str) -> str:
+    normalized = value.strip().replace("\\", "/")
+    while normalized.endswith("/"):
+        normalized = normalized[:-1]
+    if normalized.lower().endswith(".git"):
+        normalized = normalized[:-4]
+    return normalized
+
+
+def _resolve_commit(repository_root: Path, revision: str) -> str:
+    resolved = _run_git(
+        repository_root,
+        ["rev-parse", "--verify", f"{revision}^{{commit}}"],
+    ).decode("ascii", "strict").strip()
+    if len(resolved) not in (40, 64):
+        raise ValidationFailure(f"Git did not resolve a full commit ID: {revision}")
+    return resolved
+
+
+def _git_blob_at_commit(
+    repository_root: Path,
+    commit: str,
+    repository_path: str,
+) -> tuple[str, bytes]:
+    object_spec = f"{commit}:{repository_path}"
+    oid = _run_git(
+        repository_root,
+        ["rev-parse", "--verify", object_spec],
+    ).decode("ascii", "strict").strip()
+    object_type = _run_git(
+        repository_root,
+        ["cat-file", "-t", oid],
+    ).decode("ascii", "strict").strip()
+    if object_type != "blob":
+        raise ValidationFailure(
+            f"bound Git object is not a file blob: {repository_path}@{commit}"
+        )
+    return oid, _run_git(repository_root, ["cat-file", "blob", oid])
+
+
+def _validate_repository_candidate(
+    manifest: dict[str, Any],
+    repository_root: Path,
+) -> str:
+    declared = manifest["candidate"]
+    actual_repository = _run_git(
+        repository_root,
+        ["config", "--get", "remote.origin.url"],
+    ).decode("utf-8", "strict").strip()
+    if _normalize_repository_identity(declared["repository"]) != \
+            _normalize_repository_identity(actual_repository):
+        raise ValidationFailure("manifest candidate repository identity mismatch")
+
+    candidate_commit = _resolve_commit(
+        repository_root,
+        declared["production_git_commit"],
+    )
+    if candidate_commit != declared["production_git_commit"]:
+        raise ValidationFailure("manifest production_git_commit is not a full resolved commit ID")
+    reference_commit = _resolve_commit(
+        repository_root,
+        declared["branch_or_reference"],
+    )
+    if reference_commit != candidate_commit:
+        raise ValidationFailure("manifest branch_or_reference does not resolve to production_git_commit")
+    return candidate_commit
+
+
+def _validate_schema_binding(
+    name: str,
+    binding: dict[str, Any],
+    repository_root: Path,
+) -> None:
+    expected = EXPECTED_SCHEMA_BINDINGS[name]
+    for field, expected_value in expected.items():
+        if binding[field] != expected_value:
+            raise ValidationFailure(f"manifest {name} schema {field} is not the expected v2 contract")
+
+    schema_file = _safe_repository_file_from_root(
+        repository_root,
+        binding["schema_repository_path"],
+    )
+    schema_raw = schema_file.read_bytes()
+    if binding["schema_sha256"] != raw_file_sha256(schema_raw):
+        raise ValidationFailure(f"manifest {name} schema raw-file SHA-256 mismatch")
+
+    schema_commit = _resolve_commit(repository_root, binding["schema_git_commit"])
+    committed_oid, committed_raw = _git_blob_at_commit(
+        repository_root,
+        schema_commit,
+        binding["schema_repository_path"],
+    )
+    if binding["schema_git_blob_sha"] != committed_oid:
+        raise ValidationFailure(f"manifest {name} schema declared Git blob mismatch")
+    if committed_raw != schema_raw:
+        raise ValidationFailure(f"manifest {name} schema working file differs from declared commit blob")
+
+
+def _safe_repository_file_from_root(repository_root: Path, repository_path: str) -> Path:
+    root = repository_root.resolve()
+    candidate = (root / Path(repository_path)).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as error:
+        raise ValidationFailure(f"repository path escapes repository root: {repository_path}") from error
+    if not candidate.is_file():
+        raise ValidationFailure(f"bound repository file does not exist: {repository_path}")
+    return candidate
+
+
+def _validate_generated_binding(
+    name: str,
+    binding: dict[str, Any],
+    repository_root: Path,
+    candidate_commit: str,
+) -> None:
+    generated_file = _safe_repository_file_from_root(repository_root, binding["path"])
+    generated_raw = generated_file.read_bytes()
+    if binding["raw_file_sha256"] != raw_file_sha256(generated_raw):
+        raise ValidationFailure(f"manifest {name} generated-output raw-file SHA-256 mismatch")
+    committed_oid, committed_raw = _git_blob_at_commit(
+        repository_root,
+        candidate_commit,
+        binding["path"],
+    )
+    if binding["git_blob_sha"] != committed_oid:
+        raise ValidationFailure(f"manifest {name} generated-output declared Git blob mismatch")
+    if committed_raw != generated_raw:
+        raise ValidationFailure(f"manifest {name} generated output differs from candidate blob")
+
+
+def _validate_evidence_binding(
+    name: str,
+    binding: dict[str, Any],
+    repository_root: Path,
+) -> None:
+    evidence_commit = _resolve_commit(repository_root, binding["git_commit"])
+    committed_oid, committed_raw = _git_blob_at_commit(
+        repository_root,
+        evidence_commit,
+        binding["path"],
+    )
+    if binding["git_blob_sha"] != committed_oid:
+        raise ValidationFailure(f"manifest {name} evidence declared Git blob mismatch")
+    if binding["raw_file_sha256"] != raw_file_sha256(committed_raw):
+        raise ValidationFailure(f"manifest {name} evidence raw-file SHA-256 mismatch")
+
+
 def validate_manifest_object(
     manifest: dict[str, Any],
     ntc: dict[str, Any],
@@ -508,6 +690,7 @@ def validate_manifest_object(
     *,
     paths: dict[str, Path | str] | None = None,
     raw_files: dict[str, bytes] | None = None,
+    repository_root: Path = REPO_ROOT,
 ) -> None:
     _check_placeholders(manifest)
     _schema_validate(manifest, "manifest")
@@ -526,6 +709,7 @@ def validate_manifest_object(
     validate_pair(ntc, afe)
     if manifest["hardware_identity"] != ntc["hardware_identity"]:
         raise ValidationFailure("manifest hardware_identity does not match supplied artifacts")
+    candidate_commit = _validate_repository_candidate(manifest, repository_root)
 
     supplied = {
         "ntc": (ntc, ntc_record, ntc_hash),
@@ -564,26 +748,25 @@ def validate_manifest_object(
             raise ValidationFailure(f"manifest {name} generated-output artifact revision mismatch")
         if generated["source_artifact_canonical_projection_sha256"] != computed_hash:
             raise ValidationFailure(f"manifest {name} generated-output artifact hash mismatch")
+        if generated["production_git_commit"] != candidate_commit:
+            raise ValidationFailure(f"manifest {name} generated output binds a different candidate")
+        _validate_generated_binding(name, generated, repository_root, candidate_commit)
 
         schema_binding = manifest["schemas"][name]
         if schema_binding["schema_id"] != artifact["schema_id"]:
             raise ValidationFailure(f"manifest {name} schema ID mismatch")
         if schema_binding["schema_version"] != artifact["schema_version"]:
             raise ValidationFailure(f"manifest {name} schema version mismatch")
-        schema_file = _safe_repository_file(schema_binding["schema_repository_path"])
-        schema_raw = schema_file.read_bytes()
-        if schema_binding["schema_sha256"] != raw_file_sha256(schema_raw):
-            raise ValidationFailure(f"manifest {name} schema raw-file SHA-256 mismatch")
-        schema_oid = schema_binding["schema_git_blob_sha"]
-        if git_blob_oid(schema_raw, len(schema_oid)) != schema_oid:
-            raise ValidationFailure(f"manifest {name} schema Git blob identity mismatch")
+        _validate_schema_binding(name, schema_binding, repository_root)
 
-    candidate_commit = manifest["candidate"]["production_git_commit"]
-    for name in ("ntc", "afe"):
-        if manifest["generated_outputs"][name]["production_git_commit"] != candidate_commit:
-            raise ValidationFailure(f"manifest {name} generated output binds a different candidate")
     if manifest["evidence"]["production_git_commit"] != candidate_commit:
         raise ValidationFailure("manifest evidence binds a different production candidate")
+    for name in ("build", "test", "verifier", "manifest"):
+        _validate_evidence_binding(
+            name,
+            manifest["evidence"][name],
+            repository_root,
+        )
 
 
 def validate_manifest_files(
