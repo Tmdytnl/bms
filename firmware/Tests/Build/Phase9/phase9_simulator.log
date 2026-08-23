@@ -1,0 +1,24 @@
+LOAD ..\..\Tests\Build\Phase9\phase9_tests.axf
+RESET
+G
+printf("PHASE9_TEST_COMPLETED=%u\n", g_phase9_test_completed)
+PHASE9_TEST_COMPLETED=1
+printf("PHASE9_TEST_FAILURES=%u\n", g_phase9_test_failures)
+PHASE9_TEST_FAILURES=0
+printf("PHASE9_TEST_PROBE=%u\n", g_phase9_test_probe)
+PHASE9_TEST_PROBE=3
+printf("P9_LOGIC_FAILURES=%u\n", g_phase9_logic_failures)
+P9_LOGIC_FAILURES=0
+printf("P9_FET_FAILURES=%u\n", g_phase9_fet_failures)
+P9_FET_FAILURES=0
+printf("P9_RECOVERY_FAILURES=%u\n", g_phase9_recovery_failures)
+P9_RECOVERY_FAILURES=0
+printf("P9_HEALTH_FAILURES=%u\n", g_phase9_health_failures)
+P9_HEALTH_FAILURES=0
+printf("P9_HW_HANDSHAKE_FAILURES=%u\n", g_phase9_hw_handshake_failures)
+P9_HW_HANDSHAKE_FAILURES=0
+printf("P9_SCENARIOS_COMPLETED=%u\n", g_phase9_scenarios_completed)
+P9_SCENARIOS_COMPLETED=24
+printf("P9_RACES_COMPLETED=%u\n", g_phase9_races_completed)
+P9_RACES_COMPLETED=3
+LOG OFF

@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "bms_fault.h"
 #include "bms_protect.h"
@@ -757,5 +758,71 @@ uint32_t Test_Phase7_BoundaryContracts(void)
     TEST_CHECK(faults.latched == latched_before);
     TEST_CHECK(clear_mask == 0U);
 
+    return failures;
+}
+
+uint32_t Test_Phase7_SimCommPolicy(void)
+{
+    uint32_t failures;
+    uint8_t stat_values[1];
+    BQ76940_Status_t stat_statuses[1];
+    BMS_Policy_t policy;
+    BMS_ProtectSafetySnapshot_t safety;
+
+    failures = 0UL;
+    (void)memset(&policy, 0, sizeof(policy));
+    policy.afe_comm.consecutive_failures_to_active = 3U;
+    policy.afe_comm.no_success_timeout_ms = 1000UL;
+    policy.afe_comm.continuous_latch_ms = 5000UL;
+    policy.afe_comm.consecutive_successes_to_recover = 3U;
+    policy.ocd_escalation.event_count_to_latch = 3U;
+    policy.ocd_escalation.event_window_ms = 60000UL;
+
+    TestP7_StubReset();
+    BMS_Protect_SetPolicy(&policy);
+    stat_values[0] = 0U;
+    stat_statuses[0] = BQ76940_STATUS_I2C_NACK;
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,
+                                   BMS_FAULT_ID_AFE_COMM));
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,
+                                   BMS_FAULT_ID_AFE_COMM));
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_RETRY_REQUIRED);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(BMS_Fault_Contains(safety.faults.active,
+                                  BMS_FAULT_ID_AFE_COMM));
+
+    BMS_Protect_TestUpdateAfeCommPolicy(6000UL);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(BMS_Fault_Contains(safety.faults.latched,
+                                  BMS_FAULT_ID_AFE_COMM));
+
+    stat_statuses[0] = BQ76940_STATUS_OK;
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(BMS_Fault_Contains(safety.faults.active,
+                                  BMS_FAULT_ID_AFE_COMM));
+    TestP7_SetStatScript(stat_values, stat_statuses, 1U);
+    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+               BMS_PROTECT_DRAIN_COMPLETE);
+    safety = BMS_Protect_GetSafetySnapshot();
+    TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,
+                                   BMS_FAULT_ID_AFE_COMM));
+    TEST_CHECK(BMS_Fault_Contains(safety.faults.latched,
+                                  BMS_FAULT_ID_AFE_COMM));
     return failures;
 }

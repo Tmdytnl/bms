@@ -1,0 +1,42 @@
+BMS V1 Phase 9 simulation-development build
+HARDWARE_CLAIM=NONE
+RUN: assemble startup
+RUN: compile firmware/App/bms_fault.c
+RUN: compile firmware/App/bms_ntc.c
+RUN: compile firmware/Config/bms_policy.c
+RUN: compile firmware/Driver/bq76940_control.c
+RUN: compile firmware/App/bms_state.c
+RUN: compile firmware/App/bms_health.c
+RUN: compile firmware/App/bms_hw_recovery.c
+RUN: compile firmware/App/bms_recovery.c
+RUN: compile firmware/App/bms_fet_manager.c
+RUN: compile firmware/Tests/test_phase9_stub.c
+RUN: compile firmware/Tests/test_phase9.c
+RUN: compile firmware/Tests/test_phase9_main.c
+RUN: link Phase 9 test image
+
+========================================================================
+
+** Object/Image Component Sizes
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
+
+     12944        646        860        136       2376     118812   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
+     12944        646        860        136          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
+
+========================================================================
+
+      Code (inc. data)   RO Data    RW Data    ZI Data      Debug
+
+     12944        646        860        136       2376     118812   Grand Totals
+     12944        646        860        136          0          0   ROM Totals
+
+========================================================================
+
+    Total RO  Size (Code + RO Data)                13804 (  13.48kB)
+    Total RW  Size (RW Data + ZI Data)              2512 (   2.45kB)
+    Total ROM Size (Code + RO Data + RW Data)      13940 (  13.61kB)
+
+========================================================================
+
+PHASE9_TEST_IMAGE_BUILD_PASS

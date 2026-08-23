@@ -1,4 +1,5 @@
 #include "test_phase8_sample_stub.h"
+#include "bms_health.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -745,4 +746,8 @@ bool BMS_Protect_XreadyBindingIsCurrent(
 {
     return (state != NULL) && !state->active &&
            (state->xready_generation == bound_generation);
+}
+void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id)
+{
+    (void)task_id;
 }

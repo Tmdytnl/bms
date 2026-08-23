@@ -440,8 +440,10 @@ function Build-TestImage {
 }
 
 Build-TestImage -Suite 'phase4_regression_tests' -Sources $phase4Sources
-Build-TestImage -Suite 'phase6_regression_tests' -Sources $phase6Sources
-Build-TestImage -Suite 'phase7_regression_tests' -Sources $phase7Sources
+Build-TestImage -Suite 'phase6_regression_tests' -Sources $phase6Sources `
+    -ExtraDefines @('TEST_PHASE6_IMAGE')
+Build-TestImage -Suite 'phase7_regression_tests' -Sources $phase7Sources `
+    -ExtraDefines @('TEST_PHASE7_IMAGE')
 Build-TestImage -Suite 'phase8_data_tests' -Sources $phase8DataSources `
     -LanguageArgs @('--c90') `
     -ExtraDefines @('TEST_PHASE8_DATA_IMAGE')

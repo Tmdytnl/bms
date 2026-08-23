@@ -27,6 +27,7 @@ volatile uint32_t g_phase8_sample_xready_cell_rejects;
 volatile uint32_t g_phase8_sample_xready_pack_rejects;
 volatile uint32_t g_phase8_sample_xready_wrap_rejects;
 volatile uint32_t g_phase8_sample_xready_atomic_publishes;
+volatile uint32_t g_phase8_sample_provenance_guard_completed;
 
 #define TEST_SAMPLE_CHECK(condition_)                      \
     do                                                     \
@@ -1016,6 +1017,61 @@ static void TestSample_XreadyGenerationGuard(void)
     g_phase8_sample_xready_guard_completed = 1UL;
 }
 
+static void TestSample_RecoveryCalibrationProvenance(void)
+{
+    BMS_DataSnapshot_t snapshot;
+    BMS_SampleCalibrationEvidence_t evidence;
+    BQ76940_Calibration_t cached_calibration;
+
+    TestSample_Reset(true);
+    cached_calibration = TestSample_ValidCalibration();
+
+    /* First runtime XREADY permanently closes the unproven legacy setter.
+     * A cached pre-XREADY calibration therefore cannot be relabelled for the
+     * new AFE epoch after Protect has cleared the active condition. */
+    BMS_Sample_InvalidateCalibrationForXready(1UL);
+    g_phase8_sample_stub_control.xready_state.xready_generation = 1UL;
+    g_phase8_sample_stub_control.xready_state.active = false;
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetCalibration(&cached_calibration));
+    TestPhase8SampleStub_ClearObservation();
+    TEST_SAMPLE_CHECK(!BMS_Sample_RunOnce(250UL));
+    TEST_SAMPLE_CHECK(
+        g_phase8_sample_stub_observation.i2c_take_attempt_count == 0UL);
+
+    evidence.xready_generation = 0UL;
+    evidence.recovery_revision = 42UL;
+    evidence.post_clear_verified = true;
+    evidence.calibration = cached_calibration;
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetRecoveryCalibration(
+        &evidence, 42UL, true));
+
+    evidence.xready_generation = 1UL;
+    evidence.post_clear_verified = false;
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetRecoveryCalibration(
+        &evidence, 42UL, true));
+
+    evidence.post_clear_verified = true;
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetRecoveryCalibration(
+        &evidence, 41UL, true));
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetRecoveryCalibration(
+        &evidence, 42UL, false));
+
+    TEST_SAMPLE_CHECK(BMS_Sample_SetRecoveryCalibration(
+        &evidence, 42UL, true));
+    TestPhase8SampleStub_ClearObservation();
+    TEST_SAMPLE_CHECK(BMS_Sample_RunOnce(500UL));
+    TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 500UL));
+    TEST_SAMPLE_CHECK(snapshot.sample_sequence == 1UL);
+    TEST_SAMPLE_CHECK(snapshot.afe_generation == 1UL);
+
+    BMS_Sample_InvalidateCalibrationForXready(2UL);
+    g_phase8_sample_stub_control.xready_state.xready_generation = 2UL;
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetRecoveryCalibration(
+        &evidence, 42UL, true));
+    TEST_SAMPLE_CHECK(!BMS_Sample_SetCalibration(&cached_calibration));
+    g_phase8_sample_provenance_guard_completed = 1UL;
+}
+
 static void TestSample_RepeatedFailureRecovery(void)
 {
     BMS_SampleDiagnostics_t diagnostics;
@@ -1130,6 +1186,7 @@ uint32_t Test_Phase8_Sample(void)
     g_phase8_sample_xready_pack_rejects = 0UL;
     g_phase8_sample_xready_wrap_rejects = 0UL;
     g_phase8_sample_xready_atomic_publishes = 0UL;
+    g_phase8_sample_provenance_guard_completed = 0UL;
 
     TestSample_SetterSchedulerGuard();
     TestSample_StartupAndSignedCurrent();
@@ -1143,6 +1200,7 @@ uint32_t Test_Phase8_Sample(void)
     TestSample_ConfigurationRevisionGuard();
     TestSample_ConfigurationRevisionImmediateWrapGuard();
     TestSample_XreadyGenerationGuard();
+    TestSample_RecoveryCalibrationProvenance();
     TestSample_RepeatedFailureRecovery();
     TestSample_ProtectI2cContentionModel();
 

@@ -49,6 +49,8 @@ printf("P7_XREADY_FAILURES=%u\n", g_p7_xready_failures)
 P7_XREADY_FAILURES=0
 printf("P7_BOUNDARY_FAILURES=%u\n", g_p7_boundary_failures)
 P7_BOUNDARY_FAILURES=0
+printf("P7_SIM_COMM_FAILURES=%u\n", g_p7_sim_comm_failures)
+P7_SIM_COMM_FAILURES=0
 printf("P7_PROBE=%u\n", g_p7_probe)
 P7_PROBE=8
 LOAD ..\..\Tests\Build\Phase8\phase8_data_tests.axf
@@ -113,6 +115,8 @@ printf("P8_SAMPLE_XREADY_WRAP_REJECTS=%u\n", g_phase8_sample_xready_wrap_rejects
 P8_SAMPLE_XREADY_WRAP_REJECTS=1
 printf("P8_SAMPLE_XREADY_ATOMIC_PUBLISHES=%u\n", g_phase8_sample_xready_atomic_publishes)
 P8_SAMPLE_XREADY_ATOMIC_PUBLISHES=1
+printf("P8_SAMPLE_PROVENANCE_GUARD_COMPLETED=%u\n", g_phase8_sample_provenance_guard_completed)
+P8_SAMPLE_PROVENANCE_GUARD_COMPLETED=1
 LOAD ..\..\Tests\Build\Phase8\phase8_afe_tests.axf
 RESET
 G

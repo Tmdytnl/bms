@@ -71,7 +71,9 @@ uint32_t Test_Phase6_Objects(void)
     /* Stack sizes must match spec §11.4 (words). */
     TEST_CHECK(APP_RTOS_STACK_PROTECT == 160U);
     TEST_CHECK(APP_RTOS_STACK_SAMPLE == 192U);
-    TEST_CHECK(APP_RTOS_STACK_STATE == 128U);
+    /* Phase 9 replaced the placeholder: ARMCC5 reports 1104-byte depth, so
+     * the original 128-word construction value is objectively obsolete. */
+    TEST_CHECK(APP_RTOS_STACK_STATE == 384U);
     TEST_CHECK(APP_RTOS_STACK_SOC == 192U);
     TEST_CHECK(APP_RTOS_STACK_BALANCE == 160U);
     TEST_CHECK(APP_RTOS_STACK_CAN_TX == 160U);

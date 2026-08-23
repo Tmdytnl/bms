@@ -13,6 +13,7 @@ uint32_t Test_Phase7_CcQueue(void);
 uint32_t Test_Phase7_AlertRetry(void);
 uint32_t Test_Phase7_Xready(void);
 uint32_t Test_Phase7_BoundaryContracts(void);
+uint32_t Test_Phase7_SimCommPolicy(void);
 
 /* Deterministic RTOS/BQ/BSP fakes used to execute the production Phase 7
  * queue, drain and service functions under ARMCC5. */

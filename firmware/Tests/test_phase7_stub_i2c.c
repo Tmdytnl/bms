@@ -7,6 +7,8 @@
 #include <string.h>
 
 #include "bms_protect.h"
+#include "bms_data.h"
+#include "bms_health.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
 #include "stm32f10x_exti.h"
@@ -48,6 +50,35 @@ QueueHandle_t xCanTxQueue;
 QueueHandle_t xCanRxQueue;
 QueueHandle_t xCcSampleQueue;
 EventGroupHandle_t xSysEvents;
+
+void App_Rtos_NotifyStateUrgent(void)
+{
+}
+
+void App_Rtos_RequestProtectService(void)
+{
+}
+
+bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
+{
+    if (identity == NULL)
+    {
+        return false;
+    }
+    identity->sample_sequence = 0UL;
+    identity->afe_generation = 0UL;
+    return true;
+}
+
+void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id)
+{
+    (void)task_id;
+}
+
+bool BMS_Policy_Validate(const BMS_Policy_t *policy)
+{
+    return policy != NULL;
+}
 
 static BMS_CcSample_t s_queue[TEST_P7_QUEUE_CAPACITY];
 static uint8_t s_queue_head;
