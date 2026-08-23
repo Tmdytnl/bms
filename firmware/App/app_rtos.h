@@ -40,8 +40,9 @@
  * 384-word allocation leaves Cortex-M3 context and runtime margin. */
 #define APP_RTOS_STACK_STATE                    (384)
 #define APP_RTOS_STACK_SOC                      (192)
-#define APP_RTOS_STACK_BALANCE                  (160)
-#define APP_RTOS_STACK_CAN_TX                   (160)
+/* ARMCC5 continuation callgraphs: Balance=840 bytes, CAN Tx=752 bytes. */
+#define APP_RTOS_STACK_BALANCE                  (256)
+#define APP_RTOS_STACK_CAN_TX                   (240)
 #define APP_RTOS_STACK_CAN_RX                   (160)
 
 /* Queue depths (spec §11.3). */
@@ -61,13 +62,17 @@ typedef struct
 {
     int16_t raw;
     TickType_t tick;
+    uint32_t xready_generation;
 } BMS_CcSample_t;
 
 typedef struct
 {
+    /* Despite the historical field name, SIM_POLICY_V1 permits only
+     * standard 11-bit identifiers (0..0x7FF). */
     uint32_t ext_id;
     uint8_t dlc;
     uint8_t data[8];
+    TickType_t received_tick;
 } BMS_CanFrame_t;
 
 /* IPC objects (spec §11.2 / Gate §3.2). */
@@ -98,7 +103,8 @@ void App_Rtos_NotifyStateUrgent(void);
 void App_Rtos_RequestProtectService(void);
 
 /* Task entry points. Task_Protect is implemented in bms_protect.c and
- * Task_Sample in bms_sample.c; the later task bodies remain skeletons. */
+ * Task_Sample in bms_sample.c; State/SOC/Balance/CAN bodies are integrated
+ * here because this file owns their scheduler contexts. */
 void Task_Sample(void *argument);
 void Task_State(void *argument);
 void Task_SOC(void *argument);

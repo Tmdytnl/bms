@@ -425,6 +425,26 @@
               <FilePath>..\..\App\bms_health.c</FilePath>
             </File>
             <File>
+              <FileName>bms_soc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_soc.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_balance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_balance.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_persistence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_persistence.c</FilePath>
+            </File>
+            <File>
               <FileName>bms_ntc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\App\bms_ntc.c</FilePath>

@@ -1,5 +1,7 @@
 #include "app_rtos.h"
 #include "bms_afe_startup.h"
+#include "bms_balance.h"
+#include "bms_can.h"
 #include "bms_data.h"
 #include "bms_config.h"
 #include "bms_fet_manager.h"
@@ -9,6 +11,7 @@
 #include "bms_protect.h"
 #include "bms_sample.h"
 #include "bms_recovery.h"
+#include "bms_soc.h"
 #include "bms_state.h"
 #include "bsp_clock.h"
 #include "bsp_gpio.h"
@@ -146,6 +149,10 @@ int main(void)
     BMS_State_Init(policy, 0UL);
     BMS_Recovery_Init(&s_afe_device, policy);
     BMS_FetManager_Init(&s_afe_device);
+    BMS_Soc_Init(policy);
+    /* Successful startup has already verified CELLBAL1..3 all zero. */
+    BMS_Balance_Init(&s_afe_device, policy, true);
+    BMS_Can_Init(policy);
 
     /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after

@@ -47,17 +47,21 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(EVT_CC_QUEUE_OVERFLOW == ((EventBits_t)1U << 4));
 
     /* Queue element layout must match the spec §11.3 fields. The struct
-     * is a C layout: BMS_CanFrame_t pads to 16 bytes (uint32_t alignment),
-     * BMS_CcSample_t to 8 (tick at offset 4 after int16 + padding). */
+     * is a C layout: BMS_CanFrame_t is 20 bytes with an explicit receive
+     * timestamp for bounded command-age checks,
+     * BMS_CcSample_t to 12 (tick at offset 4 after int16 + padding, then
+     * the explicit runtime AFE generation identity). */
     TEST_CHECK(offsetof(BMS_CcSample_t, raw) == 0);
     TEST_CHECK(offsetof(BMS_CcSample_t, tick) == 4U);
-    TEST_CHECK(sizeof(BMS_CcSample_t) == 8U);
+    TEST_CHECK(offsetof(BMS_CcSample_t, xready_generation) == 8U);
+    TEST_CHECK(sizeof(BMS_CcSample_t) == 12U);
 
     TEST_CHECK(offsetof(BMS_CanFrame_t, ext_id) == 0);
     TEST_CHECK(offsetof(BMS_CanFrame_t, dlc) == sizeof(uint32_t));
     TEST_CHECK(offsetof(BMS_CanFrame_t, data) ==
                (sizeof(uint32_t) + sizeof(uint8_t)));
-    TEST_CHECK(sizeof(BMS_CanFrame_t) == 16U);
+    TEST_CHECK(offsetof(BMS_CanFrame_t, received_tick) == 16U);
+    TEST_CHECK(sizeof(BMS_CanFrame_t) == 20U);
 
     /* Priorities must match errata C-01: 5/4/3/3/2/2/2. */
     TEST_CHECK(APP_RTOS_PRIO_PROTECT == 5U);
@@ -75,8 +79,9 @@ uint32_t Test_Phase6_Objects(void)
      * the original 128-word construction value is objectively obsolete. */
     TEST_CHECK(APP_RTOS_STACK_STATE == 384U);
     TEST_CHECK(APP_RTOS_STACK_SOC == 192U);
-    TEST_CHECK(APP_RTOS_STACK_BALANCE == 160U);
-    TEST_CHECK(APP_RTOS_STACK_CAN_TX == 160U);
+    /* Phase 10/11 callgraphs require 840/752 bytes respectively. */
+    TEST_CHECK(APP_RTOS_STACK_BALANCE == 256U);
+    TEST_CHECK(APP_RTOS_STACK_CAN_TX == 240U);
     TEST_CHECK(APP_RTOS_STACK_CAN_RX == 160U);
 
     return failures;

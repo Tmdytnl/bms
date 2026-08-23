@@ -210,6 +210,7 @@ uint32_t Test_Phase7_CcQueue(void)
     {
         TEST_CHECK(TestP7_QueuePop(&sample));
         TEST_CHECK(sample.raw == (int16_t)(101 + index));
+        TEST_CHECK(sample.xready_generation == 0UL);
     }
 
     /* Continuous producer overflow remains exactly-one-drop and newest wins. */

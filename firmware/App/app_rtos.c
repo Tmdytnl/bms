@@ -4,12 +4,15 @@
 
 #include "bms_protect.h"
 #if !defined(TEST_PHASE6_IMAGE)
+#include "bms_balance.h"
+#include "bms_can.h"
 #include "bms_data.h"
 #include "bms_fet_manager.h"
 #include "bms_health.h"
 #include "bms_hw_recovery.h"
 #include "bms_policy.h"
 #include "bms_recovery.h"
+#include "bms_soc.h"
 #include "bms_state.h"
 #include "bsp_iwdg.h"
 #endif
@@ -59,8 +62,8 @@ BaseType_t App_Rtos_CreateObjects(void)
 
 /* ------------------------------------------------------------------ */
 /* Seven task bodies. Task_Protect is implemented in bms_protect.c and
- * Task_Sample in bms_sample.c. The remaining five are placeholders that
- * keep their specified periods until their later phases. */
+ * Task_Sample in bms_sample.c. This file owns the five remaining scheduler
+ * contexts and delegates each bounded loop body to its owner module. */
 /* ------------------------------------------------------------------ */
 
 void Task_State(void *argument)
@@ -146,41 +149,53 @@ void Task_State(void *argument)
 
 void Task_SOC(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(1000U);
+    TickType_t period;
     TickType_t last;
 
     (void)argument;
+#if defined(TEST_PHASE6_IMAGE)
+    period = pdMS_TO_TICKS(1000U);
+#else
+    period = pdMS_TO_TICKS(BMS_Policy_Get()->soc.period_ms);
+#endif
     last = xTaskGetTickCount();
     for (;;)
     {
         vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
+        BMS_Soc_RunOnce((uint32_t)(
+            xTaskGetTickCount() * portTICK_PERIOD_MS));
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_SOC);
 #endif
-        /* Phase 10: CC queue consumption + coulomb integration. */
     }
 }
 
 void Task_Balance(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(1000U);
+    TickType_t period;
     TickType_t last;
 
     (void)argument;
+#if defined(TEST_PHASE6_IMAGE)
+    period = pdMS_TO_TICKS(1000U);
+#else
+    period = pdMS_TO_TICKS(BMS_Policy_Get()->balance.period_ms);
+#endif
     last = xTaskGetTickCount();
     for (;;)
     {
         vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
+        BMS_Balance_RunOnce((uint32_t)(
+            xTaskGetTickCount() * portTICK_PERIOD_MS));
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_BALANCE);
 #endif
-        /* Phase 10: balancing policy + CELLBAL writes. */
     }
 }
 
 void Task_CANTx(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(250U);
+    const TickType_t period = pdMS_TO_TICKS(100U);
     TickType_t last;
 
     (void)argument;
@@ -189,26 +204,38 @@ void Task_CANTx(void *argument)
     {
         vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
+        BMS_Can_TxRunOnce((uint32_t)(
+            xTaskGetTickCount() * portTICK_PERIOD_MS));
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_TX);
 #endif
-        /* Phase 11: drain xCanTxQueue, transmit. */
     }
 }
 
 void Task_CANRx(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(10U);
-    TickType_t last;
+#if !defined(TEST_PHASE6_IMAGE)
+    BMS_CanFrame_t frame;
+    uint32_t now_ms;
+#endif
 
     (void)argument;
-    last = xTaskGetTickCount();
     for (;;)
     {
-        vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
+        if ((xCanRxQueue != NULL) &&
+            (xQueueReceive(xCanRxQueue, &frame,
+                           pdMS_TO_TICKS(100U)) == pdPASS))
+        {
+            now_ms = (uint32_t)(
+                xTaskGetTickCount() * portTICK_PERIOD_MS);
+            BMS_Can_RxProcess(&frame,
+                (uint32_t)(frame.received_tick * portTICK_PERIOD_MS),
+                now_ms);
+        }
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_RX);
+#else
+        vTaskDelay(pdMS_TO_TICKS(10U));
 #endif
-        /* Phase 11: drain xCanRxQueue, protocol decode. */
     }
 }
 

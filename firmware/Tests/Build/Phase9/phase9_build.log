@@ -10,8 +10,13 @@ RUN: compile firmware/App/bms_health.c
 RUN: compile firmware/App/bms_hw_recovery.c
 RUN: compile firmware/App/bms_recovery.c
 RUN: compile firmware/App/bms_fet_manager.c
+RUN: compile firmware/App/bms_soc.c
+RUN: compile firmware/App/bms_balance.c
+RUN: compile firmware/App/bms_can.c
+RUN: compile firmware/App/bms_persistence.c
 RUN: compile firmware/Tests/test_phase9_stub.c
 RUN: compile firmware/Tests/test_phase9.c
+RUN: compile firmware/Tests/test_phase10.c
 RUN: compile firmware/Tests/test_phase9_main.c
 RUN: link Phase 9 test image
 
@@ -21,21 +26,21 @@ RUN: link Phase 9 test image
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-     12944        646        860        136       2376     118812   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
-     12944        646        860        136          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
+     20648        872       1044        176       2424     168539   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
+     20648        872       1044        176          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase9\phase9_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-     12944        646        860        136       2376     118812   Grand Totals
-     12944        646        860        136          0          0   ROM Totals
+     20648        872       1044        176       2424     168539   Grand Totals
+     20648        872       1044        176          0          0   ROM Totals
 
 ========================================================================
 
-    Total RO  Size (Code + RO Data)                13804 (  13.48kB)
-    Total RW  Size (RW Data + ZI Data)              2512 (   2.45kB)
-    Total ROM Size (Code + RO Data + RW Data)      13940 (  13.61kB)
+    Total RO  Size (Code + RO Data)                21692 (  21.18kB)
+    Total RW  Size (RW Data + ZI Data)              2600 (   2.54kB)
+    Total ROM Size (Code + RO Data + RW Data)      21868 (  21.36kB)
 
 ========================================================================
 

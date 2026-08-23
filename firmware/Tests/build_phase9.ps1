@@ -73,8 +73,13 @@ $sources = [ordered]@{
     bms_hw_recovery = 'firmware\App\bms_hw_recovery.c'
     bms_recovery = 'firmware\App\bms_recovery.c'
     bms_fet_manager = 'firmware\App\bms_fet_manager.c'
+    bms_soc = 'firmware\App\bms_soc.c'
+    bms_balance = 'firmware\App\bms_balance.c'
+    bms_can = 'firmware\App\bms_can.c'
+    bms_persistence = 'firmware\App\bms_persistence.c'
     test_stub = 'firmware\Tests\test_phase9_stub.c'
     test_phase9 = 'firmware\Tests\test_phase9.c'
+    test_phase10 = 'firmware\Tests\test_phase10.c'
     test_main = 'firmware\Tests\test_phase9_main.c'
 }
 $objects = [Collections.Generic.List[string]]::new()
@@ -128,7 +133,10 @@ if (-not $SkipSimulator) {
     foreach ($required in @('PHASE9_TEST_COMPLETED=1',
                              'PHASE9_TEST_FAILURES=0',
                              'P9_SCENARIOS_COMPLETED=24',
-                             'P9_RACES_COMPLETED=3')) {
+                             'P9_RACES_COMPLETED=3',
+                             'CONTINUATION_TEST_COMPLETED=1',
+                             'CONTINUATION_TEST_FAILURES=0',
+                             'CONTINUATION_SCENARIOS_COMPLETED=6')) {
         if ($simText -notmatch [regex]::Escape($required)) {
             throw "Phase 9 Simulator failed evidence check: $required"
         }

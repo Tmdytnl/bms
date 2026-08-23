@@ -47,9 +47,11 @@
 #define configMESSAGE_BUFFER_LENGTH_TYPE        size_t
 
 /* ------------------------------------------------------------------ */
-/* Memory (H-08: 8 KiB is the initial budget, not a permanent value)   */
+/* Memory (H-08): Phase 10/11 measured task stacks plus seven TCBs and
+ * expanded CAN/CC queues exceed the original 8 KiB construction budget.
+ * 12 KiB is verified against the 20 KiB target SRAM linker boundary. */
 /* ------------------------------------------------------------------ */
-#define configTOTAL_HEAP_SIZE                   (8 * 1024)
+#define configTOTAL_HEAP_SIZE                   (12 * 1024)
 #define configAPPLICATION_ALLOCATED_HEAP        0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
 #define configSUPPORT_STATIC_ALLOCATION         0

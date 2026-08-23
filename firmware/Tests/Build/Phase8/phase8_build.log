@@ -1,9 +1,9 @@
 BMS V1 Phase 8 reproducible hard-gate build
 Repository-relative input paths; absolute tool paths only
-RUN_STARTED_UTC=2026-08-23T15:30:29.1550701Z
+RUN_STARTED_UTC=2026-08-23T16:08:28.6882670Z
 ARMCC5_TOOL=D:\Keil_v5\ARM\Version5.06\bin\armcc.exe
 UVISION_TOOL=D:\Keil_v5\UV4\UV4.exe
-UVOPTX_ORIGINAL_SHA256 ebbd08c91d5942f90ff2491f12c2caf5ee3ac3d8b0f59db00f0908ba83152788 firmware/Project/Keil/BMS_V1.uvoptx
+UVOPTX_ORIGINAL_SHA256 8a54db493e6acb2887013583027d1c139a93c8f3941fcd750833cec08bd0ad28 firmware/Project/Keil/BMS_V1.uvoptx
 UVISION_FILE_VERSION=5.38.0.0
 RUN: record tool version: armcc.exe
 Product: MDK Plus 5.38
@@ -99,15 +99,19 @@ INPUT_SHA256 919dc1f5c6bbba74cb712e8ec7cf73f1988eafa9438c706526fb401a2ab4672d do
 INPUT_SHA256 d5f06afeb57a339fd877ec6bd7f75bd8a940a38108ce69ed3cb591caa4cd0620 docs/reference/ST/STM32F10x Standard Peripheral Library/stm32f10x_conf.h
 INPUT_SHA256 d41e14c819d2df2adca148e514a8d36290afbf94ac8319ac9694dde2a6e0f747 docs/reference/ST/STM32F10x Standard Peripheral Library/stm32f10x_it.h
 INPUT_SHA256 f0b5d2b0b1f5ec5551d0b0bbb1330b70f5646b8ffa566d5219311b000df149cc firmware/App/app_rtos_hooks.c
-INPUT_SHA256 d895bf9a6255ac420f71bb67e8c16a894ebdf2e91addcda578bce57acfe417c5 firmware/App/app_rtos.c
-INPUT_SHA256 30ebc8d83b2f95147bb1b9df14cefa957671790dc75f78376124d7f2df34c150 firmware/App/app_rtos.h
+INPUT_SHA256 dbabf32cf65fb02294cb515c99e4aaff946cb755dd9209910d34751e7e1ef05e firmware/App/app_rtos.c
+INPUT_SHA256 74d632bcbc995b5c8b1c5b805ae7e74a10e325168daf73d21628331dab4004ac firmware/App/app_rtos.h
 INPUT_SHA256 da4a5075e7097728412a7f395343ef28bad01eed31d992d0270d15a4c09bd10b firmware/App/bms_afe_startup.c
 INPUT_SHA256 2d511a4e551ca8feaceeada736cd17449f7234c551b51e606c5e182aa3413bc4 firmware/App/bms_afe_startup.h
+INPUT_SHA256 2557b6ae7d42dea3c2fd653de6376517a2e604a155b9c1e5676cec8c12a0601c firmware/App/bms_balance.c
+INPUT_SHA256 ae337eb26288be100aef66b2d60addf62c1d1dd3e5b3c086cc825084fafec771 firmware/App/bms_balance.h
+INPUT_SHA256 dea7a03087ec5216239d81dee805e6f96d11cebd2b89a14d94acae9d45b8d550 firmware/App/bms_can.c
+INPUT_SHA256 410adcb194c72d02e4d5058c02ed5f1f70b0a24d7cfee420a4720fd52226bf38 firmware/App/bms_can.h
 INPUT_SHA256 e35d67a3df9d6384babe7275df9bf69a2dc133796f901fb8f8840e4cfec9c580 firmware/App/bms_data.c
 INPUT_SHA256 e49359cf49ec5c26b53c2b17535216be6d989b311f8174ff13af3795fb36ba74 firmware/App/bms_data.h
 INPUT_SHA256 de387a67aa496aaea2d3732ad81ab85933dba7016999df6789505b5487b7d28e firmware/App/bms_fault.c
 INPUT_SHA256 19f78da647ebe97c2432528a4bd5f2250e848544b12485067d0ef3788ba49cdd firmware/App/bms_fault.h
-INPUT_SHA256 c2267d4f5f543cc6baf6a14b98e78e85c1c50ae172dea34f409f666437b05cce firmware/App/bms_fet_manager.c
+INPUT_SHA256 7a8af082bcece3c75690a6769621c26a2284d6f52be9d260e3d655b8835cdd90 firmware/App/bms_fet_manager.c
 INPUT_SHA256 5190a0b38e6bc7db96debb4e2167dc54ba5087f8a0e9170a4c8f3d5283b061a8 firmware/App/bms_fet_manager.h
 INPUT_SHA256 7493dbe388c085838e9986d27a56609bc02e13f7ee91f00a03932c6e85b8f527 firmware/App/bms_health.c
 INPUT_SHA256 4d081503a833d200c750a16b4fb245d50bc1cf7a5e21e4b07c3290aaf3ceec5e firmware/App/bms_health.h
@@ -115,13 +119,17 @@ INPUT_SHA256 c84af3e7515b60fecbe251145157c16bee3823606a24d3042935c7df9bc70eb2 fi
 INPUT_SHA256 998cf12b15dbef8e518bfc4bfc207d9f45813c226c94da0597012f6cd9838938 firmware/App/bms_hw_recovery.h
 INPUT_SHA256 042fcdebdd3db1ba23dc9b548a1fdb8d8e3acfe3cb98f47bfe2599ea279e976a firmware/App/bms_ntc.c
 INPUT_SHA256 7dcd533b15714bc39343f08a88f6783d409e6348110c1fda9aad9bf90beadb97 firmware/App/bms_ntc.h
-INPUT_SHA256 73f24fe9c8c47900a37ac0ae7c00af561068b6bb151c7975ac6fccdd95a04fec firmware/App/bms_protect.c
+INPUT_SHA256 509a0a58de1af0473a8615e9728ab1509182247ed354c23a4cd3d8d400cbd064 firmware/App/bms_persistence.c
+INPUT_SHA256 81e971cf0015fa77618b7b75465288cb848c8fdfdb0b9b48a14cb4a14d12edbb firmware/App/bms_persistence.h
+INPUT_SHA256 57ce9415d21811a05657a4951d8111ed9e104057b112ac08983e16274a4e2202 firmware/App/bms_protect.c
 INPUT_SHA256 f7bf4bbaaa01facbdcce7ecb33f9405d9a5395b8c6adc8dd6595c4359a7f0296 firmware/App/bms_protect.h
-INPUT_SHA256 806d71899f7d1ca17e06eff4c29e6ba6a539049b36bb377afd345912dacf2594 firmware/App/bms_recovery.c
+INPUT_SHA256 ca8f367a057518036c305d7fe40672ed1a1271e0292d11d5e1cb633782cacd9a firmware/App/bms_recovery.c
 INPUT_SHA256 2ad1fe6c0d500993c9bba2dee0250e9692d24b4df139d5d544a68e64b796c127 firmware/App/bms_recovery.h
 INPUT_SHA256 2e1bac0bc046210480f5825714bc8645fb62980bd90d503a53c336631ccd3345 firmware/App/bms_safety.h
 INPUT_SHA256 75eb5c6e5d682c287a2e223f4773742c992aa3ae02c5e37f3db1f5dce81d3d6c firmware/App/bms_sample.c
 INPUT_SHA256 76d7f0f2ec843132a05e6bb6755d78ad0386449bc1a47abb2451156d64cbdcc9 firmware/App/bms_sample.h
+INPUT_SHA256 d355dbd7a6004babf54de3bc84853516b911566d05ad7f8e2a285f39aaee7493 firmware/App/bms_soc.c
+INPUT_SHA256 8a2fa590a87e23d68539a19f068c50f536997b80e392492dd0960cc0781048f2 firmware/App/bms_soc.h
 INPUT_SHA256 2f3e3cf955d866f866dbf7b01ae3829f81a94fcb76b5280e9e1ed92d48f23e15 firmware/App/bms_state.c
 INPUT_SHA256 b2e59cce69384998f3a6ee07416d3f62d2958cf49593e44f745c642d9f8841c6 firmware/App/bms_state.h
 INPUT_SHA256 69fbe5c6ecc0bd57284b326c85c793a5622c400273ff36520d5a05d4bab01306 firmware/App/bms_types.h
@@ -130,9 +138,9 @@ INPUT_SHA256 45173be8a5ffa883f0e839a074e67d6c1666ab16d000d69ff9f33878e55f07df fi
 INPUT_SHA256 e75764286d76a7a55230cd5f9f841bbf6259882aa11503dace090d01430e2c75 firmware/Config/bms_memory_map.h
 INPUT_SHA256 a49f45ead246e5f3cf5442167812e6b327276a29ed295effb30568d090adc663 firmware/Config/bms_policy.c
 INPUT_SHA256 f5e0fc717072260ed5a36956528750c4e3a78049e7a4b62eee9cb264cbb75348 firmware/Config/bms_policy.h
-INPUT_SHA256 57bb94a1dd4865c94661aacf805c0cdb8961c66cc8b7436370ec6e860662e351 firmware/Config/FreeRTOSConfig.h
-INPUT_SHA256 29e95aee28e00bb9c7d779e69342e6654945022417d820ff2f2e873721d23309 firmware/Driver/bq76940_control.c
-INPUT_SHA256 625fad1ab5e6c27cb345fa0f6fc462f579db34b421c157872d65eba8d4442f4a firmware/Driver/bq76940_control.h
+INPUT_SHA256 69ba5b0dc17bfc09e90903ce90868264ef6319688f6c85e1c14f754505869480 firmware/Config/FreeRTOSConfig.h
+INPUT_SHA256 7e4b4bbb1e7642b821c60e35488345275997515c9d248b3075630e487092ca69 firmware/Driver/bq76940_control.c
+INPUT_SHA256 85029c184079e18874379fa4da60ca63b28010f7876cbb3a27ad4740cc0bdc0b firmware/Driver/bq76940_control.h
 INPUT_SHA256 69819eacae2ebdea8c911397522cfb26ae03c1e09e38d85bbd33c81e3db4e177 firmware/Driver/bq76940_measurement.c
 INPUT_SHA256 4883401eef11bd8fca01f9c20d9607e785b844fe82321120fad154fc5355f877 firmware/Driver/bq76940_measurement.h
 INPUT_SHA256 0ef807d409fa68d97e713900e870ec429515a7a8bdfae3fc17747774855f602e firmware/Driver/bq76940_regs.h
@@ -152,8 +160,8 @@ INPUT_SHA256 8dfeb70d18bb5226d3be0d47b99e0b0802e70770c2c79fe194d36cb3a9812976 fi
 INPUT_SHA256 0a4b07e4f927805e482a797d9c61702201882031087c5d49941db72afd934e22 firmware/Driver/crc8_bq76940.h
 INPUT_SHA256 ac4966426a0ebd56c5463523afc130ea2a9d3fdf0e2ec6b34092e0dd2b3afc2f firmware/Driver/soft_i2c.c
 INPUT_SHA256 aded2c24df34bcb2ba95c53ffb46dc69c8111d8b57161065d41e58d8bed1eaa0 firmware/Driver/soft_i2c.h
-INPUT_SHA256 ebbd08c91d5942f90ff2491f12c2caf5ee3ac3d8b0f59db00f0908ba83152788 firmware/Project/Keil/BMS_V1.uvoptx
-INPUT_SHA256 d7e34bf6bfc1186206dc588cdbe524503bc7f3c6628d9f616f90068dfe1eb101 firmware/Project/Keil/BMS_V1.uvprojx
+INPUT_SHA256 8a54db493e6acb2887013583027d1c139a93c8f3941fcd750833cec08bd0ad28 firmware/Project/Keil/BMS_V1.uvoptx
+INPUT_SHA256 b954902ca46cea9e6107382758a64818df2b76ad20bf5b39aa82ce0a0234efba firmware/Project/Keil/BMS_V1.uvprojx
 INPUT_SHA256 05fa85bf9a5e747ffdaadf3a35c00423670416aabc6533ae771901b676bf2e45 firmware/Tests/build_phase8.ps1
 INPUT_SHA256 1d12b2fc838a8f77b73edd276c7a8bb6e21e70107414ed5e8a08a046f67a5b8e firmware/Tests/phase8_simulator.ini
 INPUT_SHA256 4565f6493a81ff9c26e761594992d26a7406f2a9fee22a50f77394847405d079 firmware/Tests/phase8_tests.sct
@@ -169,11 +177,11 @@ INPUT_SHA256 7b0f3e72b9bef7a9a79576c0c59d12ac1a9245219b5bdbfe283caf18956fc7a5 fi
 INPUT_SHA256 3c4fe6d331d882f7bedc2bc2822450393e979e7f3b11183be8a7e69bf695eed2 firmware/Tests/test_phase5_trip.c
 INPUT_SHA256 030274dd62a40e984508471dc6c1e217f3f4111c0cc876a30d3679ec45642e48 firmware/Tests/test_phase5.h
 INPUT_SHA256 d7f1f305726a97c9a8a9449b487f3bcb57f0ed3d04500e0b00a061dca021d18e firmware/Tests/test_phase6_main.c
-INPUT_SHA256 40c8a30f2026744eec58f9501538fa240a89868441ca82a34576a676f5365336 firmware/Tests/test_phase6_objects.c
+INPUT_SHA256 71ab7e090bfa12e505db226070410491a22358071091e2e4645196fc0e3f71c7 firmware/Tests/test_phase6_objects.c
 INPUT_SHA256 2b444fbb028e2de87e2044b8f540b696ffd150d67e17f7a972588c2a846fd5dd firmware/Tests/test_phase6_task_stub.c
 INPUT_SHA256 2f1374c5037c22ad657fd1dde61224824e204d5f55b00f76aa5cfe5ebd72045e firmware/Tests/test_phase6_tasks.c
 INPUT_SHA256 4572f7ec06dda4e535d9e930a6b512c619757e918a1d6651ebdcd5e5e72ae476 firmware/Tests/test_phase6.h
-INPUT_SHA256 34abd9243424a3e7fc41873ef8b1cee9cebd792948833e8b8bf0bd99c3ac8a70 firmware/Tests/test_phase7_logic.c
+INPUT_SHA256 19f54197e47de4a56dfb13cb002668445455d8c092a204519750596a09a95acf firmware/Tests/test_phase7_logic.c
 INPUT_SHA256 28c8b98695a95bd6376eedba885a5367a061530f379171580aa251528f48f5a8 firmware/Tests/test_phase7_main.c
 INPUT_SHA256 eac630db9c7540e386c2a33b26a4588c88107576f6a395a4aadcca2eebd080c3 firmware/Tests/test_phase7_stub_i2c.c
 INPUT_SHA256 75be5f07053548c5f51ebedb8d4a4cdc74b2a07ee9a6a0c1819d113fa5c1d45c firmware/Tests/test_phase7.h
@@ -186,9 +194,9 @@ INPUT_SHA256 538a8bea6bb5c4cfde24deefe8a2edbf8a9bd888a0eb9467e22e96556cb2a053 fi
 INPUT_SHA256 a51144c08c5b303c741770fde8a6a972cb102dd8c547d324ee92ce1007d9bcdc firmware/Tests/test_phase8_sample_stub.h
 INPUT_SHA256 4894a3aa9ba09982e9f9799af141fd90218681eb65ed7323970e580a628f906d firmware/Tests/test_phase8_sample.c
 INPUT_SHA256 b305e3360fd3c8de5cbbe91e4eb70ad49fc18da7aed21f3dda3d78c2509de0c9 firmware/Tests/test_phase8_sample.h
-INPUT_SHA256 9db816799c89f796f27402323daa2809dbfc1d2f3d157fa04e3a903ebb25314c firmware/Tests/test_phase9_stub.h
+INPUT_SHA256 a2f3d34650fabc73eeec2dcbc09c1fd755ef32ccedb2e4b9a4f14b11043e322d firmware/Tests/test_phase9_stub.h
 INPUT_SHA256 3f6dbe3ce6d50b3becb4028275add1658ff6e199a5b0f554722d47978286c159 firmware/Tests/verify_phase8.py
-INPUT_SHA256 586097f5bdfc0b8c090c3f9945924c4f98e2dc493a0a68e9dfdcbc21e28d6b82 firmware/User/main.c
+INPUT_SHA256 311295de6e13c6131625fb17995a54067b0240c9c0ba2807855b8d438a56ef0c firmware/User/main.c
 LANGUAGE_MODE phase4_regression_tests --c99
 RUN: compile phase4_regression_tests firmware/Driver/bq76940.c
 RUN: compile phase4_regression_tests firmware/Driver/bq76940_measurement.c
@@ -248,21 +256,21 @@ SIZE_REPORT_BEGIN phase6_regression_tests
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-      8420        700        268        152      10112     120242   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase6_regression_tests.axf
-      8420        700        268        152          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase6_regression_tests.axf
+      8508        710        268        152      14208     120855   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase6_regression_tests.axf
+      8508        710        268        152          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase6_regression_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-      8420        700        268        152      10112     120242   Grand Totals
-      8420        700        268        152          0          0   ROM Totals
+      8508        710        268        152      14208     120855   Grand Totals
+      8508        710        268        152          0          0   ROM Totals
 
 ========================================================================
 
-    Total RO  Size (Code + RO Data)                 8688 (   8.48kB)
-    Total RW  Size (RW Data + ZI Data)             10264 (  10.02kB)
-    Total ROM Size (Code + RO Data + RW Data)       8840 (   8.63kB)
+    Total RO  Size (Code + RO Data)                 8776 (   8.57kB)
+    Total RW  Size (RW Data + ZI Data)             14360 (  14.02kB)
+    Total ROM Size (Code + RO Data + RW Data)       8928 (   8.72kB)
 
 ========================================================================
 
@@ -288,21 +296,21 @@ SIZE_REPORT_BEGIN phase7_regression_tests
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-     18908       1406        500        208       2144     334291   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase7_regression_tests.axf
-     18908       1406        500        208          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase7_regression_tests.axf
+     18944       1406        500        208       2176     334415   D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase7_regression_tests.axf
+     18944       1406        500        208          0          0   ROM Totals for D:\AI\Codex\Bms_shop\firmware\Tests\Build\Phase8\phase7_regression_tests.axf
 
 ========================================================================
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug
 
-     18908       1406        500        208       2144     334291   Grand Totals
-     18908       1406        500        208          0          0   ROM Totals
+     18944       1406        500        208       2176     334415   Grand Totals
+     18944       1406        500        208          0          0   ROM Totals
 
 ========================================================================
 
-    Total RO  Size (Code + RO Data)                19408 (  18.95kB)
-    Total RW  Size (RW Data + ZI Data)              2352 (   2.30kB)
-    Total ROM Size (Code + RO Data + RW Data)      19616 (  19.16kB)
+    Total RO  Size (Code + RO Data)                19444 (  18.99kB)
+    Total RW  Size (RW Data + ZI Data)              2384 (   2.33kB)
+    Total ROM Size (Code + RO Data + RW Data)      19652 (  19.19kB)
 
 ========================================================================
 
@@ -415,10 +423,7 @@ SIZE_REPORT_BEGIN phase8_afe_tests
 SIZE_REPORT_END phase8_afe_tests
 TEST_IMAGE_BUILD_PASS phase8_afe_tests
 PRODUCTION_CALLGRAPH_SOURCE firmware/Project/Keil/Objects/BMS_V1.htm
-PRODUCTION_CALLGRAPH_SHA256 272c1db91da3b07db29d4df70881fed29969b343f6af1a432ee7128977961181 firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.callgraph.txt
+PRODUCTION_CALLGRAPH_SHA256 8636fe13ab2699af72f952e0cc025bdac04f0515d3bed27907a81a42df396154 firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.callgraph.txt
 PRODUCTION_TASK_SAMPLE_MAX_DEPTH_BYTES 480
 PRODUCTION_TASK_SAMPLE_UNKNOWN 0
-UVOPTX_PATCH_TARGET_SIFILE ..\..\Tests\phase8_simulator.ini
-UVOPTX_PATCH_MATCH_COUNT 1
-UVOPTX_PATCHED_SHA256 c2af0dc3ff01c3b2211c63984d80e4a27153477cf77480511c0199ef790dacd9
-UVOPTX_RESTORED_SHA256 ebbd08c91d5942f90ff2491f12c2caf5ee3ac3d8b0f59db00f0908ba83152788
+RESULT: PHASE8 HARD GATE NOT_EXECUTED skipped=Simulator

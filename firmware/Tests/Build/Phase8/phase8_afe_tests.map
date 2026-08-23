@@ -60,6 +60,8 @@ Section Cross References
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_CellBalBitOfLogicalCell) refers to phase8_afe_tests_bq76940_control.o(.constdata) for s_logical_cell_to_cb
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBal) refers to phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_CellBalSetBit) for BQ76940_Control_CellBalSetBit
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBal) refers to phase8_afe_tests_bq76940_control.o(.constdata) for s_logical_cell_to_cb
+    phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBalPolicy) refers to phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_CellBalSetBit) for BQ76940_Control_CellBalSetBit
+    phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBalPolicy) refers to phase8_afe_tests_bq76940_control.o(.constdata) for s_logical_cell_to_cb
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeCellBal) refers to phase8_afe_tests_bq76940_control.o(.constdata) for s_logical_cell_to_cb
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeOvTripMv) refers to phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_RequireCalibration) for BQ76940_Control_RequireCalibration
     phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeOvTripMv) refers to phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeTripMv) for BQ76940_Control_DecodeTripMv
@@ -342,6 +344,7 @@ Removing Unused input sections from the image.
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_CellBalBitOfLogicalCell), (20 bytes).
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_CellBalSetBit), (92 bytes).
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBal), (128 bytes).
+    Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_ComposeCellBalPolicy), (156 bytes).
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeCellBal), (116 bytes).
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeOvTripMv), (32 bytes).
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_DecodeTripMv), (124 bytes).
@@ -356,7 +359,7 @@ Removing Unused input sections from the image.
     Removing phase8_afe_tests_bq76940_control.o(i.BQ76940_Control_SelectUvDelayS), (44 bytes).
     Removing phase8_afe_tests_bq76940_control.o(.constdata), (141 bytes).
 
-19 unused section(s) (total 1031 bytes) removed from the image.
+20 unused section(s) (total 1187 bytes) removed from the image.
 
 ==============================================================================
 
@@ -810,67 +813,67 @@ Memory Map of the image
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
     0x08000000   0x000000ec   Data   RO            3    RESET               startup_stm32f10x_md.o
-    0x080000ec   0x00000008   Code   RO          490  * !!!main             c_w.l(__main.o)
-    0x080000f4   0x00000034   Code   RO          663    !!!scatter          c_w.l(__scatter.o)
-    0x08000128   0x0000001a   Code   RO          665    !!handler_copy      c_w.l(__scatter_copy.o)
+    0x080000ec   0x00000008   Code   RO          496  * !!!main             c_w.l(__main.o)
+    0x080000f4   0x00000034   Code   RO          669    !!!scatter          c_w.l(__scatter.o)
+    0x08000128   0x0000001a   Code   RO          671    !!handler_copy      c_w.l(__scatter_copy.o)
     0x08000142   0x00000002   PAD
-    0x08000144   0x0000001c   Code   RO          667    !!handler_zi        c_w.l(__scatter_zi.o)
-    0x08000160   0x00000002   Code   RO          527    .ARM.Collect$$libinit$$00000000  c_w.l(libinit.o)
-    0x08000162   0x00000000   Code   RO          538    .ARM.Collect$$libinit$$00000002  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          540    .ARM.Collect$$libinit$$00000004  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          543    .ARM.Collect$$libinit$$0000000A  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          545    .ARM.Collect$$libinit$$0000000C  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          547    .ARM.Collect$$libinit$$0000000E  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          550    .ARM.Collect$$libinit$$00000011  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          552    .ARM.Collect$$libinit$$00000013  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          554    .ARM.Collect$$libinit$$00000015  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          556    .ARM.Collect$$libinit$$00000017  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          558    .ARM.Collect$$libinit$$00000019  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          560    .ARM.Collect$$libinit$$0000001B  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          562    .ARM.Collect$$libinit$$0000001D  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          564    .ARM.Collect$$libinit$$0000001F  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          566    .ARM.Collect$$libinit$$00000021  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          568    .ARM.Collect$$libinit$$00000023  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          570    .ARM.Collect$$libinit$$00000025  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          574    .ARM.Collect$$libinit$$0000002C  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          576    .ARM.Collect$$libinit$$0000002E  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          578    .ARM.Collect$$libinit$$00000030  c_w.l(libinit2.o)
-    0x08000162   0x00000000   Code   RO          580    .ARM.Collect$$libinit$$00000032  c_w.l(libinit2.o)
-    0x08000162   0x00000002   Code   RO          581    .ARM.Collect$$libinit$$00000033  c_w.l(libinit2.o)
-    0x08000164   0x00000002   Code   RO          611    .ARM.Collect$$libshutdown$$00000000  c_w.l(libshutdown.o)
-    0x08000166   0x00000000   Code   RO          628    .ARM.Collect$$libshutdown$$00000002  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          630    .ARM.Collect$$libshutdown$$00000004  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          632    .ARM.Collect$$libshutdown$$00000006  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          635    .ARM.Collect$$libshutdown$$00000009  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          638    .ARM.Collect$$libshutdown$$0000000C  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          640    .ARM.Collect$$libshutdown$$0000000E  c_w.l(libshutdown2.o)
-    0x08000166   0x00000000   Code   RO          643    .ARM.Collect$$libshutdown$$00000011  c_w.l(libshutdown2.o)
-    0x08000166   0x00000002   Code   RO          644    .ARM.Collect$$libshutdown$$00000012  c_w.l(libshutdown2.o)
-    0x08000168   0x00000000   Code   RO          492    .ARM.Collect$$rtentry$$00000000  c_w.l(__rtentry.o)
-    0x08000168   0x00000000   Code   RO          498    .ARM.Collect$$rtentry$$00000002  c_w.l(__rtentry2.o)
-    0x08000168   0x00000006   Code   RO          510    .ARM.Collect$$rtentry$$00000004  c_w.l(__rtentry4.o)
-    0x0800016e   0x00000000   Code   RO          500    .ARM.Collect$$rtentry$$00000009  c_w.l(__rtentry2.o)
-    0x0800016e   0x00000004   Code   RO          501    .ARM.Collect$$rtentry$$0000000A  c_w.l(__rtentry2.o)
-    0x08000172   0x00000000   Code   RO          503    .ARM.Collect$$rtentry$$0000000C  c_w.l(__rtentry2.o)
-    0x08000172   0x00000008   Code   RO          504    .ARM.Collect$$rtentry$$0000000D  c_w.l(__rtentry2.o)
-    0x0800017a   0x00000002   Code   RO          531    .ARM.Collect$$rtexit$$00000000  c_w.l(rtexit.o)
-    0x0800017c   0x00000000   Code   RO          583    .ARM.Collect$$rtexit$$00000002  c_w.l(rtexit2.o)
-    0x0800017c   0x00000004   Code   RO          584    .ARM.Collect$$rtexit$$00000003  c_w.l(rtexit2.o)
-    0x08000180   0x00000006   Code   RO          585    .ARM.Collect$$rtexit$$00000004  c_w.l(rtexit2.o)
+    0x08000144   0x0000001c   Code   RO          673    !!handler_zi        c_w.l(__scatter_zi.o)
+    0x08000160   0x00000002   Code   RO          533    .ARM.Collect$$libinit$$00000000  c_w.l(libinit.o)
+    0x08000162   0x00000000   Code   RO          544    .ARM.Collect$$libinit$$00000002  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          546    .ARM.Collect$$libinit$$00000004  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          549    .ARM.Collect$$libinit$$0000000A  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          551    .ARM.Collect$$libinit$$0000000C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          553    .ARM.Collect$$libinit$$0000000E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          556    .ARM.Collect$$libinit$$00000011  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          558    .ARM.Collect$$libinit$$00000013  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          560    .ARM.Collect$$libinit$$00000015  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          562    .ARM.Collect$$libinit$$00000017  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          564    .ARM.Collect$$libinit$$00000019  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          566    .ARM.Collect$$libinit$$0000001B  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          568    .ARM.Collect$$libinit$$0000001D  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          570    .ARM.Collect$$libinit$$0000001F  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          572    .ARM.Collect$$libinit$$00000021  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          574    .ARM.Collect$$libinit$$00000023  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          576    .ARM.Collect$$libinit$$00000025  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          580    .ARM.Collect$$libinit$$0000002C  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          582    .ARM.Collect$$libinit$$0000002E  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          584    .ARM.Collect$$libinit$$00000030  c_w.l(libinit2.o)
+    0x08000162   0x00000000   Code   RO          586    .ARM.Collect$$libinit$$00000032  c_w.l(libinit2.o)
+    0x08000162   0x00000002   Code   RO          587    .ARM.Collect$$libinit$$00000033  c_w.l(libinit2.o)
+    0x08000164   0x00000002   Code   RO          617    .ARM.Collect$$libshutdown$$00000000  c_w.l(libshutdown.o)
+    0x08000166   0x00000000   Code   RO          634    .ARM.Collect$$libshutdown$$00000002  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          636    .ARM.Collect$$libshutdown$$00000004  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          638    .ARM.Collect$$libshutdown$$00000006  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          641    .ARM.Collect$$libshutdown$$00000009  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          644    .ARM.Collect$$libshutdown$$0000000C  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          646    .ARM.Collect$$libshutdown$$0000000E  c_w.l(libshutdown2.o)
+    0x08000166   0x00000000   Code   RO          649    .ARM.Collect$$libshutdown$$00000011  c_w.l(libshutdown2.o)
+    0x08000166   0x00000002   Code   RO          650    .ARM.Collect$$libshutdown$$00000012  c_w.l(libshutdown2.o)
+    0x08000168   0x00000000   Code   RO          498    .ARM.Collect$$rtentry$$00000000  c_w.l(__rtentry.o)
+    0x08000168   0x00000000   Code   RO          504    .ARM.Collect$$rtentry$$00000002  c_w.l(__rtentry2.o)
+    0x08000168   0x00000006   Code   RO          516    .ARM.Collect$$rtentry$$00000004  c_w.l(__rtentry4.o)
+    0x0800016e   0x00000000   Code   RO          506    .ARM.Collect$$rtentry$$00000009  c_w.l(__rtentry2.o)
+    0x0800016e   0x00000004   Code   RO          507    .ARM.Collect$$rtentry$$0000000A  c_w.l(__rtentry2.o)
+    0x08000172   0x00000000   Code   RO          509    .ARM.Collect$$rtentry$$0000000C  c_w.l(__rtentry2.o)
+    0x08000172   0x00000008   Code   RO          510    .ARM.Collect$$rtentry$$0000000D  c_w.l(__rtentry2.o)
+    0x0800017a   0x00000002   Code   RO          537    .ARM.Collect$$rtexit$$00000000  c_w.l(rtexit.o)
+    0x0800017c   0x00000000   Code   RO          589    .ARM.Collect$$rtexit$$00000002  c_w.l(rtexit2.o)
+    0x0800017c   0x00000004   Code   RO          590    .ARM.Collect$$rtexit$$00000003  c_w.l(rtexit2.o)
+    0x08000180   0x00000006   Code   RO          591    .ARM.Collect$$rtexit$$00000004  c_w.l(rtexit2.o)
     0x08000186   0x00000002   PAD
     0x08000188   0x00000040   Code   RO            4    .text               startup_stm32f10x_md.o
-    0x080001c8   0x00000048   Code   RO          482    .text               c_w.l(llsdiv.o)
-    0x08000210   0x0000008a   Code   RO          484    .text               c_w.l(rt_memcpy_v6.o)
-    0x0800029a   0x0000004e   Code   RO          486    .text               c_w.l(rt_memclr_w.o)
-    0x080002e8   0x00000006   Code   RO          488    .text               c_w.l(heapauxi.o)
-    0x080002ee   0x000000ee   Code   RO          493    .text               c_w.l(lludivv7m.o)
-    0x080003dc   0x00000064   Code   RO          495    .text               c_w.l(rt_memcpy_w.o)
-    0x08000440   0x0000004a   Code   RO          516    .text               c_w.l(sys_stackheap_outer.o)
-    0x0800048a   0x00000012   Code   RO          520    .text               c_w.l(exit.o)
-    0x0800049c   0x00000008   Code   RO          528    .text               c_w.l(libspace.o)
-    0x080004a4   0x0000000c   Code   RO          599    .text               c_w.l(sys_exit.o)
-    0x080004b0   0x00000002   Code   RO          616    .text               c_w.l(use_no_semi.o)
-    0x080004b2   0x00000000   Code   RO          618    .text               c_w.l(indicate_semi.o)
+    0x080001c8   0x00000048   Code   RO          488    .text               c_w.l(llsdiv.o)
+    0x08000210   0x0000008a   Code   RO          490    .text               c_w.l(rt_memcpy_v6.o)
+    0x0800029a   0x0000004e   Code   RO          492    .text               c_w.l(rt_memclr_w.o)
+    0x080002e8   0x00000006   Code   RO          494    .text               c_w.l(heapauxi.o)
+    0x080002ee   0x000000ee   Code   RO          499    .text               c_w.l(lludivv7m.o)
+    0x080003dc   0x00000064   Code   RO          501    .text               c_w.l(rt_memcpy_w.o)
+    0x08000440   0x0000004a   Code   RO          522    .text               c_w.l(sys_stackheap_outer.o)
+    0x0800048a   0x00000012   Code   RO          526    .text               c_w.l(exit.o)
+    0x0800049c   0x00000008   Code   RO          534    .text               c_w.l(libspace.o)
+    0x080004a4   0x0000000c   Code   RO          605    .text               c_w.l(sys_exit.o)
+    0x080004b0   0x00000002   Code   RO          622    .text               c_w.l(use_no_semi.o)
+    0x080004b2   0x00000000   Code   RO          624    .text               c_w.l(indicate_semi.o)
     0x080004b2   0x0000008c   Code   RO           10    i.BMS_AfeStartup_ClearXready  phase8_afe_tests_bms_afe_startup.o
     0x0800053e   0x0000000e   Code   RO           11    i.BMS_AfeStartup_Fail  phase8_afe_tests_bms_afe_startup.o
     0x0800054c   0x00000024   Code   RO           12    i.BMS_AfeStartup_GetCalibration  phase8_afe_tests_bms_afe_startup.o
@@ -889,57 +892,57 @@ Memory Map of the image
     0x08000a7c   0x00000082   Code   RO           27    i.BMS_AfeStartup_ValidateConfig  phase8_afe_tests_bms_afe_startup.o
     0x08000afe   0x0000011a   Code   RO           28    i.BMS_AfeStartup_VerifyRegister  phase8_afe_tests_bms_afe_startup.o
     0x08000c18   0x00000072   Code   RO           29    i.BMS_AfeStartup_WriteRegister  phase8_afe_tests_bms_afe_startup.o
-    0x08000c8a   0x0000002a   Code   RO          160    i.BQ76940_Control_ComposeProtect1  phase8_afe_tests_bq76940_control.o
-    0x08000cb4   0x0000001e   Code   RO          161    i.BQ76940_Control_ComposeProtect2  phase8_afe_tests_bq76940_control.o
-    0x08000cd2   0x00000020   Code   RO          162    i.BQ76940_Control_ComposeProtect3  phase8_afe_tests_bq76940_control.o
-    0x08000cf2   0x00000018   Code   RO          167    i.BQ76940_Control_EncodeOvTrip  phase8_afe_tests_bq76940_control.o
-    0x08000d0a   0x000000a2   Code   RO          168    i.BQ76940_Control_EncodeTrip  phase8_afe_tests_bq76940_control.o
-    0x08000dac   0x00000018   Code   RO          169    i.BQ76940_Control_EncodeUvTrip  phase8_afe_tests_bq76940_control.o
-    0x08000dc4   0x00000032   Code   RO          171    i.BQ76940_Control_RequireCalibration  phase8_afe_tests_bq76940_control.o
-    0x08000df6   0x00000022   Code   RO          179    i.BQ76940_Control_SysCtrl2WithFets  phase8_afe_tests_bq76940_control.o
-    0x08000e18   0x00000050   Code   RO          303    i.BQ76940_DecodeCalibration  phase8_afe_tests_test_afe.o
-    0x08000e68   0x00000010   Code   RO          304    i.BQ76940_IsInitialized  phase8_afe_tests_test_afe.o
-    0x08000e78   0x000000b4   Code   RO          305    i.BQ76940_ReadByte  phase8_afe_tests_test_afe.o
-    0x08000f2c   0x000000dc   Code   RO          306    i.BQ76940_WriteByte  phase8_afe_tests_test_afe.o
-    0x08001008   0x00000002   Code   RO          459    i.SystemInit        phase8_afe_tests_test_main.o
+    0x08000c8a   0x0000002a   Code   RO          161    i.BQ76940_Control_ComposeProtect1  phase8_afe_tests_bq76940_control.o
+    0x08000cb4   0x0000001e   Code   RO          162    i.BQ76940_Control_ComposeProtect2  phase8_afe_tests_bq76940_control.o
+    0x08000cd2   0x00000020   Code   RO          163    i.BQ76940_Control_ComposeProtect3  phase8_afe_tests_bq76940_control.o
+    0x08000cf2   0x00000018   Code   RO          168    i.BQ76940_Control_EncodeOvTrip  phase8_afe_tests_bq76940_control.o
+    0x08000d0a   0x000000a2   Code   RO          169    i.BQ76940_Control_EncodeTrip  phase8_afe_tests_bq76940_control.o
+    0x08000dac   0x00000018   Code   RO          170    i.BQ76940_Control_EncodeUvTrip  phase8_afe_tests_bq76940_control.o
+    0x08000dc4   0x00000032   Code   RO          172    i.BQ76940_Control_RequireCalibration  phase8_afe_tests_bq76940_control.o
+    0x08000df6   0x00000022   Code   RO          180    i.BQ76940_Control_SysCtrl2WithFets  phase8_afe_tests_bq76940_control.o
+    0x08000e18   0x00000050   Code   RO          309    i.BQ76940_DecodeCalibration  phase8_afe_tests_test_afe.o
+    0x08000e68   0x00000010   Code   RO          310    i.BQ76940_IsInitialized  phase8_afe_tests_test_afe.o
+    0x08000e78   0x000000b4   Code   RO          311    i.BQ76940_ReadByte  phase8_afe_tests_test_afe.o
+    0x08000f2c   0x000000dc   Code   RO          312    i.BQ76940_WriteByte  phase8_afe_tests_test_afe.o
+    0x08001008   0x00000002   Code   RO          465    i.SystemInit        phase8_afe_tests_test_main.o
     0x0800100a   0x00000002   PAD
-    0x0800100c   0x0000003c   Code   RO          307    i.TestAfe_AddSysStat  phase8_afe_tests_test_afe.o
-    0x08001048   0x00000170   Code   RO          308    i.TestAfe_BoundsWakeAndProbe  phase8_afe_tests_test_afe.o
-    0x080011b8   0x000000f8   Code   RO          309    i.TestAfe_ConfigWriteAmbiguityIsNotReplayed  phase8_afe_tests_test_afe.o
-    0x080012b0   0x0000005c   Code   RO          310    i.TestAfe_DriveTerminal  phase8_afe_tests_test_afe.o
-    0x0800130c   0x0000004a   Code   RO          311    i.TestAfe_DriveToFinalCtrlWrite  phase8_afe_tests_test_afe.o
-    0x08001356   0x00000042   Code   RO          312    i.TestAfe_DriveToInitialWait  phase8_afe_tests_test_afe.o
-    0x08001398   0x000002a0   Code   RO          313    i.TestAfe_FinalFetReadbackUsesBoundedSafeOff  phase8_afe_tests_test_afe.o
-    0x08001638   0x000000c8   Code   RO          314    i.TestAfe_InitialXreadyRetiredIsNotBlindCleared  phase8_afe_tests_test_afe.o
-    0x08001700   0x0000014c   Code   RO          315    i.TestAfe_NewFaultBlocksCompletion  phase8_afe_tests_test_afe.o
-    0x0800184c   0x0000000c   Code   RO          316    i.TestAfe_PrepareDevice  phase8_afe_tests_test_afe.o
-    0x08001858   0x00000160   Code   RO          317    i.TestAfe_ReadbackAndCalibrationFailuresStop  phase8_afe_tests_test_afe.o
-    0x080019b8   0x0000016c   Code   RO          318    i.TestAfe_RejectsIncompleteConfig  phase8_afe_tests_test_afe.o
-    0x08001b24   0x00000050   Code   RO          319    i.TestAfe_ResetFake  phase8_afe_tests_test_afe.o
-    0x08001b74   0x00000260   Code   RO          320    i.TestAfe_SafeOffFailureModesAreTerminal  phase8_afe_tests_test_afe.o
-    0x08001dd4   0x00000024   Code   RO          321    i.TestAfe_Start     phase8_afe_tests_test_afe.o
-    0x08001df8   0x00000040   Code   RO          322    i.TestAfe_StepChecked  phase8_afe_tests_test_afe.o
-    0x08001e38   0x000002ac   Code   RO          323    i.TestAfe_SuccessSequenceAndSettle  phase8_afe_tests_test_afe.o
-    0x080020e4   0x0000020c   Code   RO          324    i.TestAfe_UnsafeProbeConfirmsAllSafeOutputs  phase8_afe_tests_test_afe.o
-    0x080022f0   0x00000064   Code   RO          325    i.TestAfe_ValidConfig  phase8_afe_tests_test_afe.o
-    0x08002354   0x0000003c   Code   RO          326    i.TestAfe_Wake      phase8_afe_tests_test_afe.o
-    0x08002390   0x00000140   Code   RO          327    i.TestAfe_XreadyAmbiguityIsTerminal  phase8_afe_tests_test_afe.o
-    0x080024d0   0x00000498   Code   RO          328    i.TestAfe_XreadyClearForcesFullReconfiguration  phase8_afe_tests_test_afe.o
-    0x08002968   0x000000e8   Code   RO          329    i.TestAfe_XreadyMustReadLowAfterClear  phase8_afe_tests_test_afe.o
-    0x08002a50   0x00000054   Code   RO          330    i.Test_Phase8_AfeStartup  phase8_afe_tests_test_afe.o
-    0x08002aa4   0x0000003c   Code   RO          460    i.main              phase8_afe_tests_test_main.o
-    0x08002ae0   0x00000018   Data   RO          332    .constdata          phase8_afe_tests_test_afe.o
-    0x08002af8   0x00000020   Data   RO          661    Region$$Table       anon$$obj.o
+    0x0800100c   0x0000003c   Code   RO          313    i.TestAfe_AddSysStat  phase8_afe_tests_test_afe.o
+    0x08001048   0x00000170   Code   RO          314    i.TestAfe_BoundsWakeAndProbe  phase8_afe_tests_test_afe.o
+    0x080011b8   0x000000f8   Code   RO          315    i.TestAfe_ConfigWriteAmbiguityIsNotReplayed  phase8_afe_tests_test_afe.o
+    0x080012b0   0x0000005c   Code   RO          316    i.TestAfe_DriveTerminal  phase8_afe_tests_test_afe.o
+    0x0800130c   0x0000004a   Code   RO          317    i.TestAfe_DriveToFinalCtrlWrite  phase8_afe_tests_test_afe.o
+    0x08001356   0x00000042   Code   RO          318    i.TestAfe_DriveToInitialWait  phase8_afe_tests_test_afe.o
+    0x08001398   0x000002a0   Code   RO          319    i.TestAfe_FinalFetReadbackUsesBoundedSafeOff  phase8_afe_tests_test_afe.o
+    0x08001638   0x000000c8   Code   RO          320    i.TestAfe_InitialXreadyRetiredIsNotBlindCleared  phase8_afe_tests_test_afe.o
+    0x08001700   0x0000014c   Code   RO          321    i.TestAfe_NewFaultBlocksCompletion  phase8_afe_tests_test_afe.o
+    0x0800184c   0x0000000c   Code   RO          322    i.TestAfe_PrepareDevice  phase8_afe_tests_test_afe.o
+    0x08001858   0x00000160   Code   RO          323    i.TestAfe_ReadbackAndCalibrationFailuresStop  phase8_afe_tests_test_afe.o
+    0x080019b8   0x0000016c   Code   RO          324    i.TestAfe_RejectsIncompleteConfig  phase8_afe_tests_test_afe.o
+    0x08001b24   0x00000050   Code   RO          325    i.TestAfe_ResetFake  phase8_afe_tests_test_afe.o
+    0x08001b74   0x00000260   Code   RO          326    i.TestAfe_SafeOffFailureModesAreTerminal  phase8_afe_tests_test_afe.o
+    0x08001dd4   0x00000024   Code   RO          327    i.TestAfe_Start     phase8_afe_tests_test_afe.o
+    0x08001df8   0x00000040   Code   RO          328    i.TestAfe_StepChecked  phase8_afe_tests_test_afe.o
+    0x08001e38   0x000002ac   Code   RO          329    i.TestAfe_SuccessSequenceAndSettle  phase8_afe_tests_test_afe.o
+    0x080020e4   0x0000020c   Code   RO          330    i.TestAfe_UnsafeProbeConfirmsAllSafeOutputs  phase8_afe_tests_test_afe.o
+    0x080022f0   0x00000064   Code   RO          331    i.TestAfe_ValidConfig  phase8_afe_tests_test_afe.o
+    0x08002354   0x0000003c   Code   RO          332    i.TestAfe_Wake      phase8_afe_tests_test_afe.o
+    0x08002390   0x00000140   Code   RO          333    i.TestAfe_XreadyAmbiguityIsTerminal  phase8_afe_tests_test_afe.o
+    0x080024d0   0x00000498   Code   RO          334    i.TestAfe_XreadyClearForcesFullReconfiguration  phase8_afe_tests_test_afe.o
+    0x08002968   0x000000e8   Code   RO          335    i.TestAfe_XreadyMustReadLowAfterClear  phase8_afe_tests_test_afe.o
+    0x08002a50   0x00000054   Code   RO          336    i.Test_Phase8_AfeStartup  phase8_afe_tests_test_afe.o
+    0x08002aa4   0x0000003c   Code   RO          466    i.main              phase8_afe_tests_test_main.o
+    0x08002ae0   0x00000018   Data   RO          338    .constdata          phase8_afe_tests_test_afe.o
+    0x08002af8   0x00000020   Data   RO          667    Region$$Table       anon$$obj.o
 
 
     Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x00000808, Max: 0x00005000, ABSOLUTE)
 
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x00000008   Data   RW          333    .data               phase8_afe_tests_test_afe.o
-    0x20000008   0x00000010   Data   RW          461    .data               phase8_afe_tests_test_main.o
-    0x20000018   0x0000018c   Zero   RW          331    .bss                phase8_afe_tests_test_afe.o
-    0x200001a4   0x00000060   Zero   RW          529    .bss                c_w.l(libspace.o)
+    0x20000000   0x00000008   Data   RW          339    .data               phase8_afe_tests_test_afe.o
+    0x20000008   0x00000010   Data   RW          467    .data               phase8_afe_tests_test_main.o
+    0x20000018   0x0000018c   Zero   RW          337    .bss                phase8_afe_tests_test_afe.o
+    0x200001a4   0x00000060   Zero   RW          535    .bss                c_w.l(libspace.o)
     0x20000204   0x00000004   PAD
     0x20000208   0x00000200   Zero   RW            2    HEAP                startup_stm32f10x_md.o
     0x20000408   0x00000400   Zero   RW            1    STACK               startup_stm32f10x_md.o

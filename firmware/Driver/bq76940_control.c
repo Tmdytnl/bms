@@ -523,6 +523,61 @@ bool BQ76940_Control_ComposeCellBal(
     return false;
 }
 
+bool BQ76940_Control_ComposeCellBalPolicy(
+    uint16_t balance_bitmap,
+    uint8_t max_parallel_cells,
+    bool adjacent_cells_permitted,
+    uint8_t *bal1,
+    uint8_t *bal2,
+    uint8_t *bal3)
+{
+    uint8_t index;
+    uint8_t selected;
+    uint8_t cb_bit;
+    uint16_t mask;
+
+    if ((bal1 == NULL) || (bal2 == NULL) || (bal3 == NULL) ||
+        (max_parallel_cells == 0U) ||
+        (max_parallel_cells > BMS_CELL_COUNT) ||
+        ((balance_bitmap & (uint16_t)(~(
+            (uint16_t)((1U << BMS_CELL_COUNT) - 1U)))) != 0U) ||
+        (!adjacent_cells_permitted &&
+         ((balance_bitmap & (uint16_t)(balance_bitmap << 1U)) != 0U)))
+    {
+        return false;
+    }
+
+    *bal1 = 0U;
+    *bal2 = 0U;
+    *bal3 = 0U;
+    selected = 0U;
+    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    {
+        mask = (uint16_t)(1U << index);
+        if ((balance_bitmap & mask) != 0U)
+        {
+            ++selected;
+            if (selected > max_parallel_cells)
+            {
+                *bal1 = 0U;
+                *bal2 = 0U;
+                *bal3 = 0U;
+                return false;
+            }
+            cb_bit = s_logical_cell_to_cb[index];
+            if (!BQ76940_Control_CellBalSetBit(
+                    bal1, bal2, bal3, cb_bit))
+            {
+                *bal1 = 0U;
+                *bal2 = 0U;
+                *bal3 = 0U;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 uint16_t BQ76940_Control_DecodeCellBal(uint8_t bal1,
                                        uint8_t bal2,
                                        uint8_t bal3)

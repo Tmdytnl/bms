@@ -55,6 +55,10 @@ required_sources = {
     "..\\..\\App\\bms_recovery.c",
     "..\\..\\App\\bms_fet_manager.c",
     "..\\..\\App\\bms_health.c",
+    "..\\..\\App\\bms_soc.c",
+    "..\\..\\App\\bms_balance.c",
+    "..\\..\\App\\bms_can.c",
+    "..\\..\\App\\bms_persistence.c",
     "..\\..\\Driver\\bsp_iwdg.c",
 }
 project_path = ROOT / "firmware/Project/Keil/BMS_V1.uvprojx"
@@ -82,6 +86,10 @@ recovery_c = read("firmware/App/bms_recovery.c")
 sample_c = read("firmware/App/bms_sample.c")
 fet_c = read("firmware/App/bms_fet_manager.c")
 health_h = read("firmware/App/bms_health.h")
+balance_c = read("firmware/App/bms_balance.c")
+soc_c = read("firmware/App/bms_soc.c")
+can_c = read("firmware/App/bms_can.c")
+persistence_c = read("firmware/App/bms_persistence.c")
 
 check(contains_all(data_h, ("sample_sequence", "afe_generation",
                             "BMS_DataIdentity_t")) and
@@ -118,6 +126,8 @@ check("BMS_FetManager_Service" in app_rtos and
       contains_all(fet_c, ("BQ76940_REG_SYS_CTRL2", "ReadByte", "WriteByte",
                            "UNVERIFIED", "QUARANTINED")),
       "State invokes the sole transactional scheduler-era FET manager")
+check("BQ76940_REG_SYS_CTRL2" not in recovery_c,
+      "Recovery delegates scheduler-era SYS_CTRL2 ownership to FET manager")
 check("BMS_Data_GetSnapshot" not in fet_c and
       contains_all(fet_c, ("BMS_Protect_GetSafetySnapshot",
                            "BMS_State_GetSafetySnapshot")),
@@ -152,6 +162,25 @@ check(contains_all(health_h, ("generation[BMS_HEALTH_TASK_COUNT]",
           line for line in health_h.splitlines()
           if line.strip().startswith(("void BMS_Health_", "bool BMS_Health_"))),
       "health uses monotonic per-task generations with no clear API")
+check("BMS_Balance_RunOnce" in app_rtos and
+      contains_all(balance_c, ("BQ76940_REG_CELLBAL1",
+                               "BQ76940_REG_CELLBAL2",
+                               "BQ76940_REG_CELLBAL3")) and
+      "BQ76940_REG_CELLBAL" not in recovery_c,
+      "BalanceTask is the sole scheduler-era CELLBAL writer")
+check(contains_all(soc_c, ("sample.xready_generation",
+                           "remaining_mams", "queue_gap_latched")) and
+      not re.search(r"\b(?:float|double)\b", soc_c),
+      "SOC is integer-only and binds CC samples to AFE generation")
+check("BMS_Protect_SubmitServiceResetRequest" in can_c and
+      "BQ76940_WriteByte" not in can_c and
+      "BSP_IWDG_Feed" not in can_c and
+      "fault_has_direct_fet_effect" not in can_c,
+      "CAN commands route only through source-specific service requests")
+check(contains_all(persistence_c, ("BMS_Persistence_Crc32",
+                                   "BMS_Persistence_SelectNewest")) and
+      "FLASH->" not in persistence_c,
+      "Flash A/B codec exists without unproven physical write scheduling")
 
 all_production = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
@@ -172,11 +201,14 @@ for marker in (
     "P9_LOGIC_FAILURES=0", "P9_FET_FAILURES=0",
     "P9_RECOVERY_FAILURES=0", "P9_HEALTH_FAILURES=0",
     "P9_HW_HANDSHAKE_FAILURES=0", "P9_SCENARIOS_COMPLETED=24",
-    "P9_RACES_COMPLETED=3",
+    "P9_RACES_COMPLETED=3", "CONTINUATION_TEST_COMPLETED=1",
+    "CONTINUATION_TEST_FAILURES=0", "P10_SOC_FAILURES=0",
+    "P10_BALANCE_FAILURES=0", "P11_CAN_FAILURES=0",
+    "STORAGE_CODEC_FAILURES=0", "CONTINUATION_SCENARIOS_COMPLETED=6",
 ):
     check(marker in phase9_sim, f"simulator evidence contains {marker}")
 
-phase8_sim = read("firmware/Tests/Build/Phase8/phase8_simulator.log")
+phase8_sim = read("firmware/Tests/Build/Phase8/phase8_split_simulator.log")
 nonzero_regression_failures = [
     f"{name}={value}"
     for name, value in re.findall(r"^([A-Z0-9_]*FAILURES)=(\d+)\s*$",
@@ -193,8 +225,20 @@ production_log = read("firmware/Project/Keil/Build/BMS_V1_Phase8_build.log")
 check('0 Error(s), 0 Warning(s)' in production_log and
       all(f"compiling {source}..." in production_log for source in (
           "bms_state.c", "bms_recovery.c", "bms_fet_manager.c",
-          "bms_health.c", "bms_hw_recovery.c", "bsp_iwdg.c")),
+          "bms_health.c", "bms_hw_recovery.c", "bms_soc.c",
+          "bms_balance.c", "bms_can.c", "bms_persistence.c",
+          "bsp_iwdg.c")),
       "production ARMCC5 Clean/Rebuild is Phase 9-complete at 0/0")
+
+production_map = read(
+    "firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.map")
+check("Max: 0x0000f400" in production_map and
+      "0x0800F800UL" in policy_c and "0x0800FC00UL" in policy_c,
+      "linker boundary excludes both proposed final 1 KiB Flash pages")
+rw_match = re.search(r"Total RW\s+Size \(RW Data \+ ZI Data\)\s+"
+                     r"(\d+)", production_map)
+check(rw_match is not None and int(rw_match.group(1)) < (20 * 1024),
+      "measured static RAM plus 12 KiB RTOS heap fits 20 KiB SRAM")
 
 if FAILURES:
     print(f"PHASE9 SIMULATION GATE FAIL ({len(FAILURES)} failure(s))")

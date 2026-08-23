@@ -76,6 +76,16 @@ void TestP9_SetIdentity(uint32_t sequence, uint32_t afe_generation)
     s_identity.afe_generation = afe_generation;
 }
 
+void TestP9_SetMeasurement(const BMS_DataSnapshot_t *measurement)
+{
+    if (measurement != NULL)
+    {
+        s_measurement = *measurement;
+        s_identity.sample_sequence = measurement->sample_sequence;
+        s_identity.afe_generation = measurement->afe_generation;
+    }
+}
+
 void TestP9_SetProtectSnapshot(
     const BMS_ProtectSafetySnapshot_t *snapshot)
 {
@@ -175,6 +185,24 @@ BaseType_t xQueueGenericSend(QueueHandle_t semaphore,
     return semaphore != NULL ? pdTRUE : pdFALSE;
 }
 
+BaseType_t xQueueReceive(QueueHandle_t queue,
+                         void *const item,
+                         TickType_t wait_ticks)
+{
+    (void)queue;
+    (void)item;
+    (void)wait_ticks;
+    return pdFAIL;
+}
+
+EventBits_t xEventGroupClearBits(EventGroupHandle_t event_group,
+                                 const EventBits_t bits_to_clear)
+{
+    (void)event_group;
+    (void)bits_to_clear;
+    return 0U;
+}
+
 void App_Rtos_NotifyStateUrgent(void)
 {
 }
@@ -207,6 +235,19 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
     return true;
 }
 
+bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
+                                   BMS_SocPermille_t soc_permille,
+                                   BMS_TimestampMs_t now_ms,
+                                   bool valid)
+{
+    s_measurement.remaining_capacity_mah = capacity_mah;
+    s_measurement.soc_permille = valid ? soc_permille :
+        BMS_SOC_UNKNOWN_PERMILLE;
+    s_measurement.soc_metadata.valid = valid;
+    s_measurement.soc_metadata.timestamp_ms = now_ms;
+    return true;
+}
+
 bool BMS_Data_IsFresh(bool valid,
                       bool stale_latched,
                       BMS_DataAgeMs_t age_ms,
@@ -228,6 +269,14 @@ bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot)
     }
     *snapshot = s_xready;
     return true;
+}
+
+bool BMS_Protect_SubmitServiceResetRequest(
+    const BMS_ServiceResetRequest_t *request)
+{
+    return (request != NULL) && request->valid && !s_xready.active &&
+        (request->evaluated_sample_sequence == s_identity.sample_sequence) &&
+        (request->evaluated_afe_generation == s_identity.afe_generation);
 }
 
 bool BMS_Protect_AuthorizeXreadyClear(uint32_t generation,
@@ -283,6 +332,25 @@ bool BMS_Sample_SetRecoveryCalibration(
 bool BQ76940_IsInitialized(const BQ76940_t *device)
 {
     return (device == &s_device) && device->initialized;
+}
+
+BQ76940_Status_t BQ76940_ConvertCcRawToCurrentMa(
+    int16_t cc_raw,
+    uint32_t rsense_uohm,
+    int8_t polarity,
+    int32_t *current_ma)
+{
+    int64_t value;
+
+    if ((current_ma == NULL) || (rsense_uohm == 0UL) ||
+        ((polarity != 1) && (polarity != -1)))
+    {
+        return BQ76940_STATUS_INVALID_ARGUMENT;
+    }
+    value = ((int64_t)cc_raw * 8440LL * (int64_t)polarity) /
+        (int64_t)rsense_uohm;
+    *current_ma = (int32_t)value;
+    return BQ76940_STATUS_OK;
 }
 
 BQ76940_Status_t BQ76940_ReadByte(BQ76940_t *device,

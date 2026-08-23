@@ -130,7 +130,7 @@ def check_freertos_config() -> None:
         "configUSE_PREEMPTION": "1",
         "configTICK_RATE_HZ": "(1000UL)",
         "configMAX_PRIORITIES": "(8)",
-        "configTOTAL_HEAP_SIZE": "(8 * 1024)",
+        "configTOTAL_HEAP_SIZE": "(12 * 1024)",
         "configPRIO_BITS": "4",
         "configLIBRARY_LOWEST_INTERRUPT_PRIORITY": "15",
         "configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY": "5",

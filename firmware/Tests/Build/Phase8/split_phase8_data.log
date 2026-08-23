@@ -1,0 +1,8 @@
+LOAD ..\..\Tests\Build\Phase8\phase8_data_tests.axf
+RESET
+G
+printf("PHASE8_DATA_TEST_COMPLETED=%u\n", g_phase8_test_completed)
+PHASE8_DATA_TEST_COMPLETED=1
+printf("PHASE8_DATA_TEST_FAILURES=%u\n", g_phase8_test_failures)
+PHASE8_DATA_TEST_FAILURES=0
+LOG OFF

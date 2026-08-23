@@ -1,0 +1,10 @@
+LOAD ..\..\Tests\Build\Phase8\phase8_sample_tests.axf
+RESET
+G
+printf("PHASE8_SAMPLE_TEST_COMPLETED=%u\n", g_phase8_test_completed)
+PHASE8_SAMPLE_TEST_COMPLETED=1
+printf("PHASE8_SAMPLE_TEST_FAILURES=%u\n", g_phase8_test_failures)
+PHASE8_SAMPLE_TEST_FAILURES=0
+printf("P8_SAMPLE_PROVENANCE_GUARD_COMPLETED=%u\n", g_phase8_sample_provenance_guard_completed)
+P8_SAMPLE_PROVENANCE_GUARD_COMPLETED=1
+LOG OFF

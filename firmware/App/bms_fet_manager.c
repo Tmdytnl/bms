@@ -115,6 +115,9 @@ static bool BMS_FetManager_AttemptSafeOffLocked(void)
         return false;
     }
     expected = BQ76940_Control_SysCtrl2WithFets(current, &safe_off);
+    /* The manager owns the complete scheduler-era SYS_CTRL2 composition.
+     * CC_EN is required in both safe-off and operational states. */
+    expected |= BMS_FET_MANAGER_CC_EN;
     status = BQ76940_WriteByte(s_device, BQ76940_REG_SYS_CTRL2, expected);
     if (status != BQ76940_STATUS_OK)
     {
@@ -257,6 +260,7 @@ void BMS_FetManager_Service(void)
     }
 
     expected = BQ76940_Control_SysCtrl2WithFets(current, &effective);
+    expected |= BMS_FET_MANAGER_CC_EN;
     s_snapshot.expected_sys_ctrl2 = expected;
     if (current != expected)
     {

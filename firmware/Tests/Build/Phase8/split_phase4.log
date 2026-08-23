@@ -1,0 +1,8 @@
+LOAD ..\..\Tests\Build\Phase8\phase4_regression_tests.axf
+RESET
+G
+printf("PHASE4_REGRESSION_COMPLETED=%u\n", g_phase4_test_completed)
+PHASE4_REGRESSION_COMPLETED=1
+printf("PHASE4_REGRESSION_FAILURES=%u\n", g_phase4_test_failures)
+PHASE4_REGRESSION_FAILURES=0
+LOG OFF

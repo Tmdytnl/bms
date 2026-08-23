@@ -4,13 +4,15 @@
 
 #include "app_rtos.h"
 #include "bms_afe_startup.h"
+#include "bms_balance.h"
 #include "bms_data.h"
+#include "bms_fet_manager.h"
 #include "bms_protect.h"
 #include "bms_sample.h"
 #include "bq76940_control.h"
 #include "bq76940_regs.h"
 
-#define BMS_RECOVERY_CONFIG_REGISTER_COUNT      (12U)
+#define BMS_RECOVERY_CONFIG_REGISTER_COUNT      (7U)
 #define BMS_RECOVERY_SETTLE_MS                  (800UL)
 #define BMS_RECOVERY_I2C_TIMEOUT_MS             (20U)
 
@@ -188,30 +190,23 @@ static bool BMS_Recovery_StageRegisterPlan(void)
         return false;
     }
 
-    s_recovery.register_addresses[0] = BQ76940_REG_SYS_CTRL2;
-    s_recovery.register_values[0] = BMS_AFE_STARTUP_SYS_CTRL2_FET_OFF;
-    s_recovery.register_addresses[1] = BQ76940_REG_CELLBAL1;
-    s_recovery.register_values[1] = 0U;
-    s_recovery.register_addresses[2] = BQ76940_REG_CELLBAL2;
-    s_recovery.register_values[2] = 0U;
-    s_recovery.register_addresses[3] = BQ76940_REG_CELLBAL3;
-    s_recovery.register_values[3] = 0U;
-    s_recovery.register_addresses[4] = BQ76940_REG_CC_CFG;
-    s_recovery.register_values[4] = BQ76940_CC_CFG_REQUIRED_VALUE;
-    s_recovery.register_addresses[5] = BQ76940_REG_OV_TRIP;
-    s_recovery.register_values[5] = ov_trip;
-    s_recovery.register_addresses[6] = BQ76940_REG_UV_TRIP;
-    s_recovery.register_values[6] = uv_trip;
-    s_recovery.register_addresses[7] = BQ76940_REG_PROTECT3;
-    s_recovery.register_values[7] = protect3;
-    s_recovery.register_addresses[8] = BQ76940_REG_PROTECT1;
-    s_recovery.register_values[8] = protect1;
-    s_recovery.register_addresses[9] = BQ76940_REG_PROTECT2;
-    s_recovery.register_values[9] = protect2;
-    s_recovery.register_addresses[10] = BQ76940_REG_SYS_CTRL1;
-    s_recovery.register_values[10] = BMS_AFE_STARTUP_SYS_CTRL1_REQUIRED;
-    s_recovery.register_addresses[11] = BQ76940_REG_SYS_CTRL2;
-    s_recovery.register_values[11] = BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF;
+    /* SYS_CTRL2 and CELLBAL1..3 are intentionally absent: their scheduler
+     * ownership belongs to FET Manager and BalanceTask respectively.
+     * PRE_CLEAR_PREPARE waits for both owners' verified safe state. */
+    s_recovery.register_addresses[0] = BQ76940_REG_CC_CFG;
+    s_recovery.register_values[0] = BQ76940_CC_CFG_REQUIRED_VALUE;
+    s_recovery.register_addresses[1] = BQ76940_REG_OV_TRIP;
+    s_recovery.register_values[1] = ov_trip;
+    s_recovery.register_addresses[2] = BQ76940_REG_UV_TRIP;
+    s_recovery.register_values[2] = uv_trip;
+    s_recovery.register_addresses[3] = BQ76940_REG_PROTECT3;
+    s_recovery.register_values[3] = protect3;
+    s_recovery.register_addresses[4] = BQ76940_REG_PROTECT1;
+    s_recovery.register_values[4] = protect1;
+    s_recovery.register_addresses[5] = BQ76940_REG_PROTECT2;
+    s_recovery.register_values[5] = protect2;
+    s_recovery.register_addresses[6] = BQ76940_REG_SYS_CTRL1;
+    s_recovery.register_values[6] = BMS_AFE_STARTUP_SYS_CTRL1_REQUIRED;
     return true;
 }
 
@@ -345,6 +340,8 @@ void BMS_Recovery_Init(BQ76940_t *device,
 
 void BMS_Recovery_Service(uint32_t now_ms)
 {
+    BMS_BalanceSnapshot_t balance;
+    BMS_FetManagerSnapshot_t fet;
     BMS_ProtectXreadyState_t xready;
     BMS_ProtectXreadyClearAck_t ack;
     BMS_DataIdentity_t identity;
@@ -376,7 +373,18 @@ void BMS_Recovery_Service(uint32_t now_ms)
     switch (s_recovery.snapshot.phase)
     {
         case BMS_RECOVERY_PHASE_PRE_CLEAR_PREPARE:
-            BMS_Recovery_SetPhase(BMS_RECOVERY_PHASE_PRE_CLEAR_READY);
+            balance = BMS_Balance_GetSnapshot();
+            fet = BMS_FetManager_GetSnapshot();
+            if (balance.register_state_confirmed &&
+                balance.confirmed_all_off &&
+                (balance.confirmed_afe_generation ==
+                 s_recovery.snapshot.xready_generation) &&
+                fet.register_state_confirmed &&
+                !fet.observed.chg_on && !fet.observed.dsg_on &&
+                ((fet.observed_sys_ctrl2 & 0x40U) != 0U))
+            {
+                BMS_Recovery_SetPhase(BMS_RECOVERY_PHASE_PRE_CLEAR_READY);
+            }
             break;
         case BMS_RECOVERY_PHASE_PRE_CLEAR_READY:
             if (BMS_Protect_AuthorizeXreadyClear(

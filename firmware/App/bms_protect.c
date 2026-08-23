@@ -553,6 +553,7 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
 
     sample.raw = cc_raw;
     sample.tick = xTaskGetTickCount();
+    sample.xready_generation = s_xready_state.xready_generation;
 
     if (xCcSampleQueue == NULL)
     {

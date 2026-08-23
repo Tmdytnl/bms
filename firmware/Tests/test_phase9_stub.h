@@ -10,6 +10,7 @@
 
 void TestP9_StubReset(void);
 void TestP9_SetIdentity(uint32_t sequence, uint32_t afe_generation);
+void TestP9_SetMeasurement(const BMS_DataSnapshot_t *measurement);
 void TestP9_SetProtectSnapshot(
     const BMS_ProtectSafetySnapshot_t *snapshot);
 void TestP9_SetXready(uint32_t generation, bool active);

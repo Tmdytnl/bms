@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "bms_fet_manager.h"
+#include "bms_balance.h"
 #include "bms_health.h"
 #include "bms_hw_recovery.h"
 #include "bms_policy.h"
@@ -368,6 +369,10 @@ static uint32_t TestP9_Recovery(void)
     TestP9_SetXready(1UL, true);
     BMS_Recovery_Init(TestP9_GetDevice(), policy);
     BMS_Recovery_Service(0UL);
+    BMS_Balance_Init(TestP9_GetDevice(), policy, false);
+    BMS_Balance_RunOnce(50UL);
+    BMS_FetManager_Init(TestP9_GetDevice());
+    BMS_FetManager_Service();
     recovery = BMS_Recovery_GetSnapshot();
     TEST_CHECK_IN(failures, recovery.recovery_in_progress);
     TEST_CHECK_IN(failures, recovery.inhibit_chg_reasons != 0UL &&
@@ -396,6 +401,10 @@ static uint32_t TestP9_Recovery(void)
     TestP9_SetXready(1UL, true);
     BMS_Recovery_Init(TestP9_GetDevice(), policy);
     BMS_Recovery_Service(0UL);
+    BMS_Balance_Init(TestP9_GetDevice(), policy, false);
+    BMS_Balance_RunOnce(50UL);
+    BMS_FetManager_Init(TestP9_GetDevice());
+    BMS_FetManager_Service();
     BMS_Recovery_Service(100UL);
     BMS_Recovery_Service(200UL);
     recovery = BMS_Recovery_GetSnapshot();
@@ -417,6 +426,10 @@ static uint32_t TestP9_Recovery(void)
     TestP9_SetXready(1UL, true);
     BMS_Recovery_Init(TestP9_GetDevice(), policy);
     BMS_Recovery_Service(0UL);
+    BMS_Balance_Init(TestP9_GetDevice(), policy, false);
+    BMS_Balance_RunOnce(50UL);
+    BMS_FetManager_Init(TestP9_GetDevice());
+    BMS_FetManager_Service();
     BMS_Recovery_Service(100UL);
     BMS_Recovery_Service(200UL);
     recovery = BMS_Recovery_GetSnapshot();

@@ -231,6 +231,18 @@ bool BQ76940_Control_ComposeCellBal(
     uint8_t *bal2,
     uint8_t *bal3);
 
+/* Additive policy-aware composer used by the Phase 10 balance owner. The
+ * legacy one-cell API above remains frozen for lower-phase compatibility.
+ * This variant accepts up to max_parallel_cells logical cells and can reject
+ * adjacent logical cells before mapping them to the three AFE registers. */
+bool BQ76940_Control_ComposeCellBalPolicy(
+    uint16_t balance_bitmap,
+    uint8_t max_parallel_cells,
+    bool adjacent_cells_permitted,
+    uint8_t *bal1,
+    uint8_t *bal2,
+    uint8_t *bal3);
+
 /*
  * Decode the three CELLBAL register bytes back into a logical-cell
  * balance bitmap (inverse of ComposeCellBal). Illegal bits (CB9/CB14 or
