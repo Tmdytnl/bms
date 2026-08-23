@@ -245,3 +245,31 @@ policy exists.
 AFE delays remain in source-native seconds, milliseconds, or microseconds.
 Generated NTC/AFE C output is compared by semantic integer fields, ordering,
 and count, never raw struct bytes, padding, or endianness.
+
+## Simulation Development Process
+
+## D-035 Simulation baseline is an authorized development input
+
+`docs/hardware/BMS_V1_模拟硬件参数与产品策略基线.md` is the single
+SIM-HW-POLICY-V1 source for current learning-project simulation parameters.
+
+## D-036 Real-hardware unknowns do not block simulation development
+
+REAL_HW_TBD values remain future replacement/validation work. They do not
+block the explicitly authorized simulation software closed loop.
+
+## D-037 Hardware evidence remains separate
+
+Simulation, host-test, static-analysis, and target-build evidence are never
+hardware validation or production-certification evidence.
+
+## D-038 Separate real-hardware and simulation gates
+
+`firmware/Tests/verify_phase8.py` remains the real-hardware/evidence gate and
+must not be weakened to accept simulation inputs as approved hardware.
+Simulation implementation uses a separate Phase 9 simulation gate.
+
+## D-039 Policy replacement does not redesign frozen architecture
+
+SIM_POLICY_V1 values are centralized and may later be replaced by verified
+hardware/product values without changing frozen Phase 9 ownership contracts.

@@ -13,4 +13,7 @@ void BSP_I2C_SDA_DriveLow(void);
 void BSP_I2C_SDA_Release(void);
 bool BSP_I2C_SDA_Read(void);
 
+/* Emit one bounded PA8 low-to-high wake edge for the BQ/TS1 path. */
+bool BSP_AFE_WakePulse(void);
+
 #endif /* BSP_GPIO_H */

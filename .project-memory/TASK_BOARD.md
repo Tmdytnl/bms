@@ -2,7 +2,15 @@
 
 ## Active Task
 
-NONE
+### BMS-SIM-CLOSED-LOOP-M1
+
+Goal:
+Complete the BMS V1 simulation software closed loop from Phase 8 integration
+through Phase 9, then continue into SOC, balancing, CAN, safe Flash scope, and
+full simulator integration.
+
+Status:
+ACTIVE — IN PROGRESS
 
 ## Open Queue
 
@@ -12,7 +20,7 @@ Goal:
 Obtain approved immutable NTC production artifact.
 
 Status:
-BLOCKED ON USER/HARDWARE INPUT
+REAL-HARDWARE VALIDATION / REPLACEMENT TODO
 
 ### P8-BLOCKER-AFE
 
@@ -20,7 +28,7 @@ Goal:
 Obtain approved immutable AFE startup/protection policy artifact.
 
 Status:
-BLOCKED ON USER/HARDWARE INPUT
+REAL-HARDWARE VALIDATION / REPLACEMENT TODO
 
 ### P8-SAFETY-REVIEW
 
@@ -146,11 +154,8 @@ Result:
 
 ## Blocked Work
 
-Phase9 implementation
-
-Reason:
-Phase8 Hard Gate remains BLOCKED(2) under the current project process rule.
-The Phase9 architecture freeze (P9-ARCH-FREEZE-001) does not start implementation.
+Real-hardware Phase 8 qualification remains blocked on approved immutable NTC
+and AFE artifacts. This does not block the active simulation milestone.
 
 ## Completed Infrastructure
 

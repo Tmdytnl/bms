@@ -1,7 +1,9 @@
 #include "app_rtos.h"
+#include "bms_afe_startup.h"
 #include "bms_data.h"
 #include "bms_config.h"
 #include "bms_memory_map.h"
+#include "bms_policy.h"
 #include "bms_protect.h"
 #include "bms_sample.h"
 #include "bsp_clock.h"
@@ -15,6 +17,8 @@
 static SoftI2C_t s_afe_bus;
 static BQ76940_t s_afe_device;
 
+#define BMS_MAIN_AFE_STARTUP_LIMIT_MS            (5000UL)
+
 static void BMS_SafeIdle(void)
 {
     __disable_irq();
@@ -23,15 +27,68 @@ static void BMS_SafeIdle(void)
     }
 }
 
+static bool BMS_Main_AfeWake(void *context)
+{
+    (void)context;
+    return BSP_AFE_WakePulse();
+}
+
+static bool BMS_Main_RunAfeStartup(
+    BQ76940_t *device,
+    const BMS_Policy_t *policy,
+    BQ76940_Calibration_t *calibration)
+{
+    BMS_AfeStartup_t startup;
+    BMS_AfeStartupResult_t result;
+    uint32_t now_ms;
+
+    if ((device == NULL) || (policy == NULL) || (calibration == NULL) ||
+        !BMS_AfeStartup_Init(&startup,
+                             device,
+                             &policy->afe_startup,
+                             BMS_Main_AfeWake,
+                             NULL))
+    {
+        return false;
+    }
+
+    now_ms = 0UL;
+    while (now_ms < BMS_MAIN_AFE_STARTUP_LIMIT_MS)
+    {
+        result = BMS_AfeStartup_Step(&startup, now_ms);
+        if (result == BMS_AFE_STARTUP_RESULT_COMPLETE)
+        {
+            return BMS_AfeStartup_GetCalibration(&startup, calibration);
+        }
+        if (result == BMS_AFE_STARTUP_RESULT_FAILED)
+        {
+            return false;
+        }
+        if (!BSP_DelayUs(1000UL))
+        {
+            return false;
+        }
+        ++now_ms;
+    }
+    return false;
+}
+
 int main(void)
 {
     SoftI2C_LineOps_t line_ops;
     SoftI2C_Config_t i2c_config;
     SoftI2C_Status_t i2c_status;
+    const BMS_Policy_t *policy;
+    BQ76940_Calibration_t calibration;
 
     /* Reset_Handler has already called the CMSIS SystemInit function. */
     BMS_Data_Init();
     BMS_Sample_Init();
+    policy = BMS_Policy_Get();
+    if (!BMS_Policy_Validate(policy))
+    {
+        BMS_SafeIdle();
+    }
 
     /* A clock mismatch blocks all later hardware initialization. */
     if (BSP_Clock_Verify() != BSP_CLOCK_STATUS_OK)
@@ -68,23 +125,30 @@ int main(void)
     {
         BMS_SafeIdle();
     }
+    BMS_Protect_Init();
+    BMS_Protect_SetDevice(&s_afe_device);
     BMS_Sample_SetDevice(&s_afe_device);
+    if (!BMS_Sample_SetNtcTable(policy->ntc_points,
+                                policy->ntc_point_count) ||
+        !BMS_Main_RunAfeStartup(&s_afe_device,
+                                policy,
+                                &calibration) ||
+        !BMS_Sample_SetCalibration(&calibration))
+    {
+        BMS_SafeIdle();
+    }
 
     /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after
      * the FreeRTOS port has initialized its ISR-priority validation state.
      * NVIC PriorityGroup_4 is locked before scheduler/interrupt activation. */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
-    BMS_Protect_Init();
-    BMS_Protect_SetDevice(&s_afe_device);
     if (App_Rtos_CreateObjects() != pdTRUE)
     {
         BMS_SafeIdle();
     }
-    /* Phase 8 binds the SampleTask transport, but intentionally does not
-     * fabricate an AFE protection policy or NTC curve. Until the explicit
-     * AFE startup owner supplies a verified calibration, sampling remains
-     * fail-closed and publishes no valid frame. */
+    /* SIM_POLICY_V1 is an explicit learning/simulation input. Calibration
+     * still comes from this device instance; no fixed gain/offset is used. */
     if (App_Rtos_CreateTasks() != pdTRUE)
     {
         BMS_SafeIdle();

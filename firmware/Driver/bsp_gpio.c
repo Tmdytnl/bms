@@ -5,12 +5,14 @@
 
 #define BSP_I2C_SCL_PIN    GPIO_Pin_8
 #define BSP_I2C_SDA_PIN    GPIO_Pin_9
+#define BSP_AFE_WAKE_PIN   GPIO_Pin_8
 
 void BSP_GPIO_Init(void)
 {
     GPIO_InitTypeDef gpio;
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA |
+                           RCC_APB2Periph_GPIOB, ENABLE);
 
     /* Set ODR before enabling open drain so both buses begin released. */
     GPIO_SetBits(GPIOB, BSP_I2C_SCL_PIN | BSP_I2C_SDA_PIN);
@@ -18,6 +20,12 @@ void BSP_GPIO_Init(void)
     gpio.GPIO_Speed = GPIO_Speed_2MHz;
     gpio.GPIO_Mode = GPIO_Mode_Out_OD;
     GPIO_Init(GPIOB, &gpio);
+
+    GPIO_ResetBits(GPIOA, BSP_AFE_WAKE_PIN);
+    gpio.GPIO_Pin = BSP_AFE_WAKE_PIN;
+    gpio.GPIO_Speed = GPIO_Speed_2MHz;
+    gpio.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOA, &gpio);
 }
 
 void BSP_I2C_SCL_DriveLow(void)
@@ -48,4 +56,11 @@ void BSP_I2C_SDA_Release(void)
 bool BSP_I2C_SDA_Read(void)
 {
     return GPIO_ReadInputDataBit(GPIOB, BSP_I2C_SDA_PIN) == Bit_SET;
+}
+
+bool BSP_AFE_WakePulse(void)
+{
+    GPIO_ResetBits(GPIOA, BSP_AFE_WAKE_PIN);
+    GPIO_SetBits(GPIOA, BSP_AFE_WAKE_PIN);
+    return true;
 }

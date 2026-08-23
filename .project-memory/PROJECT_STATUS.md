@@ -14,8 +14,11 @@
 - Phase 8 software implementation: PASS
 - Phase 8 regression/build evidence: PASS
 - Phase 8 Hard Gate: BLOCKED (2)
+- Phase 8 simulation profile: SIM-HW-POLICY-V1 ACTIVE
+- Phase 8 simulation integration: IN PROGRESS
+- Phase 8 real-hardware qualification: DEFERRED / REAL_HW_TBD
 - Phase 9 Architecture Core v1: FROZEN
-- Phase 9 official implementation: NOT STARTED
+- Phase 9 simulation implementation: STARTED / IN PROGRESS
 - Hardware validation: DEFERRED / SEPARATE
 
 ## Active Development Branch
@@ -52,6 +55,11 @@ This does not lift the Hard Gate blockers.
 - BLOCKER-2: approved immutable AFE startup/protection policy artifact missing, including Rsense/current mapping and polarity, AFE HW OV/UV/OCD/SCD targets/delays, runtime calibration handoff policy, complete AFE startup policy, XREADY recovery policy, and FET enable/startup policy.
 
 No guessed parameters are recorded.
+
+These remain real-hardware qualification blockers. They do not block the
+explicit SIM-HW-POLICY-V1 learning/simulation development path authorized by
+BMS-SIM-CLOSED-LOOP-M1. `verify_phase8.py` remains the real-hardware/evidence
+gate; simulation development uses a separate Phase 9 gate.
 
 ## Phase 8 Blocker Intake Package
 
@@ -101,13 +109,11 @@ Note: the completion commit is task-closure evidence, not the dynamic repository
 
 ## Current Next Actions
 
-1. Obtain approved immutable NTC artifact (Blocker-1).
-2. Obtain approved immutable AFE startup/protection policy artifact (Blocker-2).
-3. Re-run future Phase8 gate only after approved artifacts exist.
-4. Perform later Codex Sol High Phase8 safety review as required by the project review flow.
-5. Resolve Phase9 OPEN product-policy items OP-01 … OP-10 via approved policy artifacts; do not guess values.
-6. Fill and independently approve the v2 Phase8 blocker artifacts; detached approval and preflight do not themselves pass the gate.
-7. Phase9 official implementation remains NOT STARTED until the Hard Gate/process rule permits it.
+1. Complete BMS-SIM-CLOSED-LOOP-M1 through the separate simulation gate.
+2. Keep SIM_POLICY_V1 values centralized and preserve frozen Phase 9 ownership.
+3. Obtain approved immutable NTC and AFE artifacts later for real-hardware qualification.
+4. Re-run the real-hardware Phase 8 gate only after approved artifacts exist.
+5. Perform physical-hardware validation separately after real hardware is available.
 
 ## Invariants
 
@@ -115,5 +121,6 @@ Note: the completion commit is task-closure evidence, not the dynamic repository
 - No guessed production calibration/protection parameters.
 - Simulator evidence is not hardware validation.
 - Hardware validation remains separate.
-- Phase9 official implementation is not started while Phase8 Hard Gate remains BLOCKED under current process rule; the Phase9 architecture freeze does not change this.
+- SIM_POLICY_V1 is a development input, not a production or hardware claim.
+- The Phase 8 real-hardware gate remains blocked while simulation implementation may proceed under the explicit learning-project process rule.
 - Firmware/test/verifier changes require an explicit task.
