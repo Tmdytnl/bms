@@ -36,7 +36,9 @@
 /* Task stack sizes in words (spec §11.4). */
 #define APP_RTOS_STACK_PROTECT                  (160)
 #define APP_RTOS_STACK_SAMPLE                   (192)
-#define APP_RTOS_STACK_STATE                    (128)
+/* ARMCC5 callgraph after Phase 9 integration: 1104-byte max depth. The
+ * 384-word allocation leaves Cortex-M3 context and runtime margin. */
+#define APP_RTOS_STACK_STATE                    (384)
 #define APP_RTOS_STACK_SOC                      (192)
 #define APP_RTOS_STACK_BALANCE                  (160)
 #define APP_RTOS_STACK_CAN_TX                   (160)
@@ -90,6 +92,10 @@ BaseType_t App_Rtos_CreateObjects(void);
  * (Created tasks are left running; callers check the return value.)
  */
 BaseType_t App_Rtos_CreateTasks(void);
+
+/* Bounded cross-task wakeups; neither helper performs I2C or FET writes. */
+void App_Rtos_NotifyStateUrgent(void);
+void App_Rtos_RequestProtectService(void);
 
 /* Task entry points. Task_Protect is implemented in bms_protect.c and
  * Task_Sample in bms_sample.c; the later task bodies remain skeletons. */

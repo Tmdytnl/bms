@@ -2,10 +2,14 @@
 #include "bms_afe_startup.h"
 #include "bms_data.h"
 #include "bms_config.h"
+#include "bms_fet_manager.h"
+#include "bms_health.h"
 #include "bms_memory_map.h"
 #include "bms_policy.h"
 #include "bms_protect.h"
 #include "bms_sample.h"
+#include "bms_recovery.h"
+#include "bms_state.h"
 #include "bsp_clock.h"
 #include "bsp_gpio.h"
 #include "bsp_timer.h"
@@ -127,6 +131,7 @@ int main(void)
     }
     BMS_Protect_Init();
     BMS_Protect_SetDevice(&s_afe_device);
+    BMS_Protect_SetPolicy(policy);
     BMS_Sample_SetDevice(&s_afe_device);
     if (!BMS_Sample_SetNtcTable(policy->ntc_points,
                                 policy->ntc_point_count) ||
@@ -137,6 +142,10 @@ int main(void)
     {
         BMS_SafeIdle();
     }
+    BMS_Health_Init();
+    BMS_State_Init(policy, 0UL);
+    BMS_Recovery_Init(&s_afe_device, policy);
+    BMS_FetManager_Init(&s_afe_device);
 
     /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after

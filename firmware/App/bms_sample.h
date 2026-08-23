@@ -52,6 +52,14 @@ typedef struct
     uint32_t max_consecutive_failure_count;
 } BMS_SampleDiagnostics_t;
 
+typedef struct
+{
+    uint32_t xready_generation;
+    uint32_t recovery_revision;
+    bool post_clear_verified;
+    BQ76940_Calibration_t calibration;
+} BMS_SampleCalibrationEvidence_t;
+
 /* Startup initialization. It leaves the module fail-closed until a device
  * and a validated AFE calibration are supplied. A valid calibration is bound
  * to the current inactive XREADY generation and must be rebound after every
@@ -68,10 +76,18 @@ void BMS_Sample_Init(void);
  * SetNtcTable(NULL, 0) deliberately clears the temperature curve. An
  * invalid nonempty table is rejected transactionally. No curve is embedded
  * in production code because the board NTC curve is not yet validated.
- * SetCalibration rejects and clears its binding while XREADY is active. */
+ * SetCalibration rejects and clears its binding while XREADY is active, and
+ * is permanently denied after runtime XREADY invalidation. From that point
+ * only SetRecoveryCalibration can install provenance-bound calibration. */
 void BMS_Sample_SetDevice(BQ76940_t *device);
 bool BMS_Sample_SetCalibration(
     const BQ76940_Calibration_t *calibration);
+bool BMS_Sample_SetRecoveryCalibration(
+    const BMS_SampleCalibrationEvidence_t *evidence,
+    uint32_t current_recovery_revision,
+    bool handoff_permitted);
+void BMS_Sample_InvalidateCalibrationForXready(
+    uint32_t xready_generation);
 bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
                              uint16_t point_count);
 

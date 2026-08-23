@@ -400,6 +400,31 @@
               <FilePath>..\..\Config\bms_policy.c</FilePath>
             </File>
             <File>
+              <FileName>bms_state.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_state.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_hw_recovery.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_hw_recovery.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_recovery.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_recovery.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_fet_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_fet_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>bms_health.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_health.c</FilePath>
+            </File>
+            <File>
               <FileName>bms_ntc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\App\bms_ntc.c</FilePath>
@@ -458,6 +483,11 @@
               <FileName>bsp_exti.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Driver\bsp_exti.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_iwdg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bsp_iwdg.c</FilePath>
             </File>
           </Files>
         </Group>

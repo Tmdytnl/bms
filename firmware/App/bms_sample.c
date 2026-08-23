@@ -5,6 +5,7 @@
 #include "app_rtos.h"
 #include "bms_config.h"
 #include "bms_data.h"
+#include "bms_health.h"
 #include "bms_protect.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
@@ -22,6 +23,9 @@ static BQ76940_t *s_device;
 static BQ76940_Calibration_t s_calibration;
 static uint32_t s_calibration_xready_generation;
 static bool s_calibration_generation_bound;
+static uint32_t s_calibration_recovery_revision;
+static bool s_calibration_post_clear_verified;
+static bool s_recovery_provenance_required;
 static const BMS_NtcPoint_t *s_ntc_points;
 static uint16_t s_ntc_point_count;
 static BMS_SampleDiagnostics_t s_diagnostics;
@@ -241,6 +245,7 @@ static void BMS_Sample_InitFrame(BMS_MeasurementFrame_t *frame,
     uint32_t index;
 
     frame->timestamp_ms = now_ms;
+    frame->afe_generation = 0UL;
     for (index = 0UL; index < (uint32_t)BMS_CELL_COUNT; ++index)
     {
         frame->cell_voltage_mv[index] = (BMS_CellVoltageMv_t)0U;
@@ -314,6 +319,9 @@ void BMS_Sample_Init(void)
     s_calibration.valid = false;
     s_calibration_xready_generation = 0UL;
     s_calibration_generation_bound = false;
+    s_calibration_recovery_revision = 0UL;
+    s_calibration_post_clear_verified = false;
+    s_recovery_provenance_required = false;
     s_ntc_points = NULL;
     s_ntc_point_count = 0U;
 
@@ -368,6 +376,8 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
     s_calibration.valid = false;
     s_calibration_xready_generation = 0UL;
     s_calibration_generation_bound = false;
+    s_calibration_recovery_revision = 0UL;
+    s_calibration_post_clear_verified = false;
     /* Treat any mailbox value that predates the device binding as consumed.
      * A later sequence/generation can still satisfy the first new-device
      * core frame, while an unconsumed old-device sample cannot cross over. */
@@ -399,7 +409,8 @@ bool BMS_Sample_SetCalibration(
     bool xready_available;
     bool resume_scheduler;
 
-    valid = BMS_Sample_CalibrationIsValid(calibration);
+    valid = BMS_Sample_CalibrationIsValid(calibration) &&
+        !s_recovery_provenance_required;
     resume_scheduler = BMS_Sample_BeginConfigUpdate();
     xready_available = false;
     if (valid)
@@ -415,6 +426,8 @@ bool BMS_Sample_SetCalibration(
         s_calibration_xready_generation =
             xready_state.xready_generation;
         s_calibration_generation_bound = true;
+        s_calibration_recovery_revision = 0UL;
+        s_calibration_post_clear_verified = false;
     }
     else
     {
@@ -423,6 +436,8 @@ bool BMS_Sample_SetCalibration(
         s_calibration.valid = false;
         s_calibration_xready_generation = 0UL;
         s_calibration_generation_bound = false;
+        s_calibration_recovery_revision = 0UL;
+        s_calibration_post_clear_verified = false;
         valid = false;
     }
     s_configuration_revision =
@@ -430,6 +445,80 @@ bool BMS_Sample_SetCalibration(
             s_configuration_revision);
     BMS_Sample_EndConfigUpdate(resume_scheduler);
     return valid;
+}
+
+bool BMS_Sample_SetRecoveryCalibration(
+    const BMS_SampleCalibrationEvidence_t *evidence,
+    uint32_t current_recovery_revision,
+    bool handoff_permitted)
+{
+    BMS_ProtectXreadyState_t xready_state;
+    bool valid;
+    bool resume_scheduler;
+
+    valid = (evidence != NULL) && handoff_permitted &&
+        evidence->post_clear_verified &&
+        (evidence->recovery_revision == current_recovery_revision) &&
+        BMS_Sample_CalibrationIsValid(
+            evidence == NULL ? NULL : &evidence->calibration);
+    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    if (valid)
+    {
+        valid = BMS_Protect_GetXreadyState(&xready_state) &&
+            !xready_state.active &&
+            (xready_state.xready_generation ==
+             evidence->xready_generation);
+    }
+    if (valid)
+    {
+        s_calibration = evidence->calibration;
+        s_calibration_xready_generation = evidence->xready_generation;
+        s_calibration_generation_bound = true;
+        s_calibration_recovery_revision = evidence->recovery_revision;
+        s_calibration_post_clear_verified = true;
+    }
+    else
+    {
+        s_calibration.gain_uv_per_lsb = 0U;
+        s_calibration.offset_mv = 0;
+        s_calibration.valid = false;
+        s_calibration_xready_generation = 0UL;
+        s_calibration_generation_bound = false;
+        s_calibration_recovery_revision = 0UL;
+        s_calibration_post_clear_verified = false;
+    }
+    s_configuration_revision =
+        BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(s_configuration_revision);
+    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    return valid;
+}
+
+void BMS_Sample_InvalidateCalibrationForXready(
+    uint32_t xready_generation)
+{
+    bool resume_scheduler;
+
+    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    /* This latch is deliberately never cleared by the legacy calibration
+     * setter. Once runtime XREADY has been observed, only a generation- and
+     * recovery-revision-bound coordinator handoff may restore sampling. */
+    s_recovery_provenance_required = true;
+    if (!s_calibration_generation_bound ||
+        (s_calibration_xready_generation != xready_generation) ||
+        s_calibration.valid)
+    {
+        s_calibration.gain_uv_per_lsb = 0U;
+        s_calibration.offset_mv = 0;
+        s_calibration.valid = false;
+        s_calibration_xready_generation = xready_generation;
+        s_calibration_generation_bound = false;
+        s_calibration_recovery_revision = 0UL;
+        s_calibration_post_clear_verified = false;
+        s_current_epoch_invalidation_pending = true;
+        s_configuration_revision =
+            BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(s_configuration_revision);
+    }
+    BMS_Sample_EndConfigUpdate(resume_scheduler);
 }
 
 bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
@@ -499,6 +588,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     BQ76940_Status_t status;
     uint32_t cell_index;
     uint32_t calibration_xready_generation;
+    uint32_t calibration_recovery_revision;
     uint32_t configuration_revision;
     uint16_t cell_mask;
     BMS_PackVoltageMv_t pack_min_mv;
@@ -511,6 +601,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     bool ntc_curve_unavailable;
     bool temperature_unavailable;
     bool calibration_generation_bound;
+    bool calibration_post_clear_verified;
     bool xready_available;
     bool xready_guard_current;
     bool configuration_current;
@@ -529,6 +620,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         s_calibration_xready_generation;
     calibration_generation_bound =
         s_calibration_generation_bound;
+    calibration_recovery_revision =
+        s_calibration_recovery_revision;
+    calibration_post_clear_verified =
+        s_calibration_post_clear_verified;
     ntc_points = s_ntc_points;
     ntc_point_count = s_ntc_point_count;
     current_epoch_invalidation_pending =
@@ -558,6 +653,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     }
     xready_guard_current = xready_available &&
         calibration_generation_bound &&
+        (((calibration_recovery_revision == 0UL) &&
+          !calibration_post_clear_verified) ||
+         ((calibration_recovery_revision != 0UL) &&
+          calibration_post_clear_verified)) &&
         BMS_Protect_XreadyBindingIsCurrent(
             &xready_state, calibration_xready_generation);
     if (!xready_guard_current)
@@ -568,6 +667,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                                  false, true, false);
         return false;
     }
+    frame.afe_generation = calibration_xready_generation;
     if (xI2CMutex == NULL)
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_CELL,
@@ -755,6 +855,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         (s_calibration.gain_uv_per_lsb ==
          calibration.gain_uv_per_lsb) &&
         (s_calibration.offset_mv == calibration.offset_mv) &&
+        (s_calibration_recovery_revision ==
+         calibration_recovery_revision) &&
+        (s_calibration_post_clear_verified ==
+         calibration_post_clear_verified) &&
         BMS_Protect_XreadyBindingIsCurrent(
             &xready_state, calibration_xready_generation);
     configuration_current =
@@ -840,6 +944,8 @@ void Task_Sample(void *argument)
     {
         vTaskDelayUntil(&last_wake, period);
         (void)BMS_Sample_RunOnce(
-            (BMS_TimestampMs_t)xTaskGetTickCount());
+            (BMS_TimestampMs_t)(xTaskGetTickCount() *
+                                portTICK_PERIOD_MS));
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_SAMPLE);
     }
 }

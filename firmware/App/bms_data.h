@@ -34,7 +34,7 @@ typedef struct
  * In-memory shared snapshot model only. It is not a CAN or Flash record and
  * must never be serialized by copying its raw C representation.
  */
-typedef struct
+struct BMS_DataSnapshot
 {
     BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT];
     /* Safety decisions use the cell sum; BAT is a diagnostic cross-check. */
@@ -61,7 +61,8 @@ typedef struct
 
     BMS_TimestampMs_t snapshot_timestamp_ms;
     uint32_t sample_sequence;
-} BMS_DataSnapshot_t;
+    uint32_t afe_generation;
+};
 
 /*
  * Bounded-stack projection for consumers that only decide freshness. All
@@ -75,7 +76,14 @@ typedef struct
     BMS_MeasurementMetadata_t current_metadata;
     BMS_MeasurementMetadata_t temperature_metadata;
     uint32_t sample_sequence;
+    uint32_t afe_generation;
 } BMS_DataFreshnessSnapshot_t;
+
+typedef struct
+{
+    uint32_t sample_sequence;
+    uint32_t afe_generation;
+} BMS_DataIdentity_t;
 
 /*
  * One fully staged SampleTask publication. The 13-cell/BQ-pack core is
@@ -89,6 +97,7 @@ typedef struct
 typedef struct
 {
     BMS_TimestampMs_t timestamp_ms;
+    uint32_t afe_generation;
     BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT];
     uint16_t cell_valid_bitmap;
     uint16_t cell_in_range_bitmap;
@@ -122,7 +131,7 @@ typedef struct
     (BMS_CURRENT_FRESH_LIMIT_MS)
 #define BMS_DATA_TEMPERATURE_FRESH_MAX_MS        \
     (BMS_TEMPERATURE_FRESH_LIMIT_MS)
-#define BMS_DATA_FRESHNESS_SNAPSHOT_MAX_BYTES    (40U)
+#define BMS_DATA_FRESHNESS_SNAPSHOT_MAX_BYTES    (44U)
 
 BMS_BUILD_ASSERT(BMS_DATA_MODEL_VERSION == 1U,
                  data_model_version_is_one);
@@ -177,6 +186,17 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
 bool BMS_Data_GetFreshnessSnapshot(
     BMS_DataFreshnessSnapshot_t *snapshot,
     BMS_TimestampMs_t now_ms);
+
+/* Copy only the generation identity under xDataMutex. */
+bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity);
+
+/* Diagnostic projections only; neither API creates FET authority. */
+bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
+                                     const BMS_FaultSummary_t *faults);
+bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
+                                   BMS_SocPermille_t soc_permille,
+                                   BMS_TimestampMs_t now_ms,
+                                   bool valid);
 
 /* Valid and fresh are deliberately separate concepts. A stale latch can be
  * cleared only by publication of that measurement group. */

@@ -6,6 +6,8 @@
 
 #include "app_rtos.h"
 #include "bms_fault.h"
+#include "bms_policy.h"
+#include "bms_safety.h"
 #include "bq76940.h"
 #include "bq76940_control.h"
 
@@ -70,6 +72,7 @@
  * unavailable I2C mutex from turning the highest-priority task into a busy
  * loop while keeping retry independent of another EXTI edge. */
 #define BMS_PROTECT_RETRY_DELAY_MS      (10U)
+#define BMS_PROTECT_HEALTH_WAIT_MS       (100U)
 
 typedef enum
 {
@@ -140,6 +143,91 @@ typedef struct
     bool active;
 } BMS_ProtectXreadyState_t;
 
+typedef enum
+{
+    BMS_PROTECT_SOURCE_HW_OV = 0,
+    BMS_PROTECT_SOURCE_HW_UV,
+    BMS_PROTECT_SOURCE_HW_OCD,
+    BMS_PROTECT_SOURCE_HW_SCD,
+    BMS_PROTECT_SOURCE_COUNT
+} BMS_ProtectSourceId_t;
+
+typedef struct
+{
+    BMS_FaultSummary_t faults;
+    BMS_InhibitReasonBitmap_t inhibit_chg_reasons;
+    BMS_InhibitReasonBitmap_t inhibit_dsg_reasons;
+    uint32_t publication_revision;
+    uint32_t source_generation[BMS_PROTECT_SOURCE_COUNT];
+    uint32_t xready_generation;
+    bool xready_active;
+} BMS_ProtectSafetySnapshot_t;
+
+typedef struct
+{
+    uint32_t xready_generation;
+    uint32_t recovery_revision;
+    bool valid;
+} BMS_ProtectXreadyClearAuthorization_t;
+
+typedef struct
+{
+    uint32_t xready_generation;
+    uint32_t recovery_revision;
+    uint32_t protect_revision;
+    bool accepted;
+    bool finalization_ambiguous;
+} BMS_ProtectXreadyClearAck_t;
+
+typedef struct
+{
+    BMS_FaultId_t fault_id;
+    uint32_t request_id;
+    uint32_t expected_source_generation;
+    uint32_t evaluated_sample_sequence;
+    uint32_t evaluated_afe_generation;
+    uint32_t qualification_revision;
+    uint32_t expiry_ms;
+    bool valid;
+} BMS_ProtectHwRecoveryRequest_t;
+
+typedef struct
+{
+    BMS_FaultId_t fault_id;
+    uint32_t request_id;
+    uint32_t source_generation;
+    uint32_t qualification_revision;
+    uint32_t protect_revision;
+    bool accepted;
+} BMS_ProtectHwRecoveryAck_t;
+
+typedef enum
+{
+    BMS_SERVICE_RESET_HW_SCD = 0,
+    BMS_SERVICE_RESET_AFE_OVRD_ALERT,
+    BMS_SERVICE_RESET_AFE_COMM,
+    BMS_SERVICE_RESET_SOURCE_COUNT
+} BMS_ServiceResetSource_t;
+
+typedef struct
+{
+    BMS_ServiceResetSource_t source;
+    uint32_t request_id;
+    uint32_t evaluated_sample_sequence;
+    uint32_t evaluated_afe_generation;
+    uint32_t qualification_revision;
+    uint32_t expiry_ms;
+    bool valid;
+} BMS_ServiceResetRequest_t;
+
+typedef struct
+{
+    BMS_ServiceResetSource_t source;
+    uint32_t request_id;
+    uint32_t protect_revision;
+    bool accepted;
+} BMS_ServiceResetAck_t;
+
 /* Modular generation advance shared with the production-C wrap regression. */
 #define BMS_PROTECT_CC_SEQUENCE_NEXT(sequence_) \
     ((uint32_t)((uint32_t)(sequence_) + 1UL))
@@ -172,6 +260,7 @@ void BMS_Protect_Init(void);
  * inject the device for testing and early integration.
  */
 void BMS_Protect_SetDevice(BQ76940_t *device);
+void BMS_Protect_SetPolicy(const BMS_Policy_t *policy);
 
 void BMS_Protect_SetXreadyRecoveryHook(
     BMS_ProtectXreadyRecoveryHook_t recovery_hook);
@@ -194,6 +283,9 @@ void EXTI1_IRQHandler(void);
  * API. The returned value is read-only and SYS_STAT=0 must not be interpreted
  * as a recovery authorization. */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
+
+/* Authoritative Protect-owned action snapshot consumed directly by FET. */
+BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void);
 
 /* Latched, task-context H-02 diagnostics. The returned multi-field snapshot is
  * scheduler-protected; counters saturate at UINT32_MAX rather than wrapping. */
@@ -261,5 +353,28 @@ bool BMS_Protect_XreadyBindingIsCurrent(
  * bit low. The historical latch remains for the Phase 9 explicit-reset policy.
  */
 bool BMS_Protect_RecoverXready(BQ76940_t *device);
+
+/* Recovery Coordinator requests; Protect remains the sole runtime W1C owner. */
+bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
+                                     uint32_t recovery_revision);
+bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack);
+
+/* SIM_POLICY_V1 source-specific XREADY action-latch release. */
+bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
+                                         uint32_t recovery_revision);
+
+/* State qualification -> Protect fresh-status two-party recovery. */
+bool BMS_Protect_SubmitHwRecoveryRequest(
+    const BMS_ProtectHwRecoveryRequest_t *request);
+bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack);
+
+/* Source-specific service reset request; never a bitmap clear command. */
+bool BMS_Protect_SubmitServiceResetRequest(
+    const BMS_ServiceResetRequest_t *request);
+bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
+
+#if defined(TEST_PHASE7_IMAGE) || defined(TEST_PHASE9_IMAGE)
+void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms);
+#endif
 
 #endif /* BMS_PROTECT_H */

@@ -57,6 +57,7 @@ void BMS_Data_Init(void)
 
     g_bms_data.snapshot_timestamp_ms = (BMS_TimestampMs_t)0U;
     g_bms_data.sample_sequence = (uint32_t)0U;
+    g_bms_data.afe_generation = (uint32_t)0U;
 }
 
 static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
@@ -215,6 +216,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
     }
 
     g_bms_data.snapshot_timestamp_ms = frame->timestamp_ms;
+    g_bms_data.afe_generation = frame->afe_generation;
     ++g_bms_data.sample_sequence;
 
     (void)xSemaphoreGive(xDataMutex);
@@ -356,11 +358,62 @@ bool BMS_Data_GetFreshnessSnapshot(
     snapshot->current_metadata = g_bms_data.current_metadata;
     snapshot->temperature_metadata = g_bms_data.temperature_metadata;
     snapshot->sample_sequence = g_bms_data.sample_sequence;
+    snapshot->afe_generation = g_bms_data.afe_generation;
     (void)xSemaphoreGive(xDataMutex);
 
     BMS_Data_DeriveMetadataAge(&snapshot->pack_metadata, now_ms);
     BMS_Data_DeriveMetadataAge(&snapshot->current_metadata, now_ms);
     BMS_Data_DeriveMetadataAge(&snapshot->temperature_metadata, now_ms);
+    return true;
+}
+
+bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
+{
+    if ((identity == NULL) || (xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+    identity->sample_sequence = g_bms_data.sample_sequence;
+    identity->afe_generation = g_bms_data.afe_generation;
+    (void)xSemaphoreGive(xDataMutex);
+    return true;
+}
+
+bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
+                                     const BMS_FaultSummary_t *faults)
+{
+    if ((faults == NULL) || ((uint32_t)state >= (uint32_t)BMS_STATE_COUNT) ||
+        (xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+    g_bms_data.state = state;
+    g_bms_data.faults = *faults;
+    (void)xSemaphoreGive(xDataMutex);
+    return true;
+}
+
+bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
+                                   BMS_SocPermille_t soc_permille,
+                                   BMS_TimestampMs_t now_ms,
+                                   bool valid)
+{
+    if ((valid && (soc_permille > BMS_SOC_PERMILLE_MAX)) ||
+        (xDataMutex == NULL) ||
+        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    {
+        return false;
+    }
+    g_bms_data.remaining_capacity_mah = capacity_mah;
+    g_bms_data.soc_permille = valid ? soc_permille :
+        BMS_SOC_UNKNOWN_PERMILLE;
+    BMS_Data_PublishMetadata(&g_bms_data.soc_metadata,
+                             now_ms,
+                             valid,
+                             valid);
+    (void)xSemaphoreGive(xDataMutex);
     return true;
 }
 

@@ -2,7 +2,17 @@
 
 #include <stddef.h>
 
-#include "bms_protect.h"   /* Task_Protect entry (Phase 7 implementation) */
+#include "bms_protect.h"
+#if !defined(TEST_PHASE6_IMAGE)
+#include "bms_data.h"
+#include "bms_fet_manager.h"
+#include "bms_health.h"
+#include "bms_hw_recovery.h"
+#include "bms_policy.h"
+#include "bms_recovery.h"
+#include "bms_state.h"
+#include "bsp_iwdg.h"
+#endif
 
 /* ------------------------------------------------------------------ */
 /* IPC objects (spec §11.2).                                           */
@@ -14,6 +24,7 @@ QueueHandle_t xCanTxQueue;
 QueueHandle_t xCanRxQueue;
 QueueHandle_t xCcSampleQueue;
 EventGroupHandle_t xSysEvents;
+static TaskHandle_t s_state_task_handle;
 
 BaseType_t App_Rtos_CreateObjects(void)
 {
@@ -54,16 +65,83 @@ BaseType_t App_Rtos_CreateObjects(void)
 
 void Task_State(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(100U);
-    TickType_t last;
-
+#if defined(TEST_PHASE6_IMAGE)
     (void)argument;
-    last = xTaskGetTickCount();
     for (;;)
     {
-        vTaskDelayUntil(&last, period);
-        /* Phase 9: state machine / software protection / IWDG feed. */
     }
+#else
+    const BMS_Policy_t *policy;
+    BMS_HealthMonitor_t health_monitor;
+    BMS_HealthDecision_t health;
+    BMS_HwRecoveryEngine_t hw_recovery;
+    BMS_ProtectHwRecoveryRequest_t request;
+    BMS_ProtectSafetySnapshot_t protect;
+    BMS_RecoverySnapshot_t recovery;
+    BMS_StateSafetySnapshot_t state;
+    BMS_DataSnapshot_t measurement;
+    BMS_FaultSummary_t diagnostic_faults;
+    uint32_t now_ms;
+    bool iwdg_started;
+
+    (void)argument;
+    policy = BMS_Policy_Get();
+    now_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+    BMS_Health_MonitorInit(&health_monitor, now_ms);
+    BMS_HwRecovery_Init(&hw_recovery);
+    iwdg_started = false;
+    for (;;)
+    {
+        now_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_STATE);
+        health = BMS_Health_Evaluate(&health_monitor,
+                                     &policy->health, now_ms);
+
+        BMS_Recovery_Service(now_ms);
+        recovery = BMS_Recovery_GetSnapshot();
+        (void)BMS_State_RunOnce(now_ms,
+                                recovery.technical_ready,
+                                health.rtos_health_fault,
+                                &state);
+
+        protect = BMS_Protect_GetSafetySnapshot();
+        if (BMS_Data_GetSnapshot(&measurement, now_ms) &&
+            BMS_HwRecovery_Evaluate(&hw_recovery, policy,
+                                    &protect, &measurement,
+                                    now_ms, &request))
+        {
+            (void)BMS_Protect_SubmitHwRecoveryRequest(&request);
+        }
+
+        BMS_FetManager_Service();
+
+        state = BMS_State_GetSafetySnapshot();
+        protect = BMS_Protect_GetSafetySnapshot();
+        diagnostic_faults.active =
+            state.faults.active | protect.faults.active;
+        diagnostic_faults.latched =
+            state.faults.latched | protect.faults.latched;
+        (void)BMS_Data_PublishStateDiagnostic(state.state,
+                                               &diagnostic_faults);
+
+        if (health.feed_allowed)
+        {
+            if (!iwdg_started)
+            {
+                iwdg_started = BSP_IWDG_StartNominal(
+                    policy->health.iwdg_nominal_timeout_ms);
+            }
+            else
+            {
+                /* StateTask is the sole production feeder. */
+                BSP_IWDG_Feed();
+            }
+        }
+
+        (void)ulTaskNotifyTake(pdTRUE,
+            pdMS_TO_TICKS(policy->state.period_ms));
+    }
+#endif
 }
 
 void Task_SOC(void *argument)
@@ -76,6 +154,9 @@ void Task_SOC(void *argument)
     for (;;)
     {
         vTaskDelayUntil(&last, period);
+#if !defined(TEST_PHASE6_IMAGE)
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_SOC);
+#endif
         /* Phase 10: CC queue consumption + coulomb integration. */
     }
 }
@@ -90,6 +171,9 @@ void Task_Balance(void *argument)
     for (;;)
     {
         vTaskDelayUntil(&last, period);
+#if !defined(TEST_PHASE6_IMAGE)
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_BALANCE);
+#endif
         /* Phase 10: balancing policy + CELLBAL writes. */
     }
 }
@@ -104,6 +188,9 @@ void Task_CANTx(void *argument)
     for (;;)
     {
         vTaskDelayUntil(&last, period);
+#if !defined(TEST_PHASE6_IMAGE)
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_TX);
+#endif
         /* Phase 11: drain xCanTxQueue, transmit. */
     }
 }
@@ -118,6 +205,9 @@ void Task_CANRx(void *argument)
     for (;;)
     {
         vTaskDelayUntil(&last, period);
+#if !defined(TEST_PHASE6_IMAGE)
+        BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_RX);
+#endif
         /* Phase 11: drain xCanRxQueue, protocol decode. */
     }
 }
@@ -128,56 +218,80 @@ void Task_CANRx(void *argument)
 static BaseType_t App_Rtos_CreateOne(TaskFunction_t function,
                                      const char *name,
                                      uint16_t stack_words,
-                                     UBaseType_t priority)
+                                     UBaseType_t priority,
+                                     TaskHandle_t *created_handle)
 {
     TaskHandle_t handle;
+    BaseType_t result;
 
-    return xTaskCreate(function, name, stack_words, NULL, priority, &handle);
+    result = xTaskCreate(function, name, stack_words, NULL, priority, &handle);
+    if ((result == pdPASS) && (created_handle != NULL))
+    {
+        *created_handle = handle;
+    }
+    return result;
 }
 
 BaseType_t App_Rtos_CreateTasks(void)
 {
     if (App_Rtos_CreateOne(Task_Protect, "Protect",
                            APP_RTOS_STACK_PROTECT,
-                           APP_RTOS_PRIO_PROTECT) != pdPASS)
+                           APP_RTOS_PRIO_PROTECT, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_Sample, "Sample",
                            APP_RTOS_STACK_SAMPLE,
-                           APP_RTOS_PRIO_SAMPLE) != pdPASS)
+                           APP_RTOS_PRIO_SAMPLE, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_State, "State",
                            APP_RTOS_STACK_STATE,
-                           APP_RTOS_PRIO_STATE) != pdPASS)
+                           APP_RTOS_PRIO_STATE,
+                           &s_state_task_handle) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_SOC, "SOC",
                            APP_RTOS_STACK_SOC,
-                           APP_RTOS_PRIO_SOC) != pdPASS)
+                           APP_RTOS_PRIO_SOC, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_Balance, "Balance",
                            APP_RTOS_STACK_BALANCE,
-                           APP_RTOS_PRIO_BALANCE) != pdPASS)
+                           APP_RTOS_PRIO_BALANCE, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_CANTx, "CANTx",
                            APP_RTOS_STACK_CAN_TX,
-                           APP_RTOS_PRIO_CAN_TX) != pdPASS)
+                           APP_RTOS_PRIO_CAN_TX, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     if (App_Rtos_CreateOne(Task_CANRx, "CANRx",
                            APP_RTOS_STACK_CAN_RX,
-                           APP_RTOS_PRIO_CAN_RX) != pdPASS)
+                           APP_RTOS_PRIO_CAN_RX, NULL) != pdPASS)
     {
         return pdFALSE;
     }
     return pdTRUE;
+}
+
+void App_Rtos_NotifyStateUrgent(void)
+{
+    if (s_state_task_handle != NULL)
+    {
+        xTaskNotifyGive(s_state_task_handle);
+    }
+}
+
+void App_Rtos_RequestProtectService(void)
+{
+    if (xAfeAlertSem != NULL)
+    {
+        (void)xSemaphoreGive(xAfeAlertSem);
+    }
 }
