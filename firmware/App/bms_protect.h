@@ -48,8 +48,8 @@
  *
  * This module owns the ALERT ISR entry (EXTI1_IRQHandler) and the
  * ProtectTask body. It reuses the Phase 5 FET arbitration primitives and
- * the Phase 6 IPC objects; it does not implement state machine, SOC,
- * balancing or CAN (later phases).
+ * the shared IPC objects; State, SOC, balancing and CAN remain separate
+ * owner modules.
  */
 
 /* SYS_STAT bit masks (SLUSBK2I §8.3.1.3; Phase 3 regs.h has the address,

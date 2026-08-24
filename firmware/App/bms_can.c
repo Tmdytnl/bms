@@ -4,8 +4,21 @@
 #include <stddef.h>
 #include <string.h>
 
+#if !defined(TEST_PHASE9_IMAGE)
+#include "bsp_can.h"
+#endif
+
 static const BMS_Policy_t *s_policy;
 static BMS_CanDiagnostics_t s_diagnostics;
+#if !defined(TEST_PHASE9_IMAGE)
+static uint32_t s_target_last_init_attempt_ms;
+static bool s_target_init_attempted;
+static bool s_target_rx_enabled;
+#endif
+
+#if !defined(TEST_PHASE9_IMAGE)
+#define BMS_CAN_TARGET_RETRY_MS                  (1000UL)
+#endif
 
 static void BMS_Can_Increment(uint32_t *value)
 {
@@ -206,6 +219,120 @@ void BMS_Can_Init(const BMS_Policy_t *policy)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
     (void)memset(&s_diagnostics, 0, sizeof(s_diagnostics));
+#if !defined(TEST_PHASE9_IMAGE)
+    s_target_last_init_attempt_ms = 0UL;
+    s_target_init_attempted = false;
+    s_target_rx_enabled = false;
+#endif
+}
+
+bool BMS_Can_BindTarget(const BMS_Policy_t *policy)
+{
+#if defined(TEST_PHASE9_IMAGE)
+    (void)policy;
+    return false;
+#else
+    s_target_init_attempted = true;
+    s_target_last_init_attempt_ms = 0UL;
+    s_target_rx_enabled = false;
+    if ((policy == NULL) || !BMS_Policy_Validate(policy) ||
+        !policy->can.standard_11_bit_ids ||
+        !BSP_CAN_Init500K(policy->can.service_rx_id))
+    {
+        BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
+        return false;
+    }
+    return true;
+#endif
+}
+
+bool BMS_Can_EnableTargetRx(void)
+{
+#if defined(TEST_PHASE9_IMAGE)
+    return false;
+#else
+    if (!BSP_CAN_EnableRxInterrupt())
+    {
+        BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
+        return false;
+    }
+    s_target_rx_enabled = true;
+    return true;
+#endif
+}
+
+void BMS_Can_TxHardwareService(uint32_t now_ms)
+{
+#if defined(TEST_PHASE9_IMAGE)
+    (void)now_ms;
+#else
+    BMS_CanFrame_t queued;
+    BSP_CanFrame_t target;
+    BSP_CanTxResult_t result;
+
+    if (!BSP_CAN_IsInitialized())
+    {
+        if (s_target_init_attempted &&
+            ((uint32_t)(now_ms - s_target_last_init_attempt_ms) <
+             BMS_CAN_TARGET_RETRY_MS))
+        {
+            return;
+        }
+        s_target_init_attempted = true;
+        s_target_last_init_attempt_ms = now_ms;
+        s_target_rx_enabled = false;
+        if ((s_policy == NULL) ||
+            !BSP_CAN_Init500K(s_policy->can.service_rx_id))
+        {
+            BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
+            return;
+        }
+    }
+    if (!s_target_rx_enabled && !BMS_Can_EnableTargetRx())
+    {
+        return;
+    }
+
+    if (BSP_CAN_IsBusOff())
+    {
+        if (BSP_CAN_Recover())
+        {
+            BMS_Can_Increment(
+                &s_diagnostics.target_bus_off_recovery_count);
+        }
+        else
+        {
+            s_target_rx_enabled = false;
+            return;
+        }
+    }
+    while ((xCanTxQueue != NULL) &&
+           (xQueueReceive(xCanTxQueue, &queued, 0U) == pdPASS))
+    {
+        target.id = queued.ext_id;
+        target.extended = s_policy != NULL &&
+            !s_policy->can.standard_11_bit_ids;
+        target.dlc = queued.dlc;
+        (void)memcpy(target.data, queued.data, sizeof(target.data));
+        result = BSP_CAN_TryTransmit(&target);
+        if (result == BSP_CAN_TX_ACCEPTED)
+        {
+            BMS_Can_Increment(&s_diagnostics.target_tx_count);
+        }
+        else if (result == BSP_CAN_TX_NO_MAILBOX)
+        {
+            if (xQueueSendToFront(xCanTxQueue, &queued, 0U) != pdPASS)
+            {
+                BMS_Can_Increment(&s_diagnostics.target_tx_drop_count);
+            }
+            break;
+        }
+        else
+        {
+            BMS_Can_Increment(&s_diagnostics.target_tx_drop_count);
+        }
+    }
+#endif
 }
 
 void BMS_Can_TxRunOnce(uint32_t now_ms)
@@ -287,3 +414,42 @@ BMS_CanDiagnostics_t BMS_Can_GetDiagnostics(void)
     (void)xTaskResumeAll();
     return snapshot;
 }
+
+#if !defined(TEST_PHASE9_IMAGE)
+void USB_LP_CAN1_RX0_IRQHandler(void)
+{
+    BaseType_t higher_priority_task_woken;
+    BSP_CanFrame_t target;
+    BMS_CanFrame_t frame;
+
+    higher_priority_task_woken = pdFALSE;
+    if (BSP_CAN_IsRxFifoOverrun())
+    {
+        BSP_CAN_ClearRxFifoOverrun();
+        if (s_diagnostics.target_rx_fifo_overrun_count < UINT32_MAX)
+        {
+            ++s_diagnostics.target_rx_fifo_overrun_count;
+        }
+    }
+    while (BSP_CAN_ReceivePending())
+    {
+        if (BSP_CAN_Receive(&target))
+        {
+            frame.ext_id = target.id;
+            frame.dlc = target.dlc;
+            (void)memcpy(frame.data, target.data, sizeof(frame.data));
+            frame.received_tick = xTaskGetTickCountFromISR();
+            if ((xCanRxQueue == NULL) ||
+                (xQueueSendFromISR(xCanRxQueue, &frame,
+                                   &higher_priority_task_woken) != pdPASS))
+            {
+                if (s_diagnostics.target_rx_queue_drop_count < UINT32_MAX)
+                {
+                    ++s_diagnostics.target_rx_queue_drop_count;
+                }
+            }
+        }
+    }
+    portYIELD_FROM_ISR(higher_priority_task_woken);
+}
+#endif

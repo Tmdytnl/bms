@@ -38,7 +38,6 @@ TEST_SOURCES = (
     FW / "Tests" / "test_phase7_stub_i2c.c",
 )
 
-PHASE6_REPORT_HASH = "TODO"  # filled by the report author after commit
 PHASE6_UVPROJX_HASH = "089b41545ea6893f628873cc5c713223b4396a5d303306cc1820f196eee0457d"
 
 EXPECTED_APP_HASHES = {

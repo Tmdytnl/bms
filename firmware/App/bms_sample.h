@@ -106,8 +106,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms);
 /* Same-generation task-context snapshot; not callable from an ISR. */
 BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void);
 
-/* Production FreeRTOS entry. app_rtos.c's Phase 6 placeholder must be
- * removed when this module is added to the target. */
+/* Production FreeRTOS entry owned by the measurement module. */
 void Task_Sample(void *argument);
 
 #endif /* BMS_SAMPLE_H */

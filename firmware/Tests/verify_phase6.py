@@ -37,7 +37,6 @@ TEST_SOURCES = (
     FW / "Tests" / "test_phase6_tasks.c",
 )
 
-PHASE5_REPORT_HASH = "TODO"  # filled after report is committed; see below
 PHASE5_UVPROJX_HASH = "c13d76bb7c3c47f58e030fab199a18ecc2387d8849dac640df6c745a3173f174"
 
 EXPECTED_APP_HASHES = {

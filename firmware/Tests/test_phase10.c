@@ -331,6 +331,113 @@ static uint32_t TestContinuation_Can(void)
     return failures;
 }
 
+typedef struct
+{
+    uint8_t pages[2][1024];
+    uint32_t program_count;
+    uint32_t fail_program_ordinal;
+    bool fail_erase;
+} TestPersistenceFlash_t;
+
+/* The Keil simulator image has a deliberately small 1 KiB C stack. Keep the
+ * two emulated 1 KiB Flash pages in ZI rather than a test-function frame. */
+static TestPersistenceFlash_t s_test_persistence_flash;
+static BMS_PersistenceStore_t s_test_persistence_store;
+static BMS_PersistenceStore_t s_test_persistence_rebooted;
+
+static bool TestPersistence_Map(TestPersistenceFlash_t *flash,
+                                uint32_t address,
+                                uint16_t length,
+                                uint8_t **mapped)
+{
+    const BMS_FlashPolicy_t *policy;
+    uint32_t offset;
+    uint8_t page;
+
+    policy = &BMS_Policy_Get()->flash;
+    if ((address >= policy->slot_a_address) &&
+        (address < policy->slot_a_address + policy->page_size_bytes))
+    {
+        page = 0U;
+        offset = address - policy->slot_a_address;
+    }
+    else if ((address >= policy->slot_b_address) &&
+             (address < policy->slot_b_address + policy->page_size_bytes))
+    {
+        page = 1U;
+        offset = address - policy->slot_b_address;
+    }
+    else
+    {
+        return false;
+    }
+    if ((offset + length) > policy->page_size_bytes)
+    {
+        return false;
+    }
+    *mapped = &flash->pages[page][offset];
+    return true;
+}
+
+static bool TestPersistence_Read(void *context, uint32_t address,
+                                 uint8_t *destination, uint16_t length)
+{
+    TestPersistenceFlash_t *flash;
+    uint8_t *mapped;
+
+    flash = (TestPersistenceFlash_t *)context;
+    if ((destination == NULL) ||
+        !TestPersistence_Map(flash, address, length, &mapped))
+    {
+        return false;
+    }
+    (void)memcpy(destination, mapped, length);
+    return true;
+}
+
+static bool TestPersistence_Erase(void *context, uint32_t page_address)
+{
+    TestPersistenceFlash_t *flash;
+    uint8_t *mapped;
+    uint16_t page_size;
+
+    flash = (TestPersistenceFlash_t *)context;
+    page_size = BMS_Policy_Get()->flash.page_size_bytes;
+    if (flash->fail_erase ||
+        !TestPersistence_Map(flash, page_address, page_size, &mapped) ||
+        ((page_address != BMS_Policy_Get()->flash.slot_a_address) &&
+         (page_address != BMS_Policy_Get()->flash.slot_b_address)))
+    {
+        return false;
+    }
+    (void)memset(mapped, 0xFF, page_size);
+    return true;
+}
+
+static bool TestPersistence_Program(void *context, uint32_t address,
+                                   uint16_t value)
+{
+    TestPersistenceFlash_t *flash;
+    uint8_t *mapped;
+
+    flash = (TestPersistenceFlash_t *)context;
+    ++flash->program_count;
+    if ((flash->fail_program_ordinal != 0UL) &&
+        (flash->program_count == flash->fail_program_ordinal))
+    {
+        return false;
+    }
+    if (((address & 1UL) != 0UL) ||
+        !TestPersistence_Map(flash, address, 2U, &mapped) ||
+        (mapped[0] != 0xFFU) || (mapped[1] != 0xFFU))
+    {
+        return false;
+    }
+    mapped[0] = (uint8_t)value;
+    mapped[1] = (uint8_t)(value >> 8U);
+    return true;
+}
+
 static uint32_t TestContinuation_Persistence(void)
 {
     BMS_PersistencePayload_t payload_a;
@@ -338,6 +445,9 @@ static uint32_t TestContinuation_Persistence(void)
     BMS_PersistencePayload_t selected;
     uint8_t slot_a[BMS_PERSISTENCE_RECORD_BYTES];
     uint8_t slot_b[BMS_PERSISTENCE_RECORD_BYTES];
+    BMS_PersistenceStorageOps_t storage;
+    BMS_PersistenceDiagnostics_t persistence_diagnostics;
+    BMS_PersistenceStoreResult_t store_result;
     uint32_t failures;
 
     failures = 0UL;
@@ -367,6 +477,74 @@ static uint32_t TestContinuation_Persistence(void)
     TEST_CONT_CHECK(failures, BMS_Persistence_SelectNewest(
         slot_a, slot_b, &selected) == BMS_PERSISTENCE_SLOT_B);
     ++g_continuation_scenarios_completed; /* SIM-29 */
+
+    (void)memset(&s_test_persistence_flash, 0xFF,
+                 sizeof(s_test_persistence_flash));
+    s_test_persistence_flash.program_count = 0UL;
+    s_test_persistence_flash.fail_program_ordinal = 0UL;
+    s_test_persistence_flash.fail_erase = false;
+    storage.read = TestPersistence_Read;
+    storage.erase_page = TestPersistence_Erase;
+    storage.program_halfword = TestPersistence_Program;
+    storage.context = &s_test_persistence_flash;
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreInit(
+        &s_test_persistence_store, &BMS_Policy_Get()->flash, &storage));
+    persistence_diagnostics =
+        BMS_Persistence_StoreGetDiagnostics(&s_test_persistence_store);
+    TEST_CONT_CHECK(failures,
+        persistence_diagnostics.both_invalid_count == 1UL);
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreSocIfDue(
+        &s_test_persistence_store, 500U, 10000UL, 1UL, 2UL, true,
+        59999UL) ==
+            BMS_PERSISTENCE_STORE_NOT_DUE);
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreSocIfDue(
+        &s_test_persistence_store, 500U, 10000UL, 1UL, 2UL, true,
+        60000UL) ==
+            BMS_PERSISTENCE_STORE_SAVED);
+    TEST_CONT_CHECK(failures,
+        BMS_Persistence_StoreGetLatest(
+            &s_test_persistence_store, &selected) &&
+        selected.sequence == 1UL && selected.soc_permille == 500U);
+
+    /* Interrupt the next transaction at the commit-last halfword. A reboot
+     * must reject the incomplete new page and retain the previous bank. */
+    s_test_persistence_flash.fail_program_ordinal =
+        s_test_persistence_flash.program_count +
+        (BMS_PERSISTENCE_BODY_BYTES / 2U) + 1UL;
+    store_result = BMS_Persistence_StoreSocIfDue(
+        &s_test_persistence_store, 510U, 10200UL, 3UL, 4UL, true,
+        120000UL);
+    TEST_CONT_CHECK(failures,
+        store_result == BMS_PERSISTENCE_STORE_IO_ERROR);
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreInit(
+        &s_test_persistence_rebooted,
+        &BMS_Policy_Get()->flash, &storage));
+    TEST_CONT_CHECK(failures,
+        BMS_Persistence_StoreGetLatest(
+            &s_test_persistence_rebooted, &selected) &&
+        selected.sequence == 1UL && selected.soc_permille == 500U);
+    ++g_continuation_scenarios_completed; /* SIM-31 */
+
+    /* Retry to the inactive bank, then corrupt the newest body. CRC-based
+     * reboot selection must fall back to the still-valid older bank. */
+    s_test_persistence_flash.fail_program_ordinal = 0UL;
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreSocIfDue(
+        &s_test_persistence_rebooted, 510U, 10200UL, 3UL, 4UL, true,
+        180000UL) ==
+            BMS_PERSISTENCE_STORE_SAVED);
+    TEST_CONT_CHECK(failures,
+        BMS_Persistence_StoreGetLatest(
+            &s_test_persistence_rebooted, &selected) &&
+        selected.sequence == 2UL && selected.soc_permille == 510U);
+    s_test_persistence_flash.pages[1][20] ^= 0x01U;
+    TEST_CONT_CHECK(failures, BMS_Persistence_StoreInit(
+        &s_test_persistence_store,
+        &BMS_Policy_Get()->flash, &storage));
+    TEST_CONT_CHECK(failures,
+        BMS_Persistence_StoreGetLatest(
+            &s_test_persistence_store, &selected) &&
+        selected.sequence == 1UL && selected.soc_permille == 500U);
+    ++g_continuation_scenarios_completed; /* SIM-32 */
     return failures;
 }
 

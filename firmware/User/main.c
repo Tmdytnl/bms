@@ -8,6 +8,7 @@
 #include "bms_health.h"
 #include "bms_memory_map.h"
 #include "bms_policy.h"
+#include "bms_persistence.h"
 #include "bms_protect.h"
 #include "bms_sample.h"
 #include "bms_recovery.h"
@@ -16,6 +17,7 @@
 #include "bsp_clock.h"
 #include "bsp_gpio.h"
 #include "bsp_timer.h"
+#include "bsp_uart.h"
 #include "bq76940.h"
 #include "soft_i2c.h"
 
@@ -87,6 +89,7 @@ int main(void)
     SoftI2C_Status_t i2c_status;
     const BMS_Policy_t *policy;
     BQ76940_Calibration_t calibration;
+    BMS_PersistencePayload_t persisted;
 
     /* Reset_Handler has already called the CMSIS SystemInit function. */
     BMS_Data_Init();
@@ -105,6 +108,10 @@ int main(void)
 
     BSP_GPIO_Init();
     BSP_Timer_Init();
+    if (!BSP_UART1_Init115200())
+    {
+        BMS_SafeIdle();
+    }
 
     line_ops.scl_drive_low = BSP_I2C_SCL_DriveLow;
     line_ops.scl_release = BSP_I2C_SCL_Release;
@@ -150,11 +157,17 @@ int main(void)
     BMS_Recovery_Init(&s_afe_device, policy);
     BMS_FetManager_Init(&s_afe_device);
     BMS_Soc_Init(policy);
+    if (BMS_Persistence_TargetInit(&policy->flash) &&
+        BMS_Persistence_TargetGetLatest(&persisted))
+    {
+        (void)BMS_Soc_Restore(persisted.soc_permille,
+                              persisted.remaining_capacity_mah);
+    }
     /* Successful startup has already verified CELLBAL1..3 all zero. */
     BMS_Balance_Init(&s_afe_device, policy, true);
     BMS_Can_Init(policy);
 
-    /* Phase 6/7: create all objects/tasks before scheduler start. ALERT EXTI
+    /* Create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after
      * the FreeRTOS port has initialized its ISR-priority validation state.
      * NVIC PriorityGroup_4 is locked before scheduler/interrupt activation. */
@@ -163,6 +176,10 @@ int main(void)
     {
         BMS_SafeIdle();
     }
+    /* Target CAN is diagnostic-only in SIM_POLICY_V1. A missing transceiver
+     * or peripheral-init failure must not disable local protection. RX IRQ is
+     * enabled later from CANRxTask, after FreeRTOS ISR validation is live. */
+    (void)BMS_Can_BindTarget(policy);
     /* SIM_POLICY_V1 is an explicit learning/simulation input. Calibration
      * still comes from this device instance; no fixed gain/offset is used. */
     if (App_Rtos_CreateTasks() != pdTRUE)

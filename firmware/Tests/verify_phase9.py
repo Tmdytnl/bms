@@ -60,6 +60,12 @@ required_sources = {
     "..\\..\\App\\bms_can.c",
     "..\\..\\App\\bms_persistence.c",
     "..\\..\\Driver\\bsp_iwdg.c",
+    "..\\..\\Driver\\bsp_can.c",
+    "..\\..\\Driver\\bsp_flash.c",
+    "..\\..\\Driver\\bsp_uart.c",
+    "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_can.c",
+    "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_flash.c",
+    "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_usart.c",
 }
 project_path = ROOT / "firmware/Project/Keil/BMS_V1.uvprojx"
 project_sources: set[str] = set()
@@ -90,6 +96,9 @@ balance_c = read("firmware/App/bms_balance.c")
 soc_c = read("firmware/App/bms_soc.c")
 can_c = read("firmware/App/bms_can.c")
 persistence_c = read("firmware/App/bms_persistence.c")
+can_driver = read("firmware/Driver/bsp_can.c")
+flash_driver = read("firmware/Driver/bsp_flash.c")
+uart_driver = read("firmware/Driver/bsp_uart.c")
 
 check(contains_all(data_h, ("sample_sequence", "afe_generation",
                             "BMS_DataIdentity_t")) and
@@ -177,10 +186,30 @@ check("BMS_Protect_SubmitServiceResetRequest" in can_c and
       "BSP_IWDG_Feed" not in can_c and
       "fault_has_direct_fet_effect" not in can_c,
       "CAN commands route only through source-specific service requests")
+check(contains_all(can_driver, ("CAN_Prescaler = BSP_CAN_PRESCALER",
+                                "CAN_BS1_6tq", "CAN_BS2_1tq",
+                                "CAN_FilterMode_IdMask",
+                                "BSP_CAN_RX_LOGICAL_PRIORITY")) and
+      contains_all(can_c, ("USB_LP_CAN1_RX0_IRQHandler",
+                            "xQueueSendFromISR",
+                            "BMS_Can_TxHardwareService")),
+      "target bxCAN binding has locked timing, filter and ISR/task ownership")
 check(contains_all(persistence_c, ("BMS_Persistence_Crc32",
-                                   "BMS_Persistence_SelectNewest")) and
-      "FLASH->" not in persistence_c,
-      "Flash A/B codec exists without unproven physical write scheduling")
+                                   "BMS_Persistence_SelectNewest",
+                                   "BMS_PERSISTENCE_COMMIT_OFFSET",
+                                   "BMS_Persistence_StoreSocIfDue",
+                                   "BMS_Persistence_TargetServiceSoc")) and
+      contains_all(flash_driver, ("BMS_PARAM_A_ADDR",
+                                   "BMS_PARAM_B_ADDR",
+                                   "FLASH_ErasePage",
+                                   "FLASH_ProgramHalfWord")),
+      "Flash A/B physical persistence is commit-last and page-restricted")
+check(contains_all(uart_driver, ("GPIO_Pin_9", "GPIO_Pin_10",
+                                 "BSP_UART1_BAUDRATE",
+                                 "USART_WordLength_8b",
+                                 "USART_StopBits_1",
+                                 "USART_Parity_No")),
+      "required debug UART1 binding is PA9/PA10 at 115200 8N1")
 
 all_production = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
@@ -204,7 +233,10 @@ for marker in (
     "P9_RACES_COMPLETED=3", "CONTINUATION_TEST_COMPLETED=1",
     "CONTINUATION_TEST_FAILURES=0", "P10_SOC_FAILURES=0",
     "P10_BALANCE_FAILURES=0", "P11_CAN_FAILURES=0",
-    "STORAGE_CODEC_FAILURES=0", "CONTINUATION_SCENARIOS_COMPLETED=6",
+    "STORAGE_CODEC_FAILURES=0", "CONTINUATION_SCENARIOS_COMPLETED=8",
+    "STRESS_TEST_COMPLETED=1", "STRESS_TEST_FAILURES=0",
+    "STRESS_ITERATIONS=50000", "STRESS_SIMULATED_MS=600000000",
+    "STRESS_PERSISTENCE_TRANSACTIONS=512",
 ):
     check(marker in phase9_sim, f"simulator evidence contains {marker}")
 
@@ -227,7 +259,9 @@ check('0 Error(s), 0 Warning(s)' in production_log and
           "bms_state.c", "bms_recovery.c", "bms_fet_manager.c",
           "bms_health.c", "bms_hw_recovery.c", "bms_soc.c",
           "bms_balance.c", "bms_can.c", "bms_persistence.c",
-          "bsp_iwdg.c")),
+          "bsp_iwdg.c", "bsp_can.c", "bsp_flash.c", "bsp_uart.c",
+          "stm32f10x_can.c", "stm32f10x_flash.c",
+          "stm32f10x_usart.c")),
       "production ARMCC5 Clean/Rebuild is Phase 9-complete at 0/0")
 
 production_map = read(

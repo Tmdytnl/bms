@@ -109,12 +109,12 @@ PASS: ARMCC5 compile/link completed: phase6_regression_tests
 PASS: size report parses: phase6_regression_tests
 PASS: test image ROM fits 64 KiB scatter: phase6_regression_tests
 PASS: test image RAM fits 20 KiB scatter: phase6_regression_tests
-INFO: phase6_regression_tests sizes Code=8420 RO=268 RW=152 ZI=10112
+INFO: phase6_regression_tests sizes Code=8508 RO=268 RW=152 ZI=14208
 PASS: ARMCC5 compile/link completed: phase7_regression_tests
 PASS: size report parses: phase7_regression_tests
 PASS: test image ROM fits 64 KiB scatter: phase7_regression_tests
 PASS: test image RAM fits 20 KiB scatter: phase7_regression_tests
-INFO: phase7_regression_tests sizes Code=18908 RO=500 RW=208 ZI=2144
+INFO: phase7_regression_tests sizes Code=18944 RO=500 RW=208 ZI=2176
 PASS: ARMCC5 compile/link completed: phase8_data_tests
 PASS: size report parses: phase8_data_tests
 PASS: test image ROM fits 64 KiB scatter: phase8_data_tests
@@ -243,6 +243,9 @@ PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard 
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_bkp.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_bkp.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_bkp.h
+PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.c
+PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.c
+PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.c
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_can.h
@@ -267,6 +270,9 @@ PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard 
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_exti.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_exti.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_exti.h
+PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.c
+PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.c
+PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.c
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_flash.h
@@ -309,6 +315,9 @@ PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard 
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_tim.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_tim.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_tim.h
+PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.c
+PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.c
+PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.c
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/Libarary/stm32f10x_usart.h
@@ -339,21 +348,33 @@ PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard 
 PASS: manifest path is repository-relative: docs/reference/ST/STM32F10x Standard Peripheral Library/stm32f10x_it.h
 PASS: manifest input exists: docs/reference/ST/STM32F10x Standard Peripheral Library/stm32f10x_it.h
 PASS: manifest hash matches current input: docs/reference/ST/STM32F10x Standard Peripheral Library/stm32f10x_it.h
-PASS: manifest path is repository-relative: firmware/App/app_rtos_hooks.c
-PASS: manifest input exists: firmware/App/app_rtos_hooks.c
-PASS: manifest hash matches current input: firmware/App/app_rtos_hooks.c
 PASS: manifest path is repository-relative: firmware/App/app_rtos.c
 PASS: manifest input exists: firmware/App/app_rtos.c
 PASS: manifest hash matches current input: firmware/App/app_rtos.c
 PASS: manifest path is repository-relative: firmware/App/app_rtos.h
 PASS: manifest input exists: firmware/App/app_rtos.h
 PASS: manifest hash matches current input: firmware/App/app_rtos.h
+PASS: manifest path is repository-relative: firmware/App/app_rtos_hooks.c
+PASS: manifest input exists: firmware/App/app_rtos_hooks.c
+PASS: manifest hash matches current input: firmware/App/app_rtos_hooks.c
 PASS: manifest path is repository-relative: firmware/App/bms_afe_startup.c
 PASS: manifest input exists: firmware/App/bms_afe_startup.c
 PASS: manifest hash matches current input: firmware/App/bms_afe_startup.c
 PASS: manifest path is repository-relative: firmware/App/bms_afe_startup.h
 PASS: manifest input exists: firmware/App/bms_afe_startup.h
 PASS: manifest hash matches current input: firmware/App/bms_afe_startup.h
+PASS: manifest path is repository-relative: firmware/App/bms_balance.c
+PASS: manifest input exists: firmware/App/bms_balance.c
+PASS: manifest hash matches current input: firmware/App/bms_balance.c
+PASS: manifest path is repository-relative: firmware/App/bms_balance.h
+PASS: manifest input exists: firmware/App/bms_balance.h
+PASS: manifest hash matches current input: firmware/App/bms_balance.h
+PASS: manifest path is repository-relative: firmware/App/bms_can.c
+PASS: manifest input exists: firmware/App/bms_can.c
+PASS: manifest hash matches current input: firmware/App/bms_can.c
+PASS: manifest path is repository-relative: firmware/App/bms_can.h
+PASS: manifest input exists: firmware/App/bms_can.h
+PASS: manifest hash matches current input: firmware/App/bms_can.h
 PASS: manifest path is repository-relative: firmware/App/bms_data.c
 PASS: manifest input exists: firmware/App/bms_data.c
 PASS: manifest hash matches current input: firmware/App/bms_data.c
@@ -390,6 +411,12 @@ PASS: manifest hash matches current input: firmware/App/bms_ntc.c
 PASS: manifest path is repository-relative: firmware/App/bms_ntc.h
 PASS: manifest input exists: firmware/App/bms_ntc.h
 PASS: manifest hash matches current input: firmware/App/bms_ntc.h
+PASS: manifest path is repository-relative: firmware/App/bms_persistence.c
+PASS: manifest input exists: firmware/App/bms_persistence.c
+PASS: manifest hash matches current input: firmware/App/bms_persistence.c
+PASS: manifest path is repository-relative: firmware/App/bms_persistence.h
+PASS: manifest input exists: firmware/App/bms_persistence.h
+PASS: manifest hash matches current input: firmware/App/bms_persistence.h
 PASS: manifest path is repository-relative: firmware/App/bms_protect.c
 PASS: manifest input exists: firmware/App/bms_protect.c
 PASS: manifest hash matches current input: firmware/App/bms_protect.c
@@ -411,6 +438,12 @@ PASS: manifest hash matches current input: firmware/App/bms_sample.c
 PASS: manifest path is repository-relative: firmware/App/bms_sample.h
 PASS: manifest input exists: firmware/App/bms_sample.h
 PASS: manifest hash matches current input: firmware/App/bms_sample.h
+PASS: manifest path is repository-relative: firmware/App/bms_soc.c
+PASS: manifest input exists: firmware/App/bms_soc.c
+PASS: manifest hash matches current input: firmware/App/bms_soc.c
+PASS: manifest path is repository-relative: firmware/App/bms_soc.h
+PASS: manifest input exists: firmware/App/bms_soc.h
+PASS: manifest hash matches current input: firmware/App/bms_soc.h
 PASS: manifest path is repository-relative: firmware/App/bms_state.c
 PASS: manifest input exists: firmware/App/bms_state.c
 PASS: manifest hash matches current input: firmware/App/bms_state.c
@@ -438,6 +471,12 @@ PASS: manifest hash matches current input: firmware/Config/bms_policy.h
 PASS: manifest path is repository-relative: firmware/Config/FreeRTOSConfig.h
 PASS: manifest input exists: firmware/Config/FreeRTOSConfig.h
 PASS: manifest hash matches current input: firmware/Config/FreeRTOSConfig.h
+PASS: manifest path is repository-relative: firmware/Driver/bq76940.c
+PASS: manifest input exists: firmware/Driver/bq76940.c
+PASS: manifest hash matches current input: firmware/Driver/bq76940.c
+PASS: manifest path is repository-relative: firmware/Driver/bq76940.h
+PASS: manifest input exists: firmware/Driver/bq76940.h
+PASS: manifest hash matches current input: firmware/Driver/bq76940.h
 PASS: manifest path is repository-relative: firmware/Driver/bq76940_control.c
 PASS: manifest input exists: firmware/Driver/bq76940_control.c
 PASS: manifest hash matches current input: firmware/Driver/bq76940_control.c
@@ -453,12 +492,12 @@ PASS: manifest hash matches current input: firmware/Driver/bq76940_measurement.h
 PASS: manifest path is repository-relative: firmware/Driver/bq76940_regs.h
 PASS: manifest input exists: firmware/Driver/bq76940_regs.h
 PASS: manifest hash matches current input: firmware/Driver/bq76940_regs.h
-PASS: manifest path is repository-relative: firmware/Driver/bq76940.c
-PASS: manifest input exists: firmware/Driver/bq76940.c
-PASS: manifest hash matches current input: firmware/Driver/bq76940.c
-PASS: manifest path is repository-relative: firmware/Driver/bq76940.h
-PASS: manifest input exists: firmware/Driver/bq76940.h
-PASS: manifest hash matches current input: firmware/Driver/bq76940.h
+PASS: manifest path is repository-relative: firmware/Driver/bsp_can.c
+PASS: manifest input exists: firmware/Driver/bsp_can.c
+PASS: manifest hash matches current input: firmware/Driver/bsp_can.c
+PASS: manifest path is repository-relative: firmware/Driver/bsp_can.h
+PASS: manifest input exists: firmware/Driver/bsp_can.h
+PASS: manifest hash matches current input: firmware/Driver/bsp_can.h
 PASS: manifest path is repository-relative: firmware/Driver/bsp_clock.c
 PASS: manifest input exists: firmware/Driver/bsp_clock.c
 PASS: manifest hash matches current input: firmware/Driver/bsp_clock.c
@@ -471,6 +510,12 @@ PASS: manifest hash matches current input: firmware/Driver/bsp_exti.c
 PASS: manifest path is repository-relative: firmware/Driver/bsp_exti.h
 PASS: manifest input exists: firmware/Driver/bsp_exti.h
 PASS: manifest hash matches current input: firmware/Driver/bsp_exti.h
+PASS: manifest path is repository-relative: firmware/Driver/bsp_flash.c
+PASS: manifest input exists: firmware/Driver/bsp_flash.c
+PASS: manifest hash matches current input: firmware/Driver/bsp_flash.c
+PASS: manifest path is repository-relative: firmware/Driver/bsp_flash.h
+PASS: manifest input exists: firmware/Driver/bsp_flash.h
+PASS: manifest hash matches current input: firmware/Driver/bsp_flash.h
 PASS: manifest path is repository-relative: firmware/Driver/bsp_gpio.c
 PASS: manifest input exists: firmware/Driver/bsp_gpio.c
 PASS: manifest hash matches current input: firmware/Driver/bsp_gpio.c
@@ -489,6 +534,12 @@ PASS: manifest hash matches current input: firmware/Driver/bsp_timer.c
 PASS: manifest path is repository-relative: firmware/Driver/bsp_timer.h
 PASS: manifest input exists: firmware/Driver/bsp_timer.h
 PASS: manifest hash matches current input: firmware/Driver/bsp_timer.h
+PASS: manifest path is repository-relative: firmware/Driver/bsp_uart.c
+PASS: manifest input exists: firmware/Driver/bsp_uart.c
+PASS: manifest hash matches current input: firmware/Driver/bsp_uart.c
+PASS: manifest path is repository-relative: firmware/Driver/bsp_uart.h
+PASS: manifest input exists: firmware/Driver/bsp_uart.h
+PASS: manifest hash matches current input: firmware/Driver/bsp_uart.h
 PASS: manifest path is repository-relative: firmware/Driver/crc8_bq76940.c
 PASS: manifest input exists: firmware/Driver/crc8_bq76940.c
 PASS: manifest hash matches current input: firmware/Driver/crc8_bq76940.c
@@ -522,6 +573,9 @@ PASS: manifest hash matches current input: firmware/Tests/test_phase2.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase3.h
 PASS: manifest input exists: firmware/Tests/test_phase3.h
 PASS: manifest hash matches current input: firmware/Tests/test_phase3.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase4.h
+PASS: manifest input exists: firmware/Tests/test_phase4.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase4.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase4_main.c
 PASS: manifest input exists: firmware/Tests/test_phase4_main.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase4_main.c
@@ -531,9 +585,9 @@ PASS: manifest hash matches current input: firmware/Tests/test_phase4_mapping.c
 PASS: manifest path is repository-relative: firmware/Tests/test_phase4_measurement.c
 PASS: manifest input exists: firmware/Tests/test_phase4_measurement.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase4_measurement.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase4.h
-PASS: manifest input exists: firmware/Tests/test_phase4.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase4.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase5.h
+PASS: manifest input exists: firmware/Tests/test_phase5.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase5.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase5_cellbal.c
 PASS: manifest input exists: firmware/Tests/test_phase5_cellbal.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase5_cellbal.c
@@ -546,9 +600,9 @@ PASS: manifest hash matches current input: firmware/Tests/test_phase5_ocdscd.c
 PASS: manifest path is repository-relative: firmware/Tests/test_phase5_trip.c
 PASS: manifest input exists: firmware/Tests/test_phase5_trip.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase5_trip.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase5.h
-PASS: manifest input exists: firmware/Tests/test_phase5.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase5.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase6.h
+PASS: manifest input exists: firmware/Tests/test_phase6.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase6.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase6_main.c
 PASS: manifest input exists: firmware/Tests/test_phase6_main.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase6_main.c
@@ -561,9 +615,9 @@ PASS: manifest hash matches current input: firmware/Tests/test_phase6_task_stub.
 PASS: manifest path is repository-relative: firmware/Tests/test_phase6_tasks.c
 PASS: manifest input exists: firmware/Tests/test_phase6_tasks.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase6_tasks.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase6.h
-PASS: manifest input exists: firmware/Tests/test_phase6.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase6.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase7.h
+PASS: manifest input exists: firmware/Tests/test_phase7.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase7.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase7_logic.c
 PASS: manifest input exists: firmware/Tests/test_phase7_logic.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase7_logic.c
@@ -573,36 +627,33 @@ PASS: manifest hash matches current input: firmware/Tests/test_phase7_main.c
 PASS: manifest path is repository-relative: firmware/Tests/test_phase7_stub_i2c.c
 PASS: manifest input exists: firmware/Tests/test_phase7_stub_i2c.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase7_stub_i2c.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase7.h
-PASS: manifest input exists: firmware/Tests/test_phase7.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase7.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_afe_startup.c
 PASS: manifest input exists: firmware/Tests/test_phase8_afe_startup.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_afe_startup.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase8_data_host_shim.h
-PASS: manifest input exists: firmware/Tests/test_phase8_data_host_shim.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase8_data_host_shim.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_data.c
 PASS: manifest input exists: firmware/Tests/test_phase8_data.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_data.c
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_data.h
 PASS: manifest input exists: firmware/Tests/test_phase8_data.h
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_data.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase8_data_host_shim.h
+PASS: manifest input exists: firmware/Tests/test_phase8_data_host_shim.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase8_data_host_shim.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_main.c
 PASS: manifest input exists: firmware/Tests/test_phase8_main.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_main.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample_stub.c
-PASS: manifest input exists: firmware/Tests/test_phase8_sample_stub.c
-PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample_stub.c
-PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample_stub.h
-PASS: manifest input exists: firmware/Tests/test_phase8_sample_stub.h
-PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample_stub.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample.c
 PASS: manifest input exists: firmware/Tests/test_phase8_sample.c
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample.c
 PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample.h
 PASS: manifest input exists: firmware/Tests/test_phase8_sample.h
 PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample.h
+PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample_stub.c
+PASS: manifest input exists: firmware/Tests/test_phase8_sample_stub.c
+PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample_stub.c
+PASS: manifest path is repository-relative: firmware/Tests/test_phase8_sample_stub.h
+PASS: manifest input exists: firmware/Tests/test_phase8_sample_stub.h
+PASS: manifest hash matches current input: firmware/Tests/test_phase8_sample_stub.h
 PASS: manifest path is repository-relative: firmware/Tests/test_phase9_stub.h
 PASS: manifest input exists: firmware/Tests/test_phase9_stub.h
 PASS: manifest hash matches current input: firmware/Tests/test_phase9_stub.h
@@ -614,7 +665,7 @@ PASS: manifest input exists: firmware/User/main.c
 PASS: manifest hash matches current input: firmware/User/main.c
 PASS: source manifest covers all Phase 8 production/test/gate inputs
 PASS: source manifest covers every production Keil source
-INFO: Phase 8 source-manifest SHA256=731d94bc783115d3fe29e29dbd9e955ce1515479a319950400ccce61781187c5 entries=159
+INFO: Phase 8 source-manifest SHA256=7b208f36042f12f32b01ef060e187796f2ce9d583743aba1be2f4bc3e6dc51de entries=176
 PASS: build log records exactly one original uvoptx byte hash
 PASS: build log records exactly one effective uvoptx Simulator target
 PASS: build log records exactly one uvoptx patched-span count
@@ -770,7 +821,7 @@ PASS: production Clean/Rebuild completed with zero errors/warnings
 PASS: production build reports Code/RO/RW/ZI
 PASS: production ROM image fits configured 0xF400 IROM
 PASS: production static/link-time RAM fits 20 KiB SRAM
-INFO: production sizes Code=39512 RO=876 RW=324 ZI=11052
+INFO: production sizes Code=51236 RO=1056 RW=352 ZI=15408
 PASS: production map enforces the 0xF400 IROM limit
 PASS: production map enforces the 20 KiB IRAM limit
 PASS: production map links real Task_Sample
@@ -792,7 +843,7 @@ FAIL: Task_State remains a delay-only placeholder with no Phase 9 calls
 FAIL: Task_State performs no state/protection/FET/IWDG work
 FAIL: production Task_State stays within the placeholder code-size bound
 FAIL: production map binds Task_State only to tick/delay primitives
-FAIL: production map contains no new Phase 9 state/protection/FET-manager/IWDG symbols (unexpected: App_Rtos_NotifyStateUrgent, App_Rtos_RequestProtectService, BMS_AfeStartup_HasFetsOff, BMS_AfeStartup_StageProtectionRegisters, BMS_Data_PublishStateDiagnostic, BMS_FetManager_AttemptSafeOffLocked, BMS_FetManager_ComposeEffective, BMS_FetManager_Init, BMS_FetManager_Publish, BMS_FetManager_RequestHasEnable, BMS_FetManager_Service, BMS_FetManager_SnapshotsStillCurrent, BMS_Protect_AddBothInhibit, BMS_Protect_AdvanceRevision, BMS_Protect_AuthorizeXreadyClear, BMS_Protect_GetSafetySnapshot, BMS_Protect_GetXreadyClearAck, BMS_Protect_HwRequestIsCurrent, BMS_Protect_RecordNewSourceEvents, BMS_Protect_ReleaseXreadyActionLatch, BMS_Protect_ServiceHwRecovery, BMS_Protect_ServiceReset, BMS_Protect_ServiceResetMapping, BMS_Protect_SetPolicy, BMS_Protect_SourceOfFault, BMS_Protect_SubmitHwRecoveryRequest, BMS_Protect_TimeNotExpired, BMS_Protect_UpdateAfeCommPolicy, BMS_State_AllSafetyMeasurementsFresh, BMS_State_BuildSoftwareActions, BMS_State_CandidateQualifyMs, BMS_State_CellCoreIsFresh, BMS_State_CurrentCandidate, BMS_State_Evaluate, BMS_State_GetSafetySnapshot, BMS_State_Init, BMS_State_PublishIfCurrent, BMS_State_ResetTracking, BMS_State_RunOnce, BMS_State_SetFault, BMS_State_TimeElapsed, BMS_State_UpdateClassification, BMS_State_UpdateCondition, BMS_State_UpdateDataStale, BMS_State_UpdateSoftwareProtection, BQ76940_Control_ComposeProtect1, BQ76940_Control_ComposeProtect2, BQ76940_Control_ComposeProtect3, BQ76940_Control_ObserveFets, BQ76940_Control_SysCtrl2WithFets, BSP_IWDG_Feed, BSP_IWDG_StartNominal)
+FAIL: production map contains no new Phase 9 state/protection/FET-manager/IWDG symbols (unexpected: App_Rtos_NotifyStateUrgent, App_Rtos_RequestProtectService, BMS_AfeStartup_HasFetsOff, BMS_AfeStartup_StageProtectionRegisters, BMS_Data_PublishStateDiagnostic, BMS_FetManager_AttemptSafeOffLocked, BMS_FetManager_ComposeEffective, BMS_FetManager_GetSnapshot, BMS_FetManager_Init, BMS_FetManager_Publish, BMS_FetManager_RequestHasEnable, BMS_FetManager_Service, BMS_FetManager_SnapshotsStillCurrent, BMS_Protect_AddBothInhibit, BMS_Protect_AdvanceRevision, BMS_Protect_AuthorizeXreadyClear, BMS_Protect_GetSafetySnapshot, BMS_Protect_GetXreadyClearAck, BMS_Protect_HwRequestIsCurrent, BMS_Protect_RecordNewSourceEvents, BMS_Protect_ReleaseXreadyActionLatch, BMS_Protect_ServiceHwRecovery, BMS_Protect_ServiceReset, BMS_Protect_ServiceResetMapping, BMS_Protect_SetPolicy, BMS_Protect_SourceOfFault, BMS_Protect_SubmitHwRecoveryRequest, BMS_Protect_SubmitServiceResetRequest, BMS_Protect_TimeNotExpired, BMS_Protect_UpdateAfeCommPolicy, BMS_State_AllSafetyMeasurementsFresh, BMS_State_BuildSoftwareActions, BMS_State_CandidateQualifyMs, BMS_State_CellCoreIsFresh, BMS_State_CurrentCandidate, BMS_State_Evaluate, BMS_State_GetSafetySnapshot, BMS_State_Init, BMS_State_PublishIfCurrent, BMS_State_ResetTracking, BMS_State_RunOnce, BMS_State_SetFault, BMS_State_TimeElapsed, BMS_State_UpdateClassification, BMS_State_UpdateCondition, BMS_State_UpdateDataStale, BMS_State_UpdateSoftwareProtection, BQ76940_Control_ComposeProtect1, BQ76940_Control_ComposeProtect2, BQ76940_Control_ComposeProtect3, BQ76940_Control_ObserveFets, BQ76940_Control_SysCtrl2WithFets, BSP_IWDG_Feed, BSP_IWDG_StartNominal)
 PASS: production linker map reports grand totals
 PASS: production build-log sizes agree with linker map
 PASS: evidence belongs to this gate run: firmware\Tests\Build\Phase8\phase8_build.log

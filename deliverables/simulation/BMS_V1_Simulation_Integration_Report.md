@@ -1,5 +1,10 @@
 # BMS V1 Simulation Closed-Loop Integration Report
 
+> Historical milestone record. Superseded by
+> `BMS_V1_Simulation_RC_Report.md` for the current Simulation Release
+> Candidate; counts and deferred-binding statements below describe the
+> earlier `BMS-SIM-CLOSED-LOOP-M1` revision.
+
 Task: `BMS-SIM-CLOSED-LOOP-M1`
 
 Profile: `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`

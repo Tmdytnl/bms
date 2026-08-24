@@ -372,6 +372,33 @@ void BMS_Soc_Init(const BMS_Policy_t *policy)
     }
 }
 
+bool BMS_Soc_Restore(uint16_t soc_permille,
+                     uint32_t remaining_capacity_mah)
+{
+    uint32_t derived_permille;
+
+    if ((s_policy == NULL) || (soc_permille > 1000U) ||
+        (remaining_capacity_mah > s_policy->soc.capacity_mah))
+    {
+        return false;
+    }
+    derived_permille = s_policy->soc.capacity_mah == 0UL ? 0UL :
+        (remaining_capacity_mah * 1000UL) /
+        s_policy->soc.capacity_mah;
+    if ((derived_permille > (uint32_t)soc_permille + 1UL) ||
+        ((uint32_t)soc_permille > derived_permille + 1UL))
+    {
+        return false;
+    }
+    (void)memset(&s_engine, 0, sizeof(s_engine));
+    s_engine.remaining_mams =
+        (int64_t)remaining_capacity_mah * BMS_SOC_MAMS_PER_MAH;
+    s_engine.initialized = true;
+    s_engine.valid = true;
+    s_snapshot = BMS_Soc_GetEngineSnapshot(&s_engine, &s_policy->soc);
+    return true;
+}
+
 void BMS_Soc_RunOnce(uint32_t now_ms)
 {
     BMS_DataSnapshot_t measurement;

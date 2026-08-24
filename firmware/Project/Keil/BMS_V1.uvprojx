@@ -509,6 +509,21 @@
               <FileType>1</FileType>
               <FilePath>..\..\Driver\bsp_iwdg.c</FilePath>
             </File>
+            <File>
+              <FileName>bsp_can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bsp_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bsp_flash.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Driver\bsp_uart.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -553,6 +568,21 @@
               <FileName>stm32f10x_exti.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_exti.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_flash.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_usart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary\stm32f10x_usart.c</FilePath>
             </File>
             <File>
               <FileName>misc.c</FileName>

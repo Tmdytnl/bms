@@ -2,6 +2,7 @@
 
 uint32_t Test_Phase9(void);
 uint32_t Test_Continuation(void);
+uint32_t Test_Stress(void);
 
 volatile uint32_t g_phase9_test_failures;
 volatile uint32_t g_phase9_test_completed;
@@ -14,7 +15,8 @@ void SystemInit(void)
 int main(void)
 {
     g_phase9_test_probe = 1UL;
-    g_phase9_test_failures = Test_Phase9() + Test_Continuation();
+    g_phase9_test_failures = Test_Phase9() + Test_Continuation() +
+        Test_Stress();
     g_phase9_test_probe = 2UL;
     g_phase9_test_completed = 1UL;
     g_phase9_test_probe = 3UL;

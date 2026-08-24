@@ -60,6 +60,8 @@ BMS_SocSnapshot_t BMS_Soc_GetEngineSnapshot(
     const BMS_SocPolicy_t *policy);
 
 void BMS_Soc_Init(const BMS_Policy_t *policy);
+bool BMS_Soc_Restore(uint16_t soc_permille,
+                     uint32_t remaining_capacity_mah);
 void BMS_Soc_RunOnce(uint32_t now_ms);
 BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void);
 

@@ -71,6 +71,10 @@
 #define BMS_CAN_RX_PIN                           (11U)  /* PA11 */
 #define BMS_CAN_TX_PORT_ID                        BMS_GPIO_PORT_A_ID
 #define BMS_CAN_TX_PIN                           (12U)  /* PA12 */
+#define BMS_UART_TX_PORT_ID                       BMS_GPIO_PORT_A_ID
+#define BMS_UART_TX_PIN                           (9U)   /* PA9 */
+#define BMS_UART_RX_PORT_ID                       BMS_GPIO_PORT_A_ID
+#define BMS_UART_RX_PIN                           (10U)  /* PA10 */
 
 BMS_BUILD_ASSERT(BMS_CONFIG_MODEL_VERSION == 1U,
                  config_model_version_is_one);

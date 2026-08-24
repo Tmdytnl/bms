@@ -3,13 +3,10 @@
 #include <stddef.h>
 
 /*
- * FreeRTOS application hooks (Phase 6).
- *
  * H-09 baseline: configASSERT + configCHECK_FOR_STACK_OVERFLOW=2 with
  * implemented hooks. Assert/overflow/malloc-failure are fatal diagnostics:
- * disable interrupts and stop. The full health/supervision reporting path
- * (IWDG, CAN diagnostic) lands in Phase 9/11; these stubs keep the system
- * from continuing in an undefined state.
+ * disable interrupts and stop so execution cannot continue in an undefined
+ * state. Runtime task health and IWDG supervision remain in StateTask.
  */
 
 static void App_Rtos_FatalStop(void)
@@ -39,5 +36,5 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 
 void vApplicationIdleHook(void)
 {
-    /* Idle hook enabled (configUSE_IDLE_HOOK=1); no work in Phase 6. */
+    /* Idle hook enabled (configUSE_IDLE_HOOK=1); intentionally no work. */
 }

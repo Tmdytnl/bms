@@ -10,18 +10,12 @@
 #include "task.h"
 
 /*
- * BMS V1 RTOS foundation (Phase 6).
+ * BMS V1 RTOS integration.
  *
- * Owns the seven application tasks and the IPC objects (spec §11.1/§11.2,
- * Software Gate §3.2). Phase 6 provides the task skeletons and object
- * creation; task bodies are filled in by later phases:
- *   - ProtectTask  : Phase 7 (ALERT/SYS_STAT/CC_READY)
- *   - SampleTask   : Phase 8 (measurement publication)
- *   - StateTask    : Phase 9 (state machine / software protection / IWDG)
- *   - SOCTask      : Phase 10 (SOC integration)
- *   - BalanceTask  : Phase 10 (balancing)
- *   - CANTxTask    : Phase 11
- *   - CANRxTask    : Phase 11
+ * Owns the seven completed application task contexts and IPC objects
+ * (spec §11.1/§11.2, Software Gate §3.2). Protect and Sample delegate to
+ * their owner modules; State, SOC, Balance, CAN Tx and CAN Rx are integrated
+ * in app_rtos.c.
  */
 
 /* Fixed seven-task priorities (errata C-01): 5/4/3/3/2/2/2. */
@@ -92,7 +86,7 @@ extern EventGroupHandle_t xSysEvents;
 BaseType_t App_Rtos_CreateObjects(void);
 
 /*
- * Create all seven task skeletons. Returns pdTRUE only if every task
+ * Create all seven application tasks. Returns pdTRUE only if every task
  * was created; on any failure the function stops creating further tasks.
  * (Created tasks are left running; callers check the return value.)
  */

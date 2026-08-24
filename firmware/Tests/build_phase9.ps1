@@ -80,6 +80,7 @@ $sources = [ordered]@{
     test_stub = 'firmware\Tests\test_phase9_stub.c'
     test_phase9 = 'firmware\Tests\test_phase9.c'
     test_phase10 = 'firmware\Tests\test_phase10.c'
+    test_stress = 'firmware\Tests\test_stress.c'
     test_main = 'firmware\Tests\test_phase9_main.c'
 }
 $objects = [Collections.Generic.List[string]]::new()
@@ -136,7 +137,12 @@ if (-not $SkipSimulator) {
                              'P9_RACES_COMPLETED=3',
                              'CONTINUATION_TEST_COMPLETED=1',
                              'CONTINUATION_TEST_FAILURES=0',
-                             'CONTINUATION_SCENARIOS_COMPLETED=6')) {
+                             'CONTINUATION_SCENARIOS_COMPLETED=8',
+                             'STRESS_TEST_COMPLETED=1',
+                             'STRESS_TEST_FAILURES=0',
+                             'STRESS_ITERATIONS=50000',
+                             'STRESS_SIMULATED_MS=600000000',
+                             'STRESS_PERSISTENCE_TRANSACTIONS=512')) {
         if ($simText -notmatch [regex]::Escape($required)) {
             throw "Phase 9 Simulator failed evidence check: $required"
         }

@@ -163,10 +163,10 @@ BQ76940_Status_t BQ76940_ReadTs1Raw(BQ76940_t *device,
  * 64-bit intermediates, truncating division, range-checked: VTSX must be
  * below 3.3 V and the resulting resistance must fit uint32_t.
  *
- * Temperature (Celsius) conversion is intentionally NOT implemented here:
- * the reference configuration only provides a 10 k-ohm NTC without a
- * Beta/table/curve, and inventing one is forbidden. R -> degC stays
- * CALIBRATION REQUIRED (Phase 8/10 boundary), see Phase 4 report.
+ * Temperature conversion is deliberately delegated to bms_ntc.c so the
+ * transport/measurement driver never embeds a product curve. SIM_POLICY_V1
+ * supplies the current simulation table; production calibration still
+ * requires an approved immutable NTC artifact.
  */
 BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
     uint16_t ts1_raw14,

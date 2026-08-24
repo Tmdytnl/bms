@@ -11,6 +11,7 @@
 #include "bms_health.h"
 #include "bms_hw_recovery.h"
 #include "bms_policy.h"
+#include "bms_persistence.h"
 #include "bms_recovery.h"
 #include "bms_soc.h"
 #include "bms_state.h"
@@ -151,6 +152,10 @@ void Task_SOC(void *argument)
 {
     TickType_t period;
     TickType_t last;
+#if !defined(TEST_PHASE6_IMAGE)
+    BMS_SocSnapshot_t snapshot;
+    uint32_t now_ms;
+#endif
 
     (void)argument;
 #if defined(TEST_PHASE6_IMAGE)
@@ -163,8 +168,17 @@ void Task_SOC(void *argument)
     {
         vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
-        BMS_Soc_RunOnce((uint32_t)(
-            xTaskGetTickCount() * portTICK_PERIOD_MS));
+        now_ms = (uint32_t)(
+            xTaskGetTickCount() * portTICK_PERIOD_MS);
+        BMS_Soc_RunOnce(now_ms);
+        snapshot = BMS_Soc_GetSnapshot();
+        (void)BMS_Persistence_TargetServiceSoc(
+            snapshot.soc_permille,
+            snapshot.remaining_capacity_mah,
+            snapshot.queue_gap_count,
+            snapshot.generation_change_count,
+            snapshot.valid,
+            now_ms);
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_SOC);
 #endif
     }
@@ -195,17 +209,30 @@ void Task_Balance(void *argument)
 
 void Task_CANTx(void *argument)
 {
-    const TickType_t period = pdMS_TO_TICKS(100U);
+    const TickType_t period = pdMS_TO_TICKS(10U);
     TickType_t last;
+#if !defined(TEST_PHASE6_IMAGE)
+    uint32_t now_ms;
+    uint32_t last_publish_ms;
+#endif
 
     (void)argument;
     last = xTaskGetTickCount();
+#if !defined(TEST_PHASE6_IMAGE)
+    last_publish_ms = (uint32_t)(last * portTICK_PERIOD_MS) - 100UL;
+#endif
     for (;;)
     {
         vTaskDelayUntil(&last, period);
 #if !defined(TEST_PHASE6_IMAGE)
-        BMS_Can_TxRunOnce((uint32_t)(
-            xTaskGetTickCount() * portTICK_PERIOD_MS));
+        now_ms = (uint32_t)(
+            xTaskGetTickCount() * portTICK_PERIOD_MS);
+        if ((uint32_t)(now_ms - last_publish_ms) >= 100UL)
+        {
+            BMS_Can_TxRunOnce(now_ms);
+            last_publish_ms = now_ms;
+        }
+        BMS_Can_TxHardwareService(now_ms);
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_TX);
 #endif
     }
@@ -219,6 +246,9 @@ void Task_CANRx(void *argument)
 #endif
 
     (void)argument;
+#if !defined(TEST_PHASE6_IMAGE)
+    (void)BMS_Can_EnableTargetRx();
+#endif
     for (;;)
     {
 #if !defined(TEST_PHASE6_IMAGE)
