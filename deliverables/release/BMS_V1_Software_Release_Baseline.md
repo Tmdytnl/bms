@@ -8,7 +8,7 @@
 | Release type | Engineering Closure M3 — software/simulation baseline |
 | Branch | `codex/phase8-phase9` |
 | Starting baseline | `cdd8f9e59a2cab1fca4f1ba518b8e4aa4b7838b9` |
-| Final content commit | `M3_FINAL_CONTENT_COMMIT` — filled in the final metadata commit |
+| Final content commit | `3121e4e030a571d2a23cb28fb5307de7a90850c5` |
 | Date | 2026-08-25 (Asia/Shanghai) |
 | Toolchain | Keil MDK5/uVision 5.38; ARMCC5 5.06 update 7 build 960 |
 | MCU assumption | STM32F103C8T6, 64 KiB Flash, 20 KiB SRAM |
