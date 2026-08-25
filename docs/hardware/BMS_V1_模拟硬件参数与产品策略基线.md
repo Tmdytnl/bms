@@ -732,7 +732,7 @@ active continuously for 5000 ms
 | State | 3 | 100 ms |
 | SOC | 3 | 1000 ms |
 | Balance | 2 | 1000 ms |
-| CAN Tx | 2 | 1000 ms |
+| CAN Tx | 2 | 10 ms service loop；100 ms frame publication |
 | CAN Rx | 2 | bounded wait ≤100 ms |
 
 ### Heartbeat
@@ -893,10 +893,10 @@ CAN bitrate：
 |---:|---|---:|---|
 | 0x180 | TX | 100 ms | BMS state / permission / summary |
 | 0x181 | TX | 100 ms | Pack V / Current / SOC |
-| 0x182 | TX | 500 ms | Cell min/max / temperature |
-| 0x183 | TX | fault change + 1000 ms heartbeat | active/latched fault |
-| 0x184 | TX | 500 ms | Cell 1…7 |
-| 0x185 | TX | 500 ms | Cell 8…13 |
+| 0x182 | TX | 100 ms | Cell min/max / temperature |
+| 0x183 | TX | 100 ms | active/latched fault |
+| 0x184 | TX | 100 ms | Cell 1…7 |
+| 0x185 | TX | 100 ms | Cell 8…13 |
 | 0x280 | RX | optional | host command/service request |
 
 RX command timeout：
@@ -904,6 +904,9 @@ RX command timeout：
 ```text
 1000 ms
 ```
+
+M3 as-built scheduler 每 10 ms service bxCAN hardware path，并每 100 ms 一次
+构造和排队上述 6 帧；这是当前 source/test 的真实实现节拍。
 
 本 V1 中：
 
