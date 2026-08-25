@@ -6,6 +6,10 @@ Profile: `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`
 
 Result: **PASS — SIMULATION RELEASE CANDIDATE**
 
+M3 refresh: Engineering Closure M3 re-executed the complete RC flow after the
+read-only bring-up telemetry addition. Counts remain unchanged and the final
+ARMCC5 resource values below supersede the pre-M3 numbers.
+
 Evidence boundary: software simulation, deterministic fault injection, static
 checks, and ARMCC5 target build only. No physical-hardware validation or
 production certification is claimed.
@@ -32,7 +36,10 @@ production certification is claimed.
   Boot selects the newest valid wrap-safe sequence and restores SOC/capacity;
   Task_SOC is the low-frequency save owner.
 - Debug UART completion: required USART1 PA9/PA10, 115200 8N1 binding is in the
-  target and compiled through the repository SPL.
+  target and compiled through the repository SPL. A one-second read-only
+  snapshot is drained in at most 8-byte chunks per 10 ms service and exposes
+  bring-up safety/data identity, subsystem diagnostics and
+  current/minimum-ever-free RTOS heap; no command parser exists.
 
 ## 2. Deterministic scenario result
 
@@ -76,10 +83,10 @@ and preservation of the previous valid bank across every injected power cut.
 - Phase 9 simulation-development verifier: **PHASE9 SIMULATION GATE PASS**.
 - Phase 8 artifact/manifest trust-chain suite: **49 tests PASS**.
 - Production Keil/ARMCC5 5.06u7 Clean/Rebuild: **0 errors, 0 warnings**.
-- Production size after target CAN, physical Flash, and UART binding:
-  Code `51,236`, RO data `1,056`, RW data `352`, ZI data `15,408` bytes.
-  Static RW+ZI RAM is `15,760` bytes, below the 20 KiB device limit; the
-  application remains below the `0xF400` (61 KiB) IROM boundary.
+- Production size after the M3 telemetry closure:
+  Code `53,344`, RO data `1,092`, RW data `364`, ZI data `16,508` bytes.
+  Static RW+ZI RAM is `16,872` bytes, below the 20 KiB device limit; the
+  54,800-byte load image remains below the `0xF400` (61 KiB) IROM boundary.
 
 Primary evidence:
 
@@ -88,6 +95,7 @@ Primary evidence:
 - `firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.map`
 - `firmware/Tests/Build/Phase9/phase9_build.log`
 - `firmware/Tests/Build/Phase9/phase9_simulator.log`
+- `deliverables/release/BMS_V1_Software_Release_Baseline.md`
 
 ## 5. Safety ownership checks
 
