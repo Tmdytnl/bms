@@ -50,6 +50,7 @@ check("bool BMS_Policy_Validate" in policy_c,
       "compiled policy has fail-closed structural validation")
 
 required_sources = {
+    "..\\..\\App\\bms_debug.c",
     "..\\..\\App\\bms_state.c",
     "..\\..\\App\\bms_hw_recovery.c",
     "..\\..\\App\\bms_recovery.c",
@@ -99,6 +100,7 @@ persistence_c = read("firmware/App/bms_persistence.c")
 can_driver = read("firmware/Driver/bsp_can.c")
 flash_driver = read("firmware/Driver/bsp_flash.c")
 uart_driver = read("firmware/Driver/bsp_uart.c")
+debug_c = read("firmware/App/bms_debug.c")
 
 check(contains_all(data_h, ("sample_sequence", "afe_generation",
                             "BMS_DataIdentity_t")) and
@@ -210,6 +212,24 @@ check(contains_all(uart_driver, ("GPIO_Pin_9", "GPIO_Pin_10",
                                  "USART_StopBits_1",
                                  "USART_Parity_No")),
       "required debug UART1 binding is PA9/PA10 at 115200 8N1")
+check(contains_all(debug_c, ("BMS_Data_GetSnapshot",
+                             "BMS_State_GetSafetySnapshot",
+                             "BMS_Protect_GetSafetySnapshot",
+                             "BMS_FetManager_GetSnapshot",
+                             "BMS_Recovery_GetSnapshot",
+                             "BMS_Health_GetSnapshot",
+                             "BMS_Soc_GetSnapshot",
+                             "BMS_Balance_GetSnapshot",
+                             "BMS_Can_GetDiagnostics",
+                             "BMS_Persistence_TargetGetDiagnostics",
+                             "xPortGetFreeHeapSize",
+                             "xPortGetMinimumEverFreeHeapSize",
+                             "BMS_DEBUG_TX_CHUNK_BYTES",
+                             "BMS_Debug_FlushChunk",
+                             "BSP_UART1_Write")) and
+      "BSP_UART1_TryReadByte" not in debug_c and
+      "BMS_Debug_Service" in app_rtos,
+      "debug UART publishes read-only bring-up telemetry without commands")
 
 all_production = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
@@ -259,6 +279,7 @@ check('0 Error(s), 0 Warning(s)' in production_log and
           "bms_state.c", "bms_recovery.c", "bms_fet_manager.c",
           "bms_health.c", "bms_hw_recovery.c", "bms_soc.c",
           "bms_balance.c", "bms_can.c", "bms_persistence.c",
+          "bms_debug.c",
           "bsp_iwdg.c", "bsp_can.c", "bsp_flash.c", "bsp_uart.c",
           "stm32f10x_can.c", "stm32f10x_flash.c",
           "stm32f10x_usart.c")),

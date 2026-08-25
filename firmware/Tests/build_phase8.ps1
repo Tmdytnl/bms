@@ -67,11 +67,17 @@ if (-not $resolvedBuildDir.StartsWith($repoRoot,
 
 $staleEvidence = [System.Collections.Generic.List[string]]::new()
 $staleEvidence.Add($buildLog)
-$staleEvidence.Add($simLog)
-$staleEvidence.Add($verifyLog)
-$staleEvidence.Add($productionMapEvidence)
-$staleEvidence.Add($productionStackEvidence)
-$staleEvidence.Add($productionLog)
+if (-not $SkipSimulator) {
+    $staleEvidence.Add($simLog)
+}
+if (-not $SkipSimulator -and -not $SkipProductionBuild) {
+    $staleEvidence.Add($verifyLog)
+}
+if (-not $SkipProductionBuild) {
+    $staleEvidence.Add($productionMapEvidence)
+    $staleEvidence.Add($productionStackEvidence)
+    $staleEvidence.Add($productionLog)
+}
 foreach ($imageName in $imageNames) {
     $staleEvidence.Add((Join-Path $buildDir ($imageName + '.axf')))
     $staleEvidence.Add((Join-Path $buildDir ($imageName + '.map')))

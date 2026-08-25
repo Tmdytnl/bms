@@ -395,6 +395,11 @@
               <FilePath>..\..\App\bms_data.c</FilePath>
             </File>
             <File>
+              <FileName>bms_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\bms_debug.c</FilePath>
+            </File>
+            <File>
               <FileName>bms_policy.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Config\bms_policy.c</FilePath>

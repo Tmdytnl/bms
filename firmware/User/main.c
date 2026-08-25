@@ -3,6 +3,7 @@
 #include "bms_balance.h"
 #include "bms_can.h"
 #include "bms_data.h"
+#include "bms_debug.h"
 #include "bms_config.h"
 #include "bms_fet_manager.h"
 #include "bms_health.h"
@@ -166,6 +167,7 @@ int main(void)
     /* Successful startup has already verified CELLBAL1..3 all zero. */
     BMS_Balance_Init(&s_afe_device, policy, true);
     BMS_Can_Init(policy);
+    BMS_Debug_Init();
 
     /* Create all objects/tasks before scheduler start. ALERT EXTI
      * is intentionally enabled by the first ProtectTask context only after

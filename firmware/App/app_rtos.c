@@ -7,6 +7,7 @@
 #include "bms_balance.h"
 #include "bms_can.h"
 #include "bms_data.h"
+#include "bms_debug.h"
 #include "bms_fet_manager.h"
 #include "bms_health.h"
 #include "bms_hw_recovery.h"
@@ -233,6 +234,7 @@ void Task_CANTx(void *argument)
             last_publish_ms = now_ms;
         }
         BMS_Can_TxHardwareService(now_ms);
+        BMS_Debug_Service(now_ms);
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_TX);
 #endif
     }

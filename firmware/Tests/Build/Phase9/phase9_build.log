@@ -1,4 +1,4 @@
-﻿BMS V1 Phase 9 simulation-development build
+BMS V1 Phase 9 simulation-development build
 HARDWARE_CLAIM=NONE
 RUN: assemble startup
 RUN: compile firmware/App/bms_fault.c

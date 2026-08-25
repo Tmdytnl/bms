@@ -32,9 +32,8 @@
  *     window. It does NOT mean all 13 cell ADCs converted simultaneously;
  *     the BQ76940 scheduler groups conversions (see SLUSBK2I 8.3.1.1.7).
  *   - After SHIP -> NORMAL the BQ76940 requires about 800 ms before the
- *     first cell data is valid (SLUSBK2I 8.3.1.1.3); a boot manager that
- *     enforces this wait is out of Phase 4 scope and is documented in the
- *     Phase 4 report.
+ *     first cell data is valid (SLUSBK2I 8.3.1.1.3); BMS_AfeStartup
+ *     enforces that wait before the scheduler starts.
  */
 
 #define BQ76940_MEASUREMENT_CELL_COUNT         (BMS_CELL_COUNT)  /* 13 */
