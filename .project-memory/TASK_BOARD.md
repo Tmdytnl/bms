@@ -32,6 +32,30 @@ WAITING
 
 ## Completed Tasks
 
+### BMS-ENGINEERING-CLOSURE-M3
+
+Goal:
+Close the simulation release candidate into a source-grounded engineering,
+bring-up, validation, learning and release baseline without changing frozen
+safety architecture or claiming real-hardware evidence.
+
+Status:
+COMPLETED — PASS SOFTWARE / SIMULATION RELEASE BASELINE
+
+Result:
+- repository/module/source-quality completeness sweep completed
+- architecture, task ownership and runtime walkthrough documented
+- staged hardware bring-up guide plus hardware/software validation matrices added
+- debugging, configuration, engineering-story and interview guides added
+- root README and current test entrypoints established
+- low-risk USART1 read-only observability added; no command/control path
+- Flash/RAM/stack/queue resource review completed with exact ARMCC5 evidence
+- 32 scenarios, 3 races, 50,000 stress iterations, lower regressions and
+  49 trust-chain tests passed
+- ARMCC5 final Clean/Rebuild passed 0 errors / 0 warnings
+- Software Release Baseline established
+- REAL_HW validation remains pending; no independent-review claim made
+
 ### BMS-SIM-CLOSED-LOOP-M1
 
 Goal:
@@ -47,9 +71,10 @@ Result:
 - centralized SIM_POLICY_V1 and Phase 8 simulation integration passed
 - Phase 9 safety/state/FET/recovery/health/IWDG closed loop passed
 - SOC and balancing passed
-- CAN protocol/core passed; physical peripheral binding deferred
-- persistence A/B format/codec passed; physical Flash writes deferred
-- 30 simulator scenarios and 3 targeted races completed with zero failures
+- CAN protocol/core and target bxCAN binding passed in software; physical bus deferred
+- persistence A/B codec and target erase/program scheduling passed in software;
+  physical brownout/endurance/timing deferred
+- 32 simulator scenarios and 3 targeted races completed with zero failures
 - ARMCC5 production rebuild passed with 0 errors and 0 warnings
 - no hardware-validation or production-certification claim
 

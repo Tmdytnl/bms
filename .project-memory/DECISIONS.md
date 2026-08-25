@@ -281,12 +281,14 @@ scheduler-era CELLBAL writer, with AFE startup all-zero as the pre-scheduler
 exception. CAN remains diagnostic/control-plane support and has no direct FET,
 CELLBAL, fault-bitmap, or IWDG authority.
 
-## D-041 Persistence physical writes remain evidence-gated
+## D-041 Persistence target implementation does not close physical evidence
 
-The A/B record format, CRC32, corruption handling, and wrap-safe newest-slot
-selection are implemented. Proposed final-page slots are outside the current
-linked image, but physical erase/program scheduling remains deferred until
-target timing, power-loss, and endurance safety are demonstrated.
+The A/B record format, CRC32, corruption handling, wrap-safe newest-slot
+selection, commit-last target erase/program and readback verification are
+implemented. The final-page slots remain outside the linked image. Simulator
+power-cut evidence and target compilation do not prove silicon brownout,
+erase/program timing, endurance, watchdog interaction or power integrity;
+those remain REAL_HW qualification work.
 
 ## D-042 Split lower-phase simulator regression
 
@@ -298,6 +300,32 @@ real-hardware/evidence gate.
 ## D-043 Simulation resource baseline
 
 The simulation-integrated FreeRTOS heap is 12 KiB. ARMCC5 callgraph evidence
-sets explicit task stack allocations, and the production link reports 15,632
-bytes of static RW+ZI RAM. These are target-build facts, not physical runtime
-high-water validation.
+sets explicit task stack allocations, and the M3 production link reports
+16,872 bytes of static RW+ZI RAM with 3,608 bytes left in the configured 20 KiB
+region. The application load image is 54,800 bytes with 7,664 bytes remaining
+before the reserved Flash pages. These are target-build/configuration facts,
+not physical runtime stack-watermark or heap-minimum validation.
+
+## Engineering Closure M3
+
+## D-044 M3 establishes a software/simulation release baseline
+
+Engineering Closure M3 may conclude `PASS — SOFTWARE / SIMULATION RELEASE
+BASELINE` and `READY FOR REAL HARDWARE BRING-UP` when the documented RC,
+regression, build and resource evidence passes. It must not conclude production
+release, hardware certification or hardware qualification.
+
+## D-045 Bring-up UART is read-only observability
+
+Task_CANTx is the sole caller of a one-second USART1 telemetry service. The
+service may snapshot diagnostic/safety state and FreeRTOS heap counters, but it
+has no receive parser and no authority to change policy, clear latches, enable
+FETs, write CELLBAL or bypass Protect/State/Recovery/FET ownership.
+
+## D-046 Resource accounting separates link reservation from runtime use
+
+The 12 KiB `ucHeap` is already included in ARMCC5 RW+ZI. Dynamically allocated
+task stacks, TCBs, queues, mutexes, semaphores, event group and timer queue
+consume that reserved arena at runtime and must not be added to RW+ZI again.
+Static callgraph and `heap_4` arithmetic are planning evidence only; target
+high-water marks and minimum-ever-free heap remain mandatory REAL_HW evidence.
