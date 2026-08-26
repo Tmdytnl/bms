@@ -226,10 +226,11 @@ check(contains_all(debug_c, ("BMS_Data_GetSnapshot",
                              "xPortGetMinimumEverFreeHeapSize",
                              "BMS_DEBUG_TX_CHUNK_BYTES",
                              "BMS_Debug_FlushChunk",
-                             "BSP_UART1_Write")) and
+                             "BSP_UART1_TryWriteByte")) and
+      re.search(r"\bBSP_UART1_Write\s*\(", debug_c) is None and
       "BSP_UART1_TryReadByte" not in debug_c and
       "BMS_Debug_Service" in app_rtos,
-      "debug UART publishes read-only bring-up telemetry without commands")
+      "debug UART publishes read-only non-blocking bring-up telemetry without commands")
 
 all_production = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))

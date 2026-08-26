@@ -229,7 +229,6 @@ static void BMS_Debug_FlushChunk(void)
 {
     uint16_t remaining;
     uint16_t chunk;
-    uint16_t written;
 
     if (s_line_offset >= s_line_length)
     {
@@ -241,9 +240,15 @@ static void BMS_Debug_FlushChunk(void)
     {
         chunk = BMS_DEBUG_TX_CHUNK_BYTES;
     }
-    written = BSP_UART1_Write(
-        (const uint8_t *)&s_line[s_line_offset], chunk);
-    s_line_offset = (uint16_t)(s_line_offset + written);
+    while (chunk > 0U)
+    {
+        if (!BSP_UART1_TryWriteByte((uint8_t)s_line[s_line_offset]))
+        {
+            return;
+        }
+        ++s_line_offset;
+        --chunk;
+    }
 }
 
 void BMS_Debug_Init(void)
