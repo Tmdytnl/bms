@@ -14,7 +14,7 @@
 
 typedef struct
 {
-    uint32_t sequence;
+    uint32_t sequence;               /* wrap-safe newest-valid 选择序号 */
     uint16_t soc_permille;
     uint32_t remaining_capacity_mah;
     uint32_t persistent_counter0;
@@ -99,8 +99,10 @@ BMS_PersistenceStoreResult_t BMS_Persistence_StoreSocIfDue(
 BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
     const BMS_PersistenceStore_t *store);
 
-/* Production target adapter. It performs no writes during init; Task_SOC is
- * the sole caller of the low-frequency save service. */
+/*
+ * 正式 target adapter。init 只读取 A/B page，绝不为“修复”无效记录而写 Flash；
+ * Task_SOC 是低频 save service 唯一调用者，避免多个任务竞争 erase/program。
+ */
 bool BMS_Persistence_TargetInit(const BMS_FlashPolicy_t *policy);
 bool BMS_Persistence_TargetGetLatest(BMS_PersistencePayload_t *payload);
 BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
@@ -112,4 +114,4 @@ BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
     uint32_t now_ms);
 BMS_PersistenceDiagnostics_t BMS_Persistence_TargetGetDiagnostics(void);
 
-#endif /* BMS_PERSISTENCE_H */
+#endif /* BMS_PERSISTENCE_H：include guard */

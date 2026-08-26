@@ -1,9 +1,7 @@
 #include "app_rtos.h"
 
-/* Phase 6 verifies the seven-task creation contract before the scheduler
- * starts. Phase 7 executes the real ProtectTask in its own regression image;
- * this non-running entry keeps the Phase 6 foundation image scoped to RTOS
- * object/task construction. */
+/* 本 construction image 只验证 scheduler 前七任务创建；正式 ProtectTask 在独立
+ * regression image 执行，因此这里保留 non-running entry。 */
 void Task_Protect(void *argument)
 {
     (void)argument;
@@ -12,8 +10,7 @@ void Task_Protect(void *argument)
     }
 }
 
-/* Phase 8 executes the production SampleTask in its own image. Keep this
- * Phase 6 construction-only image independent of measurement drivers. */
+/* production SampleTask 在独立 image 执行；construction image 不引入 measurement driver。 */
 void Task_Sample(void *argument)
 {
     (void)argument;

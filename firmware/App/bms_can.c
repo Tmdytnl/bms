@@ -1,5 +1,11 @@
 #include "bms_can.h"
 
+/*
+ * CAN ownership 分为三层：Task_CANTx 构造周期 frame 并推进 hardware mailbox；
+ * RX ISR 只 drain FIFO0 到 queue；Task_CANRx 执行协议 decode。显式 encode/decode
+ * 隔离 C struct layout，所有 service request 仍回到 Protect owner 完成授权。
+ */
+
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>
@@ -367,7 +373,7 @@ void BMS_Can_TxRunOnce(uint32_t now_ms)
         }
         else
         {
-            /* CAN absence/congestion is diagnostic-only in SIM_POLICY_V1. */
+            /* CAN mailbox 拥塞只更新诊断计数，不得反向修改 safety ownership。 */
             BMS_Can_Increment(&s_diagnostics.tx_drop_count);
         }
     }

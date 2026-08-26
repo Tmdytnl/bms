@@ -15,4 +15,4 @@ uint8_t BQ76940_CRC8_FirstWrite(uint8_t wire_write_address,
 uint8_t BQ76940_CRC8_NextByte(uint8_t data);
 uint8_t BQ76940_CRC8_FirstRead(uint8_t wire_read_address, uint8_t data);
 
-#endif /* CRC8_BQ76940_H */
+#endif /* CRC8_BQ76940_H：include guard */

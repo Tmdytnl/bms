@@ -22,10 +22,17 @@
 #include "bq76940.h"
 #include "soft_i2c.h"
 
-#include "misc.h"   /* NVIC_PriorityGroupConfig (SPL, Phase 6/7 target) */
+#include "misc.h"   /* SPL 的 NVIC_PriorityGroupConfig */
 
 static SoftI2C_t s_afe_bus;
 static BQ76940_t s_afe_device;
+
+/*
+ * main 只负责 pre-scheduler wiring：验证 clock、初始化 BSP/transport、运行有界
+ * AFE startup、把 calibration 与 immutable policy 交给各 owner、恢复 SOC，最后
+ * 一次创建 IPC/tasks。任一 mandatory step 失败都进入关中断 safe idle，绝不以
+ * 半初始化系统启动 scheduler。
+ */
 
 #define BMS_MAIN_AFE_STARTUP_LIMIT_MS            (5000UL)
 
@@ -92,7 +99,7 @@ int main(void)
     BQ76940_Calibration_t calibration;
     BMS_PersistencePayload_t persisted;
 
-    /* Reset_Handler has already called the CMSIS SystemInit function. */
+    /* Reset_Handler 已调用 CMSIS SystemInit，此处从应用级安全初值开始。 */
     BMS_Data_Init();
     BMS_Sample_Init();
     policy = BMS_Policy_Get();
@@ -101,7 +108,7 @@ int main(void)
         BMS_SafeIdle();
     }
 
-    /* A clock mismatch blocks all later hardware initialization. */
+    /* clock 不匹配会使所有 timing 假设失效，因此阻止后续硬件初始化。 */
     if (BSP_Clock_Verify() != BSP_CLOCK_STATUS_OK)
     {
         BMS_SafeIdle();
@@ -164,32 +171,33 @@ int main(void)
         (void)BMS_Soc_Restore(persisted.soc_permille,
                               persisted.remaining_capacity_mah);
     }
-    /* Successful startup has already verified CELLBAL1..3 all zero. */
+    /* AFE startup 已回读确认 CELLBAL1..3 全零，将该证据交给 Balance owner。 */
     BMS_Balance_Init(&s_afe_device, policy, true);
     BMS_Can_Init(policy);
     BMS_Debug_Init();
 
-    /* Create all objects/tasks before scheduler start. ALERT EXTI
-     * is intentionally enabled by the first ProtectTask context only after
-     * the FreeRTOS port has initialized its ISR-priority validation state.
-     * NVIC PriorityGroup_4 is locked before scheduler/interrupt activation. */
+    /*
+     * scheduler 前创建完整 IPC/task 集合。ALERT EXTI 由首个 ProtectTask context
+     * 启用，确保 FreeRTOS ISR-priority validator 已初始化；在任何 IRQ enable 前
+     * 固定 NVIC PriorityGroup_4。
+     */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
     if (App_Rtos_CreateObjects() != pdTRUE)
     {
         BMS_SafeIdle();
     }
-    /* Target CAN is diagnostic-only in SIM_POLICY_V1. A missing transceiver
-     * or peripheral-init failure must not disable local protection. RX IRQ is
-     * enabled later from CANRxTask, after FreeRTOS ISR validation is live. */
+    /*
+     * CAN peripheral init 与本地 protection ownership 解耦；RX IRQ 稍后由
+     * CANRxTask 启用，此时 FreeRTOS ISR validation 已生效。
+     */
     (void)BMS_Can_BindTarget(policy);
-    /* SIM_POLICY_V1 is an explicit learning/simulation input. Calibration
-     * still comes from this device instance; no fixed gain/offset is used. */
+    /* calibration 来自当前 device startup readback，不使用固定 gain/offset。 */
     if (App_Rtos_CreateTasks() != pdTRUE)
     {
         BMS_SafeIdle();
     }
     vTaskStartScheduler();
 
-    /* vTaskStartScheduler only returns on fatal configuration error. */
+    /* vTaskStartScheduler 正常不返回；返回即按 fatal configuration error 停机。 */
     BMS_SafeIdle();
 }

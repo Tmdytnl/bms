@@ -34,7 +34,11 @@ typedef struct
     uint32_t target_bus_off_recovery_count;
 } BMS_CanDiagnostics_t;
 
-/* Explicit wire encoding; the shared C snapshot is never serialized raw. */
+/*
+ * 明确逐字节 wire encoding，禁止直接序列化 shared C snapshot。
+ * `0x180..0x185` 六帧依次承载运行/identity、cell group、pack/current/temp、
+ * fault/inhibit、FET/recovery、SOC/balance/persistence/diagnostic 信息。
+ */
 uint8_t BMS_Can_BuildTxFrames(
     const BMS_DataSnapshot_t *measurement,
     const BMS_StateSafetySnapshot_t *state,
@@ -43,8 +47,10 @@ uint8_t BMS_Can_BuildTxFrames(
     const BMS_FetManagerSnapshot_t *fet,
     BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT]);
 
-/* Decode to a source-specific Protect request. It cannot write FETs,
- * CELLBAL, fault bitmaps, or the watchdog. */
+/*
+ * `0x280` 只解码为带 freshness/identity 的 source-specific Protect request。
+ * CAN 接收不能写 FET、CELLBAL、fault bitmap 或 IWDG，服务帧也必须通过原 owner。
+ */
 bool BMS_Can_DecodeServiceReset(
     const BMS_CanFrame_t *frame,
     uint32_t received_ms,
@@ -64,8 +70,7 @@ void BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
                        uint32_t now_ms);
 BMS_CanDiagnostics_t BMS_Can_GetDiagnostics(void);
 
-/* bxCAN FIFO0 ISR. It drains hardware into xCanRxQueue only; protocol and
- * service-request handling remain in CANRxTask. */
+/* bxCAN FIFO0 ISR 只把硬件 frame 放入 xCanRxQueue；decode/request 留在 CANRxTask。 */
 void USB_LP_CAN1_RX0_IRQHandler(void);
 
-#endif /* BMS_CAN_H */
+#endif /* BMS_CAN_H：include guard */

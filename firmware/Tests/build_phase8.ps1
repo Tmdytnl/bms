@@ -143,9 +143,8 @@ function Invoke-KeilPreservingUserOptions {
     $patchApplied = $false
     try {
         if ($SimulatorInitRelativePath) {
-            # ISO-8859-1 is used as a byte-preserving one-byte mapping. The
-            # XML span and replacement are ASCII; every byte outside the
-            # unique sIfile element is therefore copied bit-for-bit.
+            # ISO-8859-1 用作逐 byte 保真映射；XML replacement 为 ASCII，因此
+            # unique sIfile 之外所有 byte 原样复制。
             $byteEncoding = [System.Text.Encoding]::GetEncoding(28591)
             $optionsText = $byteEncoding.GetString($optionsBytes)
             $matches = [regex]::Matches(
@@ -336,8 +335,7 @@ foreach ($path in @(
     [void]$allDeclaredInputs.Add($path)
 }
 
-# Manifest every production-project translation unit, not only the sources
-# reused by the standalone test images.
+# manifest 覆盖全部 production translation unit，不只覆盖 test image 复用 source。
 [xml]$projectXml = Get-Content -LiteralPath $project -Raw
 $projectDirectory = Split-Path -Parent $project
 foreach ($fileNode in $projectXml.SelectNodes('//FilePath')) {
@@ -354,9 +352,8 @@ foreach ($fileNode in $projectXml.SelectNodes('//FilePath')) {
     [void]$allDeclaredInputs.Add($relativePath)
 }
 
-# ARMCC dependency files are deliberately hashed as gate inputs. This makes
-# concurrent edits to transitive application, driver, RTOS, CMSIS or test
-# headers fail closed when verify_phase8.py recomputes the manifest.
+# ARMCC dependency file 也作为 gate hash input；并发修改 transitive App/Driver/
+# RTOS/CMSIS/Test header 时，verify_phase8.py 重算 manifest 会 fail closed。
 $headerRoots = @(
     'firmware\App',
     'firmware\Config',

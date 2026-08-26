@@ -1,5 +1,11 @@
 #include "bms_soc.h"
 
+/*
+ * SOC 采用整数库仑计数：ProtectTask 每次 CC_READY 只产生一条带 generation 的
+ * sample，SOCTask 是 queue 与 estimate sole owner。Flash restore 只提供启动值；
+ * 后续积分、OCV full/empty correction 与 capacity clamp 都在同一 engine 内完成。
+ */
+
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>

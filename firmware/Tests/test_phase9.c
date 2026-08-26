@@ -389,7 +389,7 @@ static uint32_t TestP9_Recovery(void)
     recovery = BMS_Recovery_GetSnapshot();
     TEST_CHECK_IN(failures,
         recovery.phase == BMS_RECOVERY_PHASE_WAIT_FIRST_VALID_SAMPLE);
-    TestP9_SetIdentity(0UL, 1UL); /* natural sequence wrap */
+    TestP9_SetIdentity(0UL, 1UL); /* sequence 自然回绕 */
     BMS_Recovery_Service((uint32_t)(now_ms + 200UL));
     recovery = BMS_Recovery_GetSnapshot();
     TEST_CHECK_IN(failures, recovery.phase == BMS_RECOVERY_PHASE_COMPLETE);

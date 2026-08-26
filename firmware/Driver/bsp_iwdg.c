@@ -1,5 +1,10 @@
 #include "bsp_iwdg.h"
 
+/*
+ * BSP 只配置/刷新硬件 IWDG，不判断“是否应该喂狗”。StateTask 必须先由 health
+ * generation 证明全部必需任务推进，再启动并成为唯一 BSP_IWDG_Feed 调用者。
+ */
+
 #include "stm32f10x.h"
 
 #define BSP_IWDG_NOMINAL_LSI_HZ                 (40000UL)

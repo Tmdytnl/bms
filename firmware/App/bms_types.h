@@ -6,18 +6,15 @@
 
 #include "bms_build_assert.h"
 
-/*
- * Public in-memory scalar types. These are not wire or persistent layouts.
- * Protocol and persistence layers must serialize fields explicitly.
- */
-typedef uint16_t BMS_CellVoltageMv_t;       /* millivolts */
-typedef uint32_t BMS_PackVoltageMv_t;       /* millivolts */
-typedef int32_t  BMS_CurrentMa_t;           /* milliamps: +charge, -discharge */
-typedef int16_t  BMS_TemperatureDeciC_t;    /* 0.1 degree Celsius */
-typedef uint32_t BMS_CapacityMah_t;         /* milliamp-hours */
-typedef uint16_t BMS_SocPermille_t;         /* valid range: 0..1000 */
-typedef uint32_t BMS_TimestampMs_t;         /* milliseconds */
-typedef uint32_t BMS_DataAgeMs_t;           /* milliseconds */
+/* 公共内存标量类型，不是 wire/Flash layout；协议层必须逐字段显式序列化。 */
+typedef uint16_t BMS_CellVoltageMv_t;       /* 单节电压，mV */
+typedef uint32_t BMS_PackVoltageMv_t;       /* 包电压，mV */
+typedef int32_t  BMS_CurrentMa_t;           /* 电流，mA：正充电、负放电 */
+typedef int16_t  BMS_TemperatureDeciC_t;    /* 温度，0.1 °C */
+typedef uint32_t BMS_CapacityMah_t;         /* 容量，mAh */
+typedef uint16_t BMS_SocPermille_t;         /* SOC 千分比，有效域 0..1000 */
+typedef uint32_t BMS_TimestampMs_t;         /* 单调时间戳，ms */
+typedef uint32_t BMS_DataAgeMs_t;           /* 数据年龄，ms */
 
 #define BMS_PUBLIC_MODEL_VERSION             (1U)
 #define BMS_SOC_PERMILLE_MIN                 (0U)
@@ -50,4 +47,4 @@ BMS_BUILD_ASSERT(sizeof(BMS_TimestampMs_t) == 4U,
 BMS_BUILD_ASSERT(sizeof(BMS_DataAgeMs_t) == 4U,
                  data_age_type_is_four_bytes);
 
-#endif /* BMS_TYPES_H */
+#endif /* BMS_TYPES_H：include guard */

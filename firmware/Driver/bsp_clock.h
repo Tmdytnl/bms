@@ -15,4 +15,4 @@ typedef enum
 
 BSP_ClockStatus_t BSP_Clock_Verify(void);
 
-#endif /* BSP_CLOCK_H */
+#endif /* BSP_CLOCK_H：include guard */

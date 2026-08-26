@@ -59,8 +59,7 @@ static void BSP_CAN_ConfigureServiceFilter(uint16_t service_rx_id)
     uint32_t identifier;
     uint32_t mask;
 
-    /* bxCAN 32-bit filter layout: STID[10:0] at bits 31:21, then RTR/IDE.
-     * Masking both control bits rejects remote and extended frames. */
+    /* bxCAN 32-bit filter：STID[10:0] 位于 31:21；同时 mask RTR/IDE，拒绝 remote/extended。 */
     identifier = (uint32_t)service_rx_id << 21U;
     mask = ((uint32_t)BSP_CAN_STD_ID_MAX << 21U) |
         (1UL << 2U) | (1UL << 1U);

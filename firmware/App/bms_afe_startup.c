@@ -1,5 +1,12 @@
 #include "bms_afe_startup.h"
 
+/*
+ * AFE startup 是 pre-scheduler、caller-owned 的有界状态机：power-up/WAKE、
+ * communication probe、safe FET/CELLBAL、calibration、protection configuration、
+ * settle、status verify 逐步执行。每个 register write 都有 readback；任何状态
+ * 失败都保持 fail-closed，且不会把上一个 register epoch 的证据带入下一 epoch。
+ */
+
 #include <stddef.h>
 #include <string.h>
 
@@ -246,7 +253,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_WriteRegister(
     value = startup->register_values[startup->register_index];
     if (address == BQ76940_REG_SYS_CTRL2)
     {
-        /* A prior readback describes the previous register epoch only. */
+        /* 上一次 readback 只描述上一 register epoch，新 write 后必须重新证明。 */
         startup->fet_off_confirmed = false;
         if (startup->register_index ==
             BMS_AFE_STARTUP_REG_FINAL_CTRL2)
@@ -306,8 +313,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
     }
     if (is_sys_ctrl2)
     {
-        /* This flag follows the newest actual SYS_CTRL2 read, independent of
-         * whether non-FET bits match the requested full register value. */
+        /* 该标志只跟随最新 SYS_CTRL2 实读 FET 位，不受其他 bit 是否匹配影响。 */
         startup->fet_off_confirmed = BMS_AfeStartup_HasFetsOff(actual);
         if (startup->register_index ==
             BMS_AFE_STARTUP_REG_FINAL_CTRL2)
@@ -324,8 +330,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
             !startup->fet_off_confirmed &&
             !startup->safe_off_recovery_attempted)
         {
-            /* One bounded, idempotent emergency correction is allowed after
-             * a concrete read proves either FET bit high. */
+            /* 只有具体 read 证明任一 FET 高后，才允许一次有界且幂等的紧急纠正。 */
             startup->safe_off_recovery_attempted = true;
             startup->state = BMS_AFE_STARTUP_STATE_SAFE_OFF_WRITE;
             return BMS_AFE_STARTUP_RESULT_PENDING;
@@ -411,9 +416,10 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ReadFinalStatus(
         return BMS_AFE_STARTUP_RESULT_FAILED;
     }
 
-    /* The final read is the authorization identity for this W1C. An XREADY
-     * seen only at probe has already retired; blindly clearing it now could
-     * consume a different event that asserts after this read. */
+    /*
+     * final read 是本次 W1C 的 authorization identity。只在 probe 时出现的旧
+     * XREADY 已退休；blind clear 可能误消费 final read 之后的新事件。
+     */
     startup->xready_clear_required =
         ((startup->final_sys_stat &
           BMS_AFE_STARTUP_STAT_DEVICE_XREADY) != 0U);
@@ -450,9 +456,10 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ClearXready(
         return BMS_AFE_STARTUP_RESULT_FAILED;
     }
     startup->xready_clear_attempted = true;
-    /* The W1C may commit even when STOP finalization is ambiguous. Invalidate
-     * all evidence before issuing it so no terminal path can expose stale
-     * FET, balancing or calibration confidence from the prior epoch. */
+    /*
+     * STOP finalization ambiguous 时 W1C 仍可能已提交；发出前先使所有 evidence
+     * 失效，确保任一 terminal path 都不会暴露 prior epoch 的 FET/CELLBAL/calibration。
+     */
     startup->fet_off_confirmed = false;
     startup->safe_outputs_confirmed = false;
     startup->calibration.valid = false;
@@ -477,8 +484,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ClearXready(
         return BMS_AFE_STARTUP_RESULT_FAILED;
     }
 
-    /* XREADY denotes a reset/configuration epoch boundary. Even a successful
-     * W1C authorizes no reuse of the pre-clear register or calibration proof. */
+    /* XREADY 划分 reset/config epoch；W1C 成功也不能授权复用 pre-clear 证据。 */
     startup->xready_clear_completed = true;
     startup->safe_off_recovery_attempted = false;
     BMS_AfeStartup_StageEarlyRegisters(startup);
@@ -626,9 +632,10 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             if (BMS_AfeStartup_HasBlockingStatus(
                     startup->initial_sys_stat))
             {
-                /* Preserve the hardware event for ProtectTask/recovery policy,
-                 * but still verify both FET commands low and CELLBAL1..3 zero
-                 * before publishing the terminal unsafe-status result. */
+                /*
+                 * 保留 hardware event 给 Protect/recovery owner，但在发布 terminal
+                 * unsafe result 前仍回读确认两路 FET low 与 CELLBAL1..3 全零。
+                 */
                 startup->unsafe_sys_stat = startup->initial_sys_stat;
                 startup->abort_after_safe_outputs = true;
             }

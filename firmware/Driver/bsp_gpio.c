@@ -14,7 +14,7 @@ void BSP_GPIO_Init(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA |
                            RCC_APB2Periph_GPIOB, ENABLE);
 
-    /* Set ODR before enabling open drain so both buses begin released. */
+    /* 先置 ODR 再启用 open-drain，使两根总线从 release 状态开始。 */
     GPIO_SetBits(GPIOB, BSP_I2C_SCL_PIN | BSP_I2C_SDA_PIN);
     gpio.GPIO_Pin = BSP_I2C_SCL_PIN | BSP_I2C_SDA_PIN;
     gpio.GPIO_Speed = GPIO_Speed_2MHz;

@@ -2,8 +2,8 @@
 #define TEST_PHASE8_DATA_HOST_SHIM_H
 
 /*
- * Host-only ABI shim for executing the unmodified production bms_data.c.
- * ARMCC5/target tests use the real FreeRTOS headers instead.
+ * host-only ABI shim，用于执行未改动的 production bms_data.c；ARMCC5 target test
+ * 使用真实 FreeRTOS header。
  */
 #ifndef APP_RTOS_H
 #define APP_RTOS_H

@@ -5,20 +5,20 @@
 
 #include "bms_build_assert.h"
 
-/* STM32F103C8 official 64 KiB Flash boundary. */
+/* STM32F103C8 64 KiB Flash 边界。 */
 #define BMS_MEMORY_MAP_VERSION                   (1U)
 #define BMS_FLASH_BASE                           (0x08000000UL)
 #define BMS_FLASH_SIZE                           (0x00010000UL)
 #define BMS_FLASH_END_EXCLUSIVE                  (0x08010000UL)
 #define BMS_FLASH_PAGE_SIZE                      (0x00000400UL)
 
-/* The Keil IROM1 application region must match this half-open interval. */
+/* Keil IROM1 application region 必须精确匹配该左闭右开区间。 */
 #define BMS_APP_FLASH_BASE                       BMS_FLASH_BASE
 #define BMS_APP_FLASH_SIZE                       (0x0000F400UL)
 #define BMS_APP_FLASH_END_EXCLUSIVE              (0x0800F400UL)
 #define BMS_APP_FLASH_LAST_ADDRESS               (0x0800F3FFUL)
 
-/* Three reserved 1 KiB pages. No Phase 1 code writes these addresses. */
+/* 三个 reserved 1 KiB page；应用链接区不得覆盖，写 API 还会二次校验地址。 */
 #define BMS_SOC_LOG_ADDR                         (0x0800F400UL)
 #define BMS_SOC_LOG_END_EXCLUSIVE                (0x0800F800UL)
 #define BMS_PARAM_A_ADDR                         (0x0800F800UL)
@@ -70,4 +70,4 @@ BMS_BUILD_ASSERT(BMS_SOC_LOG_ADDR >= BMS_FLASH_BASE,
 BMS_BUILD_ASSERT(BMS_PARAM_B_END_EXCLUSIVE <= BMS_FLASH_END_EXCLUSIVE,
                  reserved_pages_are_inside_flash);
 
-#endif /* BMS_MEMORY_MAP_H */
+#endif /* BMS_MEMORY_MAP_H：include guard */

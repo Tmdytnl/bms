@@ -21,19 +21,18 @@ typedef enum
     BQ76940_STATUS_CRC_REJECTED,
     BQ76940_STATUS_CALIBRATION_INVALID,
     BQ76940_STATUS_RANGE_ERROR,
-    /* Appended to preserve every validated Phase 3 status ordinal. Every
-     * payload and CRC byte was ACKed, but final STOP generation/verification
-     * failed. The BQ7694003 register-side commit point is not established by
-     * the available software evidence, so the write may or may not have taken
-     * effect. Callers must neither report success nor blindly replay a W1C or
-     * other non-idempotent write. */
+    /*
+     * 追加在 enum 末尾以保持既有 ordinal。payload/CRC byte 全部 ACK，但最终
+     * STOP generation/verification 失败，register side effect 的 commit point
+     * 不明确；调用者既不能报告成功，也不能 blind replay W1C 等非幂等 write。
+     */
     BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS
 } BQ76940_Status_t;
 
 typedef struct
 {
-    SoftI2C_t *bus;
-    bool initialized;
+    SoftI2C_t *bus;    /* caller-owned transport，完整 transaction 期间保持有效 */
+    bool initialized;  /* 仅表示 handle/config 已绑定，不表示 AFE configuration ready */
 } BQ76940_t;
 
 typedef struct
@@ -79,4 +78,4 @@ BQ76940_Status_t BQ76940_ConvertCellRawToMv(
     const BQ76940_Calibration_t *calibration,
     uint16_t *cell_mv);
 
-#endif /* BQ76940_H */
+#endif /* BQ76940_H：include guard */

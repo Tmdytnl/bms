@@ -17,9 +17,8 @@
 #define TEST_P7_SCRIPT_CAPACITY      (16U)
 #define TEST_P7_WRITE_CAPACITY       (16U)
 
-/* The public FreeRTOS headers intentionally keep these types opaque. The
- * review harness supplies only the small deterministic behavior needed by
- * the production protect path. */
+/* FreeRTOS public header 保持类型 opaque；harness 只提供 Protect 正式路径所需的
+ * 最小确定性行为。 */
 struct QueueDefinition
 {
     uint8_t kind;
@@ -343,8 +342,7 @@ static bool TestP7_RunProtectTaskScenario(bool seed_semaphore,
     escape_reason = setjmp(s_task_escape);
     if (escape_reason == 0)
     {
-        /* The fake semaphore escapes when the production task returns to its
-         * next blocking ALERT wait after completing the retry and drain. */
+        /* 正式 task 完成 retry/drain 并回到下一次 blocking ALERT wait 时，fake semaphore 退出。 */
         Task_Protect(NULL);
         s_task_guard_failed = true;
     }

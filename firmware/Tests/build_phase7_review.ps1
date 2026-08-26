@@ -82,9 +82,8 @@ function Invoke-KeilPreservingUserOptions {
     $optionsLastWriteUtc =
         (Get-Item -LiteralPath $userOptions).LastWriteTimeUtc
     try {
-        # Start-Process joins an argument array into one command line. Embed
-        # quotes explicitly so checkout paths containing spaces remain single
-        # arguments for uVision.
+        # Start-Process 会把 argument array 合成 command line；显式加 quote，确保
+        # 含空格 checkout path 对 uVision 仍是单个 argument。
         $processArguments = foreach ($argument in $Arguments) {
             if ($argument.Contains('"')) {
                 throw "Keil argument contains an unsupported quote: $argument"

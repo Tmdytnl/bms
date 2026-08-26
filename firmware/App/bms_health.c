@@ -4,7 +4,11 @@
 
 #include "app_rtos.h"
 
-/* Naturally aligned monotonic generations; each task is its sole writer. */
+/*
+ * 自然对齐的单调 generation；每个任务是自身 slot sole writer。StateTask 在
+ * health window 两端 snapshot 比较：全部任务至少推进一次后才 arm watchdog，
+ * 任一必需任务超过 stale 窗口未推进就置 RTOS_HEALTH 并令 feed_allowed=false。
+ */
 static volatile uint32_t s_generation[BMS_HEALTH_TASK_COUNT];
 
 static bool BMS_Health_TimeElapsed(uint32_t now_ms,

@@ -1,16 +1,10 @@
 /*
- * BMS V1 FreeRTOS configuration.
- *
- * Created from scratch for the BMS project (Phase 6). The reference file
- * docs/FreeRTOS/FreeRTOSConfig.h is BLOCKED legacy input (max priorities
- * 5, 17 KiB heap, raw 0xBF, diagnostics off) and must never be copied.
- *
- * Locked baseline (errata C-01/C-02, H-08/H-09; Software Gate §3.2):
- *   - configMAX_PRIORITIES 8; seven task priorities 5/4/3/3/2/2/2
- *   - 4-bit NVIC, PriorityGroup_4, kernel raw 0xF0, max syscall raw 0x50
- *   - initial heap target about 8 KiB (H-08: budget, not immutable)
- *   - configASSERT + stack overflow check 2 + hooks (H-09)
- *   - preemptive, 1 ms tick, native FreeRTOS API
+ * BMS V1 专用 FreeRTOS configuration。`docs/FreeRTOS/FreeRTOSConfig.h` 是通用
+ * reference input，不可复制替代本文件。
+ * 冻结约束：configMAX_PRIORITIES=8；七任务 priority=5/4/3/3/2/2/2；
+ * 4-bit NVIC、PriorityGroup_4、kernel raw 0xF0、max-syscall raw 0x50；
+ * 12 KiB heap；configASSERT、stack overflow level 2 与 fatal hooks；
+ * preemptive scheduler、1 ms tick、native FreeRTOS API。
  */
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
@@ -20,7 +14,7 @@
 #include "bms_build_assert.h"
 
 /* ------------------------------------------------------------------ */
-/* Kernel basics                                                       */
+/* Kernel 基础调度配置。 */
 /* ------------------------------------------------------------------ */
 #define configUSE_PREEMPTION                    1
 #define configUSE_IDLE_HOOK                     1
@@ -47,9 +41,10 @@
 #define configMESSAGE_BUFFER_LENGTH_TYPE        size_t
 
 /* ------------------------------------------------------------------ */
-/* Memory (H-08): Phase 10/11 measured task stacks plus seven TCBs and
- * expanded CAN/CC queues exceed the original 8 KiB construction budget.
- * 12 KiB is verified against the 20 KiB target SRAM linker boundary. */
+/*
+ * Memory（H-08）：七任务 stack/TCB、CAN/CC queue 与 RTOS object 共享 heap_4；
+ * 12 KiB 已纳入 20 KiB SRAM linker boundary，不能在资源统计中重复相加。
+ */
 /* ------------------------------------------------------------------ */
 #define configTOTAL_HEAP_SIZE                   (12 * 1024)
 #define configAPPLICATION_ALLOCATED_HEAP        0
@@ -57,7 +52,7 @@
 #define configSUPPORT_STATIC_ALLOCATION         0
 
 /* ------------------------------------------------------------------ */
-/* Timers (V11.1.0 requires configUSE_TIMERS to use timers.c)          */
+/* Timer：V11.1.0 的 timers.c 要求 configUSE_TIMERS。 */
 /* ------------------------------------------------------------------ */
 #define configUSE_TIMERS                        1
 #define configTIMER_TASK_PRIORITY               (2)
@@ -65,7 +60,7 @@
 #define configTIMER_TASK_STACK_DEPTH            (160)
 
 /* ------------------------------------------------------------------ */
-/* Hooks and diagnostics (H-09)                                        */
+/* Fatal hooks 与 diagnostics（H-09）。 */
 /* ------------------------------------------------------------------ */
 #define configUSE_MALLOC_FAILED_HOOK            1
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
@@ -74,7 +69,7 @@
 #define configUSE_STATS_FORMATTING_FUNCTIONS    0
 #define configUSE_APPLICATION_TASK_TAG          0
 
-/* V11 API availability. */
+/* 正式代码使用的 V11 API 开关。 */
 #define INCLUDE_xTaskDelayUntil                  1
 #define INCLUDE_vTaskDelay                       1
 #define INCLUDE_xTaskGetCurrentTaskHandle        1
@@ -82,7 +77,7 @@
 #define INCLUDE_uxTaskGetStackHighWaterMark      1
 
 /* ------------------------------------------------------------------ */
-/* Cortex-M3 / ARMCC5 port (C-02)                                      */
+/* Cortex-M3 / ARMCC5 port 与 ISR priority contract（C-02）。 */
 /* ------------------------------------------------------------------ */
 #define configPRIO_BITS                         4
 #define configLIBRARY_LOWEST_INTERRUPT_PRIORITY 15
@@ -91,14 +86,13 @@
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY    (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
 
-/* Map the FreeRTOS port exception handlers onto the startup vector
- * names used by startup_stm32f10x_md.s (RVDS/ARM_CM3 convention). */
+/* 将 FreeRTOS port exception handler 映射到 startup vector 使用的 RVDS 名称。 */
 #define vPortSVCHandler                         SVC_Handler
 #define xPortPendSVHandler                      PendSV_Handler
 #define xPortSysTickHandler                     SysTick_Handler
 
 /* ------------------------------------------------------------------ */
-/* Assert (H-09): custom handler must be provided by the application.  */
+/* Assert（H-09）：application 提供 fail-stop handler。 */
 /* ------------------------------------------------------------------ */
 void vApplicationAssertFailedHandler(void);
 #define configASSERT(x)                         \
@@ -112,16 +106,14 @@ void vApplicationAssertFailedHandler(void);
     } while (0)
 
 /* ------------------------------------------------------------------ */
-/* Hooks: only the assert handler is declared here (the kernel has no  */
-/* prototype for it). The stack-overflow hook signature is provided by */
-/* task.h; the implementations live in App/app_rtos_hooks.c.           */
+/* hook implementation 位于 App/app_rtos_hooks.c；stack-overflow prototype 由 task.h 提供。 */
 /* ------------------------------------------------------------------ */
 void vApplicationAssertFailedHandler(void);
 void vApplicationMallocFailedHook(void);
 void vApplicationIdleHook(void);
 
 /* ------------------------------------------------------------------ */
-/* Compile-time consistency checks (fail fast at build time).          */
+/* 编译期一致性检查：配置漂移在 build 时 fail fast。 */
 /* ------------------------------------------------------------------ */
 BMS_BUILD_ASSERT(configMAX_PRIORITIES == 8,
                  freertos_max_priorities_is_eight);
@@ -140,4 +132,4 @@ BMS_BUILD_ASSERT(configCHECK_FOR_STACK_OVERFLOW == 2,
 BMS_BUILD_ASSERT(configTOTAL_HEAP_SIZE <= (20 * 1024),
                  heap_budget_inside_sram);
 
-#endif /* FREERTOS_CONFIG_H */
+#endif /* FREERTOS_CONFIG_H：include guard */

@@ -9,12 +9,12 @@
 
 typedef struct
 {
-    int64_t remaining_mams;
-    uint32_t last_sample_ms;
-    uint32_t afe_generation;
-    uint32_t integrated_sample_count;
-    uint32_t queue_gap_count;
-    uint32_t generation_change_count;
+    int64_t remaining_mams;            /* mA·ms：整数库仑积分的内部高分辨率容量 */
+    uint32_t last_sample_ms;            /* 上一条已接受 CC sample 时间 */
+    uint32_t afe_generation;            /* 积分链绑定的 AFE 生命周期 */
+    uint32_t integrated_sample_count;   /* 成功连续积分的 sample 数 */
+    uint32_t queue_gap_count;           /* newest-wins 覆盖造成的不连续次数 */
+    uint32_t generation_change_count;   /* AFE epoch 切换次数 */
     uint32_t full_correction_count;
     uint32_t empty_correction_count;
     uint32_t full_started_ms;
@@ -40,7 +40,12 @@ typedef struct
     bool queue_gap_latched;
 } BMS_SocSnapshot_t;
 
-/* Pure integer engine used by SOCTask and simulator tests. */
+/*
+ * SOCTask 与 production-C tests 共用的纯整数 SOC engine。初值来自合法 Flash
+ * restore，否则由 fresh cell OCV 建立；CC sample 使用 mA×delta_ms 积分并始终
+ * clamp 在 [0, capacity]。queue gap 会锁存精度降级诊断。AFE generation 改变
+ * 时只重新建立时间基线，绝不把旧 epoch current 与新 epoch 时间间隔连续积分。
+ */
 bool BMS_Soc_EngineInit(BMS_SocEngine_t *engine,
                         const BMS_SocPolicy_t *policy,
                         const BMS_DataSnapshot_t *measurement,
@@ -65,4 +70,4 @@ bool BMS_Soc_Restore(uint16_t soc_permille,
 void BMS_Soc_RunOnce(uint32_t now_ms);
 BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void);
 
-#endif /* BMS_SOC_H */
+#endif /* BMS_SOC_H：include guard */

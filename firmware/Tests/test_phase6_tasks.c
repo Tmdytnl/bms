@@ -14,10 +14,8 @@
     } while (0)
 
 /*
- * Phase 6 task creation test. Runs before the scheduler starts; all seven
- * task control blocks are created from the FreeRTOS heap. The scheduler
- * must still report "not started" (the production image starts it from
- * main after this point).
+ * scheduler 前创建七个 task control block；此时 scheduler 必须仍为 not-started，
+ * 正式 image 只由 main 在全部对象就绪后启动。
  */
 uint32_t Test_Phase6_Tasks(void)
 {
@@ -26,9 +24,8 @@ uint32_t Test_Phase6_Tasks(void)
 
     failures = 0UL;
 
-    /* Test_Phase6_Objects already created the single production-equivalent
-     * object set. Reuse it here; creating a second set would only measure a
-     * harness leak and distort the Phase 6 heap evidence. */
+    /* 复用 Test_Phase6_Objects 创建的唯一 production-equivalent object set；
+     * 重复创建只会引入 harness leak 并扭曲 heap evidence。 */
     g_p6_probe = 20UL;
     result = ((xI2CMutex != NULL) && (xDataMutex != NULL) &&
               (xAfeAlertSem != NULL) && (xCanTxQueue != NULL) &&
@@ -41,7 +38,7 @@ uint32_t Test_Phase6_Tasks(void)
     g_p6_probe = 22UL;
     TEST_CHECK(result == pdTRUE);
 
-    /* Scheduler must not be running yet in the production flow. */
+    /* 正式 flow 此刻 scheduler 仍未运行。 */
     g_p6_probe = 23UL;
     TEST_CHECK(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED);
     g_p6_probe = 24UL;

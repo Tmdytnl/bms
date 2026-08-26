@@ -1,5 +1,11 @@
 #include "bms_hw_recovery.h"
 
+/*
+ * 本模块不清 fault，只把 StateTask 观察到的 measurement recovery evidence
+ * 组织成带 identity 的 request。generation 变化、source inactive/重触发、数据
+ * 失效或 qualification expiry 都会使旧 exchange 失效，避免延迟 ack 清错事件。
+ */
+
 #include <stddef.h>
 
 static bool BMS_HwRecovery_TimeElapsed(uint32_t now_ms,

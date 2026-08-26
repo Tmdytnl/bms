@@ -1,5 +1,11 @@
 #include "bq76940.h"
 
+/*
+ * BQ transport 负责 address/register/data/CRC/STOP 的完整 transaction。
+ * read block 先写入局部 staging，所有 byte CRC 成功后才提交 caller output；
+ * write 的最终 STOP 是 side-effect 边界，失败时返回 AMBIGUOUS 而非猜测或重放。
+ */
+
 #include <string.h>
 
 #include "bq76940_regs.h"
@@ -53,8 +59,7 @@ static BQ76940_Status_t BQ76940_StopAfterFailure(BQ76940_t *device,
         stop_status = SoftI2C_Stop(device->bus);
         if (stop_status != SOFT_I2C_STATUS_OK)
         {
-            /* The public CRC contract requires a detected mismatch to remain
-             * distinguishable after the mandatory NACK-and-STOP attempt. */
+            /* CRC mismatch 在完成 mandatory NACK+STOP 后仍保留独立状态，便于诊断。 */
             if (primary == BQ76940_STATUS_CRC_MISMATCH)
             {
                 return primary;
@@ -167,9 +172,10 @@ BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
     i2c_status = SoftI2C_Stop(device->bus);
     if (i2c_status != SOFT_I2C_STATUS_OK)
     {
-        /* ACK of all data/CRC bytes does not prove when the BQ7694003 applies
-         * the register side effect. Without a successful final STOP this is
-         * deliberately neither success nor definite rejection. */
+        /*
+         * data/CRC 全 ACK 不证明 BQ7694003 在何时应用 register side effect；
+         * final STOP 未成功时刻意返回既非 success 也非 definite rejection。
+         */
         return BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS;
     }
     return BQ76940_STATUS_OK;

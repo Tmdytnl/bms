@@ -224,8 +224,7 @@ static uint32_t TestContinuation_Balance(void)
         &engine, &policy->balance, &measurement,
         &state, &protect, &recovery, 10000UL) == 0U);
 
-    /* Exercise the real owner transaction and its fail-safe all-off attempt
-     * after a transport failure. */
+    /* 覆盖正式 owner transaction，以及 transport failure 后的 fail-safe all-off。 */
     TestP9_StubReset();
     TestContinuation_FreshMeasurement(
         &measurement, 4100U, 1000, 250, 1UL, 0UL);
@@ -339,8 +338,7 @@ typedef struct
     bool fail_erase;
 } TestPersistenceFlash_t;
 
-/* The Keil simulator image has a deliberately small 1 KiB C stack. Keep the
- * two emulated 1 KiB Flash pages in ZI rather than a test-function frame. */
+/* Keil simulator C stack 仅 1 KiB；两个 emulated Flash page 放在 ZI 而非函数栈。 */
 static TestPersistenceFlash_t s_test_persistence_flash;
 static BMS_PersistenceStore_t s_test_persistence_store;
 static BMS_PersistenceStore_t s_test_persistence_rebooted;
@@ -506,8 +504,8 @@ static uint32_t TestContinuation_Persistence(void)
             &s_test_persistence_store, &selected) &&
         selected.sequence == 1UL && selected.soc_permille == 500U);
 
-    /* Interrupt the next transaction at the commit-last halfword. A reboot
-     * must reject the incomplete new page and retain the previous bank. */
+    /* 在 commit-last halfword 中断 transaction；reboot 必须拒绝 incomplete new page
+     * 并保留 previous bank。 */
     s_test_persistence_flash.fail_program_ordinal =
         s_test_persistence_flash.program_count +
         (BMS_PERSISTENCE_BODY_BYTES / 2U) + 1UL;
@@ -525,8 +523,7 @@ static uint32_t TestContinuation_Persistence(void)
         selected.sequence == 1UL && selected.soc_permille == 500U);
     ++g_continuation_scenarios_completed; /* SIM-31 */
 
-    /* Retry to the inactive bank, then corrupt the newest body. CRC-based
-     * reboot selection must fall back to the still-valid older bank. */
+    /* retry 写 inactive bank 后破坏 newest body；CRC selection 必须回退到旧 valid bank。 */
     s_test_persistence_flash.fail_program_ordinal = 0UL;
     TEST_CONT_CHECK(failures, BMS_Persistence_StoreSocIfDue(
         &s_test_persistence_rebooted, 510U, 10200UL, 3UL, 4UL, true,

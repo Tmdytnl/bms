@@ -29,15 +29,13 @@ typedef struct
     bool fail_xready_get;
     bool inject_xready_after_cell_give;
     bool inject_xready_after_pack_give;
-    /* Execute valid NTC table A->B->A setters after the pack mutex give. */
+    /* pack mutex give 后执行合法 NTC table A→B→A setter。 */
     bool inject_ntc_configuration_aba_after_pack_give;
-    /* Reinstall table A once after pack give for the MAX-to-zero vector. */
+    /* 为 MAX→0 vector 在 pack give 后重装一次 table A。 */
     bool inject_ntc_configuration_wrap_after_pack_give;
-    /* Queue a Protect-task transition at the final guard. The stub applies it
-     * only when the outer scheduler exclusion ends. */
+    /* final guard 时 queue Protect transition；stub 只在外层 scheduler exclusion 结束后应用。 */
     bool pend_xready_transition_on_final_guard;
-    /* Deterministic scheduling model: inject a bounded Protect mutex take
-     * inside the cell driver call, then retry immediately after Sample give. */
+    /* 确定性调度模型：cell driver 内注入 bounded Protect mutex take，并在 Sample give 后 retry。 */
     bool inject_protect_i2c_contention;
     BaseType_t scheduler_state;
     uint32_t fail_i2c_take_ordinal;

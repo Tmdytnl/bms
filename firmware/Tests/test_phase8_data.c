@@ -102,7 +102,7 @@ BaseType_t xQueueGenericSend(QueueHandle_t queue,
     }
     else if (s_give_hook == TEST_DATA_GIVE_HOOK_REPLACE_AFTER_READ)
     {
-        /* Models an immediate higher-priority writer after mutex release. */
+        /* 模拟 mutex release 后立即运行的高优先级 writer。 */
         TestData_ReplaceGlobalGeneration();
     }
     s_give_hook = TEST_DATA_GIVE_HOOK_NONE;
@@ -395,7 +395,7 @@ static void TestData_StickyStaleCannotResurrectAfterWrap(void)
     first = TestData_MakeFrame(100U, 3000U);
     TEST_DATA_CHECK(BMS_Data_PublishMeasurement(&first));
 
-    /* The first observed threshold crossing latches every valid group. */
+    /* 第一次观察 freshness threshold crossing 时锁存每个 valid group。 */
     TEST_DATA_CHECK(BMS_Data_GetSnapshot(&snapshot, 5101U));
     TEST_DATA_CHECK(snapshot.pack_metadata.stale_latched);
     TEST_DATA_CHECK(snapshot.bq_pack_metadata.stale_latched);
@@ -405,8 +405,7 @@ static void TestData_StickyStaleCannotResurrectAfterWrap(void)
     TEST_DATA_CHECK(snapshot.cell_metadata.stale_bitmap ==
                     BMS_CELL_DEFINED_MASK);
 
-    /* A full uint32_t wrap makes the arithmetic age small again, but the
-     * sticky state must keep the old generation non-fresh. */
+    /* 完整 uint32_t wrap 会让算术 age 变小，但 sticky state 保持旧代 non-fresh。 */
     TEST_DATA_CHECK(BMS_Data_GetSnapshot(&snapshot, 150U));
     TEST_DATA_CHECK(snapshot.pack_metadata.age_ms == 50U);
     TEST_DATA_CHECK(snapshot.pack_metadata.stale_latched);
@@ -415,7 +414,7 @@ static void TestData_StickyStaleCannotResurrectAfterWrap(void)
                                      snapshot.pack_metadata.age_ms,
                                      BMS_DATA_VOLTAGE_FRESH_MAX_MS));
 
-    /* A core-only publication restores only the core voltage groups. */
+    /* core-only publication 只恢复 core voltage group。 */
     core_only = TestData_MakeFrame(200U, 3100U);
     core_only.update_current = false;
     core_only.update_temperature = false;
@@ -432,7 +431,7 @@ static void TestData_StickyStaleCannotResurrectAfterWrap(void)
                                     snapshot.pack_metadata.age_ms,
                                     BMS_DATA_VOLTAGE_FRESH_MAX_MS));
 
-    /* Publishing each optional group is the only way to clear its latch. */
+    /* 只有重新发布对应 optional group 才能清各自 latch。 */
     all_groups = TestData_MakeFrame(250U, 3200U);
     TEST_DATA_CHECK(BMS_Data_PublishMeasurement(&all_groups));
     TEST_DATA_CHECK(BMS_Data_GetSnapshot(&snapshot, 250U));

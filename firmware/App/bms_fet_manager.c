@@ -1,5 +1,13 @@
 #include "bms_fet_manager.h"
 
+/*
+ * FET transaction 采用 capture revisions → compose requested/effective →
+ * read current → write expected → readback → confirm revisions 的闭环。
+ * enable 比 disable 更严格：任一安全输入在 transaction 中途变化，都会尝试
+ * safe-off；写入 finalization 或 readback 不明确则 quarantine，禁止旧 enable
+ * 在无法证明状态时继续传播。
+ */
+
 #include <stddef.h>
 
 #include "app_rtos.h"
@@ -115,8 +123,7 @@ static bool BMS_FetManager_AttemptSafeOffLocked(void)
         return false;
     }
     expected = BQ76940_Control_SysCtrl2WithFets(current, &safe_off);
-    /* The manager owns the complete scheduler-era SYS_CTRL2 composition.
-     * CC_EN is required in both safe-off and operational states. */
+    /* manager 持有调度期完整 SYS_CTRL2 composition；safe-off 与运行态都保留 CC_EN。 */
     expected |= BMS_FET_MANAGER_CC_EN;
     status = BQ76940_WriteByte(s_device, BQ76940_REG_SYS_CTRL2, expected);
     if (status != BQ76940_STATUS_OK)
@@ -180,6 +187,7 @@ void BMS_FetManager_Service(void)
     bool enabling;
     bool quarantined;
 
+    /* 先捕获三个权威 owner 快照；BMS_Data 诊断 aggregate 不参与仲裁。 */
     protect = BMS_Protect_GetSafetySnapshot();
     state = BMS_State_GetSafetySnapshot();
     recovery = BMS_Recovery_GetSnapshot();
@@ -207,6 +215,7 @@ void BMS_FetManager_Service(void)
         return;
     }
 
+    /* enable 前先确认 captured revisions 与 measurement identity 未过期。 */
     if (enabling &&
         !BMS_FetManager_SnapshotsStillCurrent(&protect, &state, &recovery))
     {
@@ -259,6 +268,7 @@ void BMS_FetManager_Service(void)
         return;
     }
 
+    /* 仅替换 owner 管理的 CHG/DSG 位，并显式保持 CC_EN。 */
     expected = BQ76940_Control_SysCtrl2WithFets(current, &effective);
     expected |= BMS_FET_MANAGER_CC_EN;
     s_snapshot.expected_sys_ctrl2 = expected;
@@ -303,6 +313,7 @@ void BMS_FetManager_Service(void)
         s_after_write_hook();
     }
 #endif
+    /* write 返回成功仍不足以证明结果；必须重新 readback 完整 SYS_CTRL2。 */
     actual = 0U;
     status = BQ76940_ReadByte(s_device, BQ76940_REG_SYS_CTRL2, &actual);
     s_snapshot.observed_sys_ctrl2 = actual;
@@ -325,6 +336,10 @@ void BMS_FetManager_Service(void)
     BQ76940_Control_ObserveFets(actual, &s_snapshot.observed);
     s_snapshot.register_state_confirmed = true;
 
+    /*
+     * readback 成功后再次确认 revisions。若写寄存器期间新 fault 到达，旧 enable
+     * 即使已经写入也不能 commit 为 applied，必须立刻回到 verified safe-off。
+     */
     if (enabling &&
         !BMS_FetManager_SnapshotsStillCurrent(&protect, &state, &recovery))
     {

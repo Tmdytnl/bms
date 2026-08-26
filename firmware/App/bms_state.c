@@ -1,5 +1,12 @@
 #include "bms_state.h"
 
+/*
+ * State owner 只负责软件保护、DATA_STALE、RTOS_HEALTH 与运行状态分类。
+ * 每次 decision 绑定同一 sample_sequence/afe_generation，并在发布前比较当前
+ * identity；FET Manager 读取 directional inhibit，而不是把 FAULT 直接翻译成
+ * CHG/DSG 双关断命令，从而保留充电/放电方向不同的保护动作。
+ */
+
 #include <stddef.h>
 
 #include "app_rtos.h"

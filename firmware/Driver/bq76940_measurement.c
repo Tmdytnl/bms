@@ -5,10 +5,8 @@
 #include "bq76940_regs.h"
 
 /*
- * Explicit 13S logical-cell to VC channel table (logical cell 1..13):
- *   1..8 -> VC1..VC8, 9..12 -> VC10..VC13, 13 -> VC15.
- * VC9 and VC14 are skipped (TI SLUSBK2I Table 9-4 "13 Cells").
- * Index is logical_cell - 1. Never derive channels by arithmetic.
+ * 显式 13S logical-cell→VC table：1..8→VC1..8，9..12→VC10..13，13→VC15。
+ * 跳过 VC9/VC14；index=logical_cell-1，绝不以算术假设 channel 连续。
  */
 static const uint8_t s_logical_cell_to_vc[BQ76940_MEASUREMENT_CELL_COUNT] =
 {
@@ -61,10 +59,8 @@ BQ76940_Status_t BQ76940_ReadCellVoltages13(
     }
 
     /*
-     * One atomic 30-byte block transaction over VC1_HI..VC15_LO. The
-     * Phase 3 transport checks every data byte CRC and commits the block
-     * atomically; this is a single software read window, not a claim that
-     * the 13 cell ADCs converted simultaneously.
+     * VC1_HI..VC15_LO 用一次 30-byte transaction 读取，每个 byte 校验 CRC 后
+     * 原子提交 block。这是同一 software read window，不代表 13 个 ADC 同时转换。
      */
     result = BQ76940_ReadBlock(device,
                                BQ76940_REG_VC1_HI,
@@ -85,7 +81,7 @@ BQ76940_Status_t BQ76940_ReadCellVoltages13(
                                             &converted[index]);
         if (result != BQ76940_STATUS_OK)
         {
-            /* Any single cell failure aborts the whole commit. */
+            /* 任一 cell decode/convert 失败都中止整组 commit。 */
             return result;
         }
     }
@@ -121,9 +117,8 @@ BQ76940_Status_t BQ76940_ReadPackVoltageMv(
     }
 
     /*
-     * TI eq. (9): V(BAT) = 4 x GAIN x ADC + (#Cells x OFFSET).
-     * BAT register holds (sum of cell ADC)/4, so the 4x factor restores
-     * the summed cell ADC scale. OFFSET is in mV, GAIN in uV/LSB.
+     * TI eq.9：BAT register 保存 cell ADC sum/4，因此乘 4 恢复求和尺度；
+     * OFFSET 单位 mV，GAIN 单位 uV/LSB。
      */
     microvolts = ((int64_t)4 * (int64_t)calibration->gain_uv_per_lsb *
                   (int64_t)bat_raw) +
@@ -184,10 +179,7 @@ BQ76940_Status_t BQ76940_ConvertCcRawToCurrentMa(
         return BQ76940_STATUS_INVALID_ARGUMENT;
     }
 
-    /*
-     * I[mA] = polarity x (CC_raw x 8440 nV/LSB) / (Rsense in u-ohm)
-     * 64-bit numerator so the full 16-bit signed range cannot overflow.
-     */
+    /* CC raw×8440 nV/LSB÷Rsense_uohm，64-bit numerator 覆盖完整 signed16 范围。 */
     numerator = (int64_t)cc_raw * (int64_t)BQ76940_MEASUREMENT_CC_LSB_NV;
     milliamps = (numerator * (int64_t)polarity) / (int64_t)rsense_uohm;
     if ((milliamps < INT32_MIN) || (milliamps > INT32_MAX))
@@ -236,17 +228,17 @@ BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
-    /* VTSX[uV] = raw x 382 uV/LSB (eq. 4). */
+    /* VTSX[uV] = raw×382 uV/LSB（eq.4）。 */
     ts_uv = (int64_t)ts1_raw14 *
             (int64_t)BQ76940_MEASUREMENT_TS_UV_PER_LSB;
     denominator = (int64_t)BQ76940_MEASUREMENT_TS_REGOUT_UV - ts_uv;
     if (denominator <= 0LL)
     {
-        /* VTSX >= 3.3 V is outside the thermistor divider model. */
+        /* VTSX>=3.3 V 时 divider denominator 非正，超出 thermistor model。 */
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
-    /* RTS[ohm] = (10000 x VTSX) / (3.3 V - VTSX), all uV (eq. 5). */
+    /* RTS[ohm]=(10000×VTSX)/(3.3 V−VTSX)，电压统一使用 uV（eq.5）。 */
     resistance = ((int64_t)BQ76940_MEASUREMENT_TS_PULLUP_OHM * ts_uv) /
                  denominator;
     if ((resistance < 0LL) || (resistance > (int64_t)UINT32_MAX))

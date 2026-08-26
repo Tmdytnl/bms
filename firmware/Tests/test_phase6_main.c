@@ -4,7 +4,7 @@ volatile uint32_t g_phase6_test_failures;
 volatile uint32_t g_phase6_test_completed;
 volatile uint32_t g_p6_objects_failures;
 volatile uint32_t g_p6_tasks_failures;
-volatile uint32_t g_p6_probe;   /* progress probe for simulator diagnosis */
+volatile uint32_t g_p6_probe;   /* Simulator 诊断用 progress probe */
 
 void SystemInit(void)
 {

@@ -6,10 +6,7 @@
 
 #include "bms_build_assert.h"
 
-/*
- * Stable Phase 1 fault identifiers. Do not reorder after protocol or
- * persistence encodings are introduced; those encodings remain explicit.
- */
+/* 稳定 fault ID；bit position 已进入显式协议/持久化语义，禁止重排。 */
 typedef enum
 {
     BMS_FAULT_ID_HW_OV = 0,
@@ -39,13 +36,15 @@ typedef uint32_t BMS_FaultBitmap_t;
 
 typedef struct
 {
-    /* An unresolved safety condition or captured event whose source owner has
-     * not yet proved the configured recovery contract. For W1C event sources,
-     * a cleared hardware status bit alone is not proof of physical recovery. */
+    /*
+     * active 表示 source owner 尚未证明 recovery contract 的安全条件/捕获事件。
+     * 对 W1C source，hardware status bit 变低本身不是 recovery evidence。
+     */
     BMS_FaultBitmap_t active;
-    /* Retained severe-event history. It is never cleared merely because the
-     * corresponding active bit or hardware status bit became zero; an
-     * authoritative, source-specific explicit-reset policy owns any clear. */
+    /*
+     * latched 保存 severe-event history，不随 active/status 变零自动清除；
+     * 任何 clear 都必须由 authoritative source-specific explicit-reset policy 执行。
+     */
     BMS_FaultBitmap_t latched;
 } BMS_FaultSummary_t;
 
@@ -67,4 +66,4 @@ bool BMS_Fault_IdIsValid(BMS_FaultId_t fault_id);
 BMS_FaultBitmap_t BMS_Fault_Mask(BMS_FaultId_t fault_id);
 bool BMS_Fault_Contains(BMS_FaultBitmap_t bitmap, BMS_FaultId_t fault_id);
 
-#endif /* BMS_FAULT_H */
+#endif /* BMS_FAULT_H：include guard */

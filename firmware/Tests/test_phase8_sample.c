@@ -655,8 +655,7 @@ static void TestSample_BoundedStaleProjection(void)
         g_phase8_sample_stub_observation.data_take_success_count == 1UL);
     TEST_SAMPLE_CHECK(TestPhase8SampleStub_LocksBalanced());
 
-    /* Latch a voltage generation stale, then model one full uint32_t wrap.
-     * Sample must consume the sticky bit even though arithmetic age is small. */
+    /* 先锁存 voltage stale，再模拟完整 uint32_t wrap；即使算术 age 变小也必须保持 sticky。 */
     TestSample_Reset(true);
     TEST_SAMPLE_CHECK(BMS_Sample_RunOnce(100UL));
     TEST_SAMPLE_CHECK(BMS_Data_GetFreshnessSnapshot(&freshness, 1101UL));
@@ -677,18 +676,15 @@ static void TestSample_ConfigurationRevisionGuard(void)
     uint32_t captured_revision;
     uint32_t current_revision;
 
-    /* The production revision primitive distinguishes the immediate natural
-     * wrap. A complete 2^32-change alias remains the documented lifecycle
-     * boundary, not a property claimed by this equality guard. */
+    /* 正式 revision primitive 可区分立即自然回绕；完整 2^32 alias 由生命周期约束。 */
     captured_revision = UINT32_MAX;
     current_revision =
         BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(captured_revision);
     TEST_SAMPLE_CHECK(current_revision == 0UL);
     TEST_SAMPLE_CHECK(captured_revision != current_revision);
 
-    /* Capture table A, then inject valid A->B->A setters after the pack
-     * transaction. Pointer/count equality alone would miss this ABA; the
-     * production revision must reject the frame and retain previous-good. */
+    /* 捕获 table A 后注入 A→B→A；pointer/count 相等会漏掉 ABA，revision 必须拒绝
+     * 本帧并保留 previous-good。 */
     TestSample_Reset(true);
     TEST_SAMPLE_CHECK(BMS_Sample_SetNtcTable(
         TestPhase8SampleStub_AbaNtcTableA(),
@@ -739,9 +735,8 @@ static void TestSample_ConfigurationRevisionImmediateWrapGuard(void)
     TEST_SAMPLE_CHECK(current_revision == 0UL);
     TEST_SAMPLE_CHECK(captured_revision != current_revision);
 
-    /* Seed the production static revision to MAX. RunOnce captures MAX, then
-     * the production setter reinstalls the same pointer/count after pack give
-     * and advances MAX->0. Only the revision guard can reject this frame. */
+    /* revision seed 为 MAX；RunOnce 捕获后 setter 重装同 pointer/count 并 MAX→0，
+     * 只有 revision guard 能拒绝。 */
     TestSample_Reset(true);
     TEST_SAMPLE_CHECK(BMS_Sample_SetNtcTable(
         TestPhase8SampleStub_AbaNtcTableA(),
@@ -785,7 +780,7 @@ static void TestSample_XreadyGenerationGuard(void)
     BMS_SampleDiagnostics_t diagnostics;
     BQ76940_Calibration_t calibration;
 
-    /* A device setter invalidates the prior calibration binding. */
+    /* SetDevice 使 prior calibration binding 失效。 */
     TestSample_Reset(true);
     BMS_Sample_SetDevice(TestPhase8SampleStub_Device());
     TestPhase8SampleStub_ClearObservation();
@@ -795,7 +790,7 @@ static void TestSample_XreadyGenerationGuard(void)
     diagnostics = BMS_Sample_GetDiagnostics();
     TEST_SAMPLE_CHECK(diagnostics.calibration_invalid_count == 1UL);
 
-    /* An active XREADY is rejected before the first AFE transaction. */
+    /* XREADY active 在第一笔 AFE transaction 前即拒绝。 */
     TestSample_Reset(true);
     g_phase8_sample_stub_control.xready_state.xready_generation = 1UL;
     g_phase8_sample_stub_control.xready_state.active = true;
@@ -806,9 +801,8 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(diagnostics.xready_precheck_reject_count == 1UL);
     TEST_SAMPLE_CHECK(diagnostics.configuration_not_ready_count == 1UL);
 
-    /* A same-generation SetDevice still creates a new physical AFE epoch.
-     * Its first successful core publication retires old current exactly once
-     * when no new CC has arrived. */
+    /* 即使 generation 数值相同，SetDevice 也创建新 physical epoch；无新 CC 时首个
+     * successful core 只淘汰一次 old current。 */
     TestSample_Reset(true);
     TestSample_SetCc(true, (int16_t)100, (TickType_t)90U, 1UL);
     TEST_SAMPLE_CHECK(BMS_Sample_RunOnce(100UL));
@@ -827,8 +821,7 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(!snapshot.current_metadata.valid);
     TEST_SAMPLE_CHECK(snapshot.current_metadata.timestamp_ms == 350UL);
 
-    /* SetDevice also consumes the identity of an unconsumed old-device
-     * mailbox value. Only a later CC can supply new-device current. */
+    /* SetDevice 同时消费未读 old-device mailbox identity，只有后续 CC 可提供新 current。 */
     TestSample_Reset(true);
     TestSample_SetCc(true, (int16_t)100, (TickType_t)90U, 7UL);
     BMS_Sample_SetDevice(TestPhase8SampleStub_Device());
@@ -845,9 +838,8 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 500UL));
     TEST_SAMPLE_CHECK(snapshot.current_metadata.valid);
 
-    /* A prior-generation current and stale mailbox survive failed core
-     * publication only as previous-good data. The next successful new-epoch
-     * core clears current; a same-epoch CC then restores it. */
+    /* failed core 后 prior current/stale mailbox 只作为 previous-good 保留；下一成功
+     * new-epoch core 清 current，同 epoch CC 再恢复。 */
     TestSample_Reset(true);
     TestSample_SetCc(true, (int16_t)100, (TickType_t)90U, 1UL);
     TEST_SAMPLE_CHECK(BMS_Sample_RunOnce(100UL));
@@ -873,9 +865,7 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(snapshot.current_metadata.valid);
     TEST_SAMPLE_CHECK(snapshot.current_ma == (BMS_CurrentMa_t)422);
 
-    /* An unconsumed old-epoch mailbox cannot become current after recovery
-     * and calibration rebinding, even though its valid bit is deliberately
-     * left set in this adversarial stub. */
+    /* recovery/rebinding 后 old-epoch mailbox 即使 stub 故意保留 valid，也不能成为 current。 */
     TestSample_Reset(true);
     TestSample_SetCc(true, (int16_t)300, (TickType_t)100U, 7UL);
     g_phase8_sample_stub_control.xready_state.xready_generation = 1UL;
@@ -893,8 +883,7 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 500UL));
     TEST_SAMPLE_CHECK(snapshot.current_metadata.valid);
 
-    /* A Protect transition after the cell transaction rejects the staged
-     * frame. Clearing active does not revive the old generation binding. */
+    /* cell transaction 后 Protect transition 必须拒绝 staging；清 active 不复活旧 binding。 */
     TestSample_Reset(true);
     g_phase8_sample_stub_control.inject_xready_after_cell_give = true;
     TEST_SAMPLE_CHECK(!BMS_Sample_RunOnce(250UL));
@@ -927,7 +916,7 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 750UL));
     TEST_SAMPLE_CHECK(snapshot.sample_sequence == 1UL);
 
-    /* The same guard catches a transition immediately after the pack read. */
+    /* 同一 guard 覆盖 pack read 后立即发生的 transition。 */
     TestSample_Reset(true);
     g_phase8_sample_stub_control.inject_xready_after_pack_give = true;
     TEST_SAMPLE_CHECK(!BMS_Sample_RunOnce(250UL));
@@ -942,8 +931,7 @@ static void TestSample_XreadyGenerationGuard(void)
     g_phase8_sample_xready_pack_rejects =
         diagnostics.xready_postcheck_reject_count;
 
-    /* Bind at UINT32_MAX, transition once to zero, recover active, and prove
-     * the old binding still differs until SetCalibration is called again. */
+    /* 在 UINT32_MAX bind 后转移到 0，再清 active；旧 binding 仍失效直到重装 calibration。 */
     TestPhase8SampleStub_Reset();
     g_phase8_sample_stub_control.xready_state.xready_generation = UINT32_MAX;
     g_phase8_sample_stub_control.xready_state.active = false;
@@ -986,8 +974,7 @@ static void TestSample_XreadyGenerationGuard(void)
     TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 1000UL));
     TEST_SAMPLE_CHECK(snapshot.current_metadata.valid);
 
-    /* A ready Protect task requested at the final getter stays deferred until
-     * after the data mutex publication while the outer scheduler lock holds. */
+    /* final getter 唤醒的 ProtectTask 在外层 scheduler lock 下延后到 data publish 之后。 */
     TestSample_Reset(true);
     g_phase8_sample_stub_control
         .pend_xready_transition_on_final_guard = true;
@@ -1026,9 +1013,8 @@ static void TestSample_RecoveryCalibrationProvenance(void)
     TestSample_Reset(true);
     cached_calibration = TestSample_ValidCalibration();
 
-    /* First runtime XREADY permanently closes the unproven legacy setter.
-     * A cached pre-XREADY calibration therefore cannot be relabelled for the
-     * new AFE epoch after Protect has cleared the active condition. */
+    /* 首次 runtime XREADY 永久关闭 legacy setter；cached pre-XREADY calibration
+     * 不能在 active clear 后被重新贴成新 epoch。 */
     BMS_Sample_InvalidateCalibrationForXready(1UL);
     g_phase8_sample_stub_control.xready_state.xready_generation = 1UL;
     g_phase8_sample_stub_control.xready_state.active = false;
@@ -1106,9 +1092,8 @@ static void TestSample_ProtectI2cContentionModel(void)
     BMS_DataSnapshot_t snapshot;
     BMS_SampleDiagnostics_t diagnostics;
 
-    /* Deterministic composition only: execute a Protect-shaped bounded take
-     * from inside the Sample driver stub, then retry immediately after the
-     * Sample give. This proves mutex ordering, not real preemptive timing. */
+    /* 确定性组合：在 Sample driver stub 内执行 Protect-shaped bounded take，并在
+     * Sample give 后立即 retry；证明 mutex ordering，不声称真实 preemptive timing。 */
     TestSample_Reset(true);
     g_phase8_sample_stub_control.inject_protect_i2c_contention = true;
     TEST_SAMPLE_CHECK(BMS_Sample_RunOnce(250UL));

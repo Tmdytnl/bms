@@ -92,8 +92,7 @@ def check_regression() -> None:
     require(sha256(ROOT / "deliverables" / "phase4" / "BMS_V1_Phase4_Report.md") ==
             PHASE4_REPORT_HASH,
             "Phase 4 report revision drifted")
-    # uvprojx is extended by Phase 4 (measurement) and now by Phase 5
-    # (control); verify both sources are present in the target.
+    # uvprojx 必须同时包含 measurement 与 control source。
     tree = ET.parse(PROJECT)
     paths = [node.text or "" for node in tree.findall(".//FilePath")]
     joined = "\n".join(paths).lower()
@@ -128,7 +127,7 @@ def check_trip_oracle() -> None:
     require("BQ76940_Control_EncodeOvTrip" in header, "OV encode API missing")
     require("BQ76940_Control_EncodeUvTrip" in header, "UV encode API missing")
 
-    # TI official example: OV 4.30V, GAIN=382, OFFSET=0 -> 0xBF.
+    # TI official example：OV 4.30 V、GAIN=382、OFFSET=0→0xBF。
     def trip(target_mv, gain, off, msb):
         full = (target_mv - off) * 1000 // gain
         assert (full >> 12) == msb
@@ -181,7 +180,7 @@ def check_ocd_scd_oracle() -> None:
     require(select(ov_delay, 9) is None, "OV 9s should be RANGE_ERROR")
     require(select(uv_delay, 17) is None, "UV 17s should be RANGE_ERROR")
 
-    # PROTECT composition.
+    # PROTECT register composition。
     require(((1 << 3) | 4) == 0x0C or True, "sanity")
     p1 = (0x80) | ((1 & 3) << 3) | (4 & 7)
     require(p1 == 0x8C, "PROTECT1 compose mismatch")
@@ -271,8 +270,7 @@ def check_boundaries() -> None:
                   "CAN_", "PROTECT1", "WriteByte", "ReadByte"):
         require(token not in source,
                 f"forbidden Phase 6+/I2C/register-write symbol in control driver: {token}")
-    # Phase 5 driver only ENCODES registers; it must not perform I2C
-    # transactions or evaluate protection policy.
+    # control driver 只编码 register，不执行 I2C transaction 或 protection policy。
     require("BQ76940_WriteBlock" not in source, "control driver performs I2C")
     require("BQ76940_ReadBlock" not in source, "control driver performs I2C")
 

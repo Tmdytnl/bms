@@ -14,4 +14,4 @@ uint16_t BSP_TimeDeltaUs16(uint16_t now_us, uint16_t start_us);
 uint16_t BSP_TimeElapsedUs16(uint16_t start_us);
 bool BSP_DelayUs(uint32_t delay_us);
 
-#endif /* BSP_TIMER_H */
+#endif /* BSP_TIMER_H：include guard */

@@ -15,9 +15,8 @@
     } while (0)
 
 /*
- * Phase 6 object creation test. Runs BEFORE the scheduler starts; the
- * FreeRTOS heap and object constructors are exercised directly.
- * All seven IPC objects must be created successfully and be non-NULL.
+ * scheduler 启动前直接覆盖 FreeRTOS heap/object constructor；七个 IPC 必须全部
+ * 成功且 non-NULL，禁止半套 object set。
  */
 uint32_t Test_Phase6_Objects(void)
 {
@@ -39,18 +38,15 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(xCcSampleQueue != NULL);
     TEST_CHECK(xSysEvents != NULL);
 
-    /* Event bits must match the spec §11.2 definitions. */
+    /* event bit 必须匹配 spec §11.2。 */
     TEST_CHECK(EVT_SAMPLE_READY == ((EventBits_t)1U << 0));
     TEST_CHECK(EVT_AFE_ONLINE == ((EventBits_t)1U << 1));
     TEST_CHECK(EVT_FAULT_PRESENT == ((EventBits_t)1U << 2));
     TEST_CHECK(EVT_PARAM_DIRTY == ((EventBits_t)1U << 3));
     TEST_CHECK(EVT_CC_QUEUE_OVERFLOW == ((EventBits_t)1U << 4));
 
-    /* Queue element layout must match the spec §11.3 fields. The struct
-     * is a C layout: BMS_CanFrame_t is 20 bytes with an explicit receive
-     * timestamp for bounded command-age checks,
-     * BMS_CcSample_t to 12 (tick at offset 4 after int16 + padding, then
-     * the explicit runtime AFE generation identity). */
+    /* queue element C layout 必须匹配 spec §11.3：CAN frame 含显式 receive tick，
+     * CC sample 含对齐后的 tick 与 runtime AFE generation identity。 */
     TEST_CHECK(offsetof(BMS_CcSample_t, raw) == 0);
     TEST_CHECK(offsetof(BMS_CcSample_t, tick) == 4U);
     TEST_CHECK(offsetof(BMS_CcSample_t, xready_generation) == 8U);
@@ -63,7 +59,7 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(offsetof(BMS_CanFrame_t, received_tick) == 16U);
     TEST_CHECK(sizeof(BMS_CanFrame_t) == 20U);
 
-    /* Priorities must match errata C-01: 5/4/3/3/2/2/2. */
+    /* priority 必须匹配 C-01：5/4/3/3/2/2/2。 */
     TEST_CHECK(APP_RTOS_PRIO_PROTECT == 5U);
     TEST_CHECK(APP_RTOS_PRIO_SAMPLE == 4U);
     TEST_CHECK(APP_RTOS_PRIO_STATE == 3U);
@@ -72,14 +68,13 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(APP_RTOS_PRIO_CAN_TX == 2U);
     TEST_CHECK(APP_RTOS_PRIO_CAN_RX == 2U);
 
-    /* Stack sizes must match spec §11.4 (words). */
+    /* stack size 单位为 word，并匹配 spec §11.4。 */
     TEST_CHECK(APP_RTOS_STACK_PROTECT == 160U);
     TEST_CHECK(APP_RTOS_STACK_SAMPLE == 192U);
-    /* Phase 9 replaced the placeholder: ARMCC5 reports 1104-byte depth, so
-     * the original 128-word construction value is objectively obsolete. */
+    /* ARMCC5 报告 State 1104-byte depth，因此使用更新后的 allocation。 */
     TEST_CHECK(APP_RTOS_STACK_STATE == 384U);
     TEST_CHECK(APP_RTOS_STACK_SOC == 192U);
-    /* Phase 10/11 callgraphs require 840/752 bytes respectively. */
+    /* Balance/CAN Tx callgraph 分别需要 840/752 B。 */
     TEST_CHECK(APP_RTOS_STACK_BALANCE == 256U);
     TEST_CHECK(APP_RTOS_STACK_CAN_TX == 240U);
     TEST_CHECK(APP_RTOS_STACK_CAN_RX == 160U);

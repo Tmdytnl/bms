@@ -49,8 +49,7 @@ EXPECTED_SCHEMA_BINDINGS = {
     },
 }
 
-# Mirrored from firmware/Driver/bq76940_control.c. The regression test in
-# test_validate_blocker_artifact.py freezes both the values and source citation.
+# 与 firmware/Driver/bq76940_control.c 镜像；regression 同时冻结 value 与 source citation。
 OV_DELAY_S = (1, 2, 4, 8)
 UV_DELAY_S = (1, 4, 8, 16)
 OCD_DELAY_MS = (8, 20, 40, 80, 160, 320, 640, 1280)

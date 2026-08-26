@@ -6,6 +6,12 @@
 
 BMS_DataSnapshot_t g_bms_data;
 
+/*
+ * 本模块把多个 owner 的诊断投影汇成一致快照，但不承担安全仲裁。
+ * measurement 发布是唯一会推进 sample_sequence 的路径；afe_generation
+ * 把序号限定在当前 AFE 生命周期，使 reset 前的数据不能被 reset 后继续采用。
+ */
+
 #define BMS_DATA_TS1_RAW14_MAX              ((uint16_t)0x3FFFU)
 
 static void BMS_Data_InitMeasurement(BMS_MeasurementMetadata_t *metadata)
@@ -257,11 +263,9 @@ static void BMS_Data_LatchMetadataStale(
 }
 
 /*
- * Must be called only while xDataMutex is held. Periodic readers make the
- * first threshold crossing sticky, preventing a later uint32_t wrap from
- * resurrecting old data. A reader stalled for an entire timestamp wrap
- * cannot be distinguished using a 32-bit clock and remains a watchdog/target
- * validation concern.
+ * 只能在持有 xDataMutex 时调用。周期读者把第一次 freshness 门限跨越变成
+ * sticky 状态，阻止后续 uint32_t 时间戳回绕让旧数据重新显得新鲜。
+ * 若读者停顿整整一个时间戳周期，32-bit clock 本身无法区分，由 watchdog 覆盖。
  */
 static void BMS_Data_LatchStale(BMS_TimestampMs_t now_ms)
 {

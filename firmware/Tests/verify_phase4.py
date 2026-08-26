@@ -95,10 +95,8 @@ def check_regression() -> None:
     require(sha256(ROOT / "deliverables" / "phase3" / "BMS_V1_Phase3_Report.md") ==
             PHASE3_REPORT_HASH,
             "Phase 3 report revision drifted")
-    # uvprojx is intentionally extended by Phase 4 (bq76940_measurement.c
-    # added to the target). Verify the incremental diff instead of the
-    # Phase 3 hash: the Phase 3 source list must still be present, plus
-    # exactly the one authorized Phase 4 source, and no unrelated SPL.
+    # uvprojx 在此阶段只授权增加 bq76940_measurement.c；验证增量 source list，
+    # 保留全部既有输入且不允许无关 SPL 混入。
     require(sha256(PROJECT) != PHASE3_UVPROJX_HASH,
             "uvprojx was not extended for Phase 4")
     tree = ET.parse(PROJECT)
@@ -128,7 +126,7 @@ def check_mapping() -> None:
     header = MEASUREMENT_H.read_text(encoding="utf-8")
     source = MEASUREMENT_C.read_text(encoding="utf-8")
 
-    # Explicit table must exist with exactly 13 entries.
+    # 显式 mapping table 必须恰好 13 项。
     table_match = re.search(
         r"s_logical_cell_to_vc\[[^]]*\]\s*=\s*\{(.*?)\}", source, re.S)
     require(table_match is not None, "mapping table not found in C source")
@@ -140,12 +138,12 @@ def check_mapping() -> None:
     require(9 not in values and 14 not in values,
             "VC9/VC14 exposed in mapping table")
 
-    # VC register window constants.
+    # VC register window 常量。
     require("BQ76940_MEASUREMENT_CELL_COUNT" in header, "cell count macro missing")
     require("BQ76940_MEASUREMENT_VC_WINDOW_BYTES" in header,
             "window size macro missing")
 
-    # The C must never use a linear VC1+index formula.
+    # C 实现不得使用 VC1+index 的错误线性推导。
     require(re.search(r"BQ76940_REG_VC1_HI\s*\+\s*[^)]*logical", source) is None,
             "linear VC arithmetic found")
     require("s_logical_cell_to_vc[index]" in source,
@@ -159,12 +157,11 @@ def check_cell_oracle() -> None:
     header = MEASUREMENT_H.read_text(encoding="utf-8")
     test = (FW / "Tests" / "test_phase4_measurement.c").read_text(encoding="utf-8")
 
-    # Conversion must use the Phase 3 formula path (no second formula).
+    # 换算必须复用唯一公式路径，不能复制第二套实现。
     require("BQ76940_ConvertCellRawToMv" in source,
             "cell conversion does not reuse Phase 3 conversion")
 
-    # Golden cell mV values embedded in the harness must match an
-    # independent computation with GAIN=380, OFFSET=+30.
+    # harness golden cell mV 必须匹配 GAIN=380/OFFSET=+30 的独立计算。
     golden = [2365, 2462, 2559, 2657, 2754, 2851, 2948,
               3046, 3240, 3338, 3435, 3532, 3727]
     raw14s = [0x1800, 0x1900, 0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00,
@@ -185,7 +182,7 @@ def check_bat_oracle() -> None:
     source = MEASUREMENT_C.read_text(encoding="utf-8")
     test = (FW / "Tests" / "test_phase4_measurement.c").read_text(encoding="utf-8")
 
-    # TI eq. (9): V(BAT) = 4*GAIN*ADC + #Cells*OFFSET.
+    # TI eq.9：V(BAT)=4*GAIN*ADC + cell-count*OFFSET。
     vectors = [(0x0000, 390), (0x4E20, 30790), (0xFFFF, 100003)]
     for bat_raw, expected in vectors:
         uv = 4 * 380 * bat_raw + 13 * 30 * 1000
@@ -205,8 +202,7 @@ def check_cc_oracle() -> None:
     require("BQ76940_DecodeSigned16" in source,
             "CC raw does not reuse Phase 3 signed decode")
 
-    # TI eq. (3): CC(uV) = raw * 8.44 uV/LSB; I(mA) = raw*8440 nV / Rsense(uhm),
-    # truncating division toward zero (matches ARMCC5 C semantics).
+    # TI eq.3：CC raw×8.44 uV/LSB；电流除法按 ARMCC5 C 语义向零截断。
     vectors = [(0, 0), (1, 2), (32767, 69138), (-32768, -69140),
                (-1, -2), (10000, 21100), (-10000, -21100)]
     for raw, expected in vectors:
@@ -223,7 +219,7 @@ def check_ts_oracle() -> None:
     source = MEASUREMENT_C.read_text(encoding="utf-8")
     test = (FW / "Tests" / "test_phase4_measurement.c").read_text(encoding="utf-8")
 
-    # TI eq. (4)/(5): VTS = raw*382 uV; RTS = 10000*VTS/(3.3V-VTS).
+    # TI eq.4/5：VTS=raw×382 uV；RTS=10000×VTS/(3.3V−VTS)。
     vectors = [(0x0000, 0), (0x0A00, 4211), (0x1000, 9016)]
     for raw, expected in vectors:
         vts = raw * 382
@@ -231,7 +227,7 @@ def check_ts_oracle() -> None:
         require(r == expected, f"TS oracle mismatch 0x{raw:04X}: {r}")
     for _, expected in vectors:
         require(str(expected) in test, f"TS golden {expected} missing in harness")
-    # 0x27DC -> VTS >= 3.3 V must be RANGE_ERROR.
+    # 0x27DC 令 VTS>=3.3 V，必须返回 RANGE_ERROR。
     vts = 0x27DC * 382
     require(vts >= 3300000, "TS over-range oracle wrong")
     require("0x27DCU" in test, "TS over-range vector missing in harness")
@@ -242,7 +238,7 @@ def check_boundaries() -> None:
     source = MEASUREMENT_C.read_text(encoding="utf-8")
     header = MEASUREMENT_H.read_text(encoding="utf-8")
 
-    # Driver must not include RTOS/App/task headers and must not write g_bms_data.
+    # Driver 不得 include RTOS/App/task header，也不得写 g_bms_data。
     for token in ("FreeRTOS", "task.h", "queue.h", "semphr.h", "event_groups.h"):
         require(token not in header and token not in source,
                 f"RTOS header leaked into measurement driver: {token}")
@@ -253,14 +249,14 @@ def check_boundaries() -> None:
         require(token not in header and token not in source,
                 f"App header leaked into measurement driver: {token}")
 
-    # No protection/balance/SOC/CAN/ALERT implementation.
+    # measurement driver 不实现 protection/balance/SOC/CAN/ALERT。
     for token in ("ProtectTask", "SampleTask", "StateTask", "SOCTask",
                   "BalanceTask", "CAN_", "SYS_STAT", "CELLBAL", "SYS_CTRL2",
                   "OV_TRIP", "UV_TRIP", "EXTI", "vTaskStartScheduler"):
         require(token not in source,
                 f"forbidden Phase 5+/RTOS symbol in measurement driver: {token}")
 
-    # API must exist.
+    # required API 必须存在。
     for api in ("BQ76940_ReadCellVoltages13", "BQ76940_ReadPackVoltageMv",
                 "BQ76940_ReadCcRaw", "BQ76940_ConvertCcRawToCurrentMa",
                 "BQ76940_ReadTs1Raw", "BQ76940_ConvertTs1RawToResistanceOhm",

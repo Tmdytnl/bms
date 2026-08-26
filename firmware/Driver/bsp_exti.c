@@ -3,15 +3,13 @@
 #include "bms_build_assert.h"
 #include "bms_config.h"
 
-#include "misc.h"          /* NVIC_StructInit / NVIC_Init (SPL) */
+#include "misc.h"          /* SPL 的 NVIC_StructInit / NVIC_Init */
 #include "stm32f10x.h"
 #include "stm32f10x_exti.h"
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_rcc.h"
 
-/*
- * PB1 / EXTI1. Port id 1 = GPIOB in the project pin map (bms_config.h).
- */
+/* PB1/EXTI1；project pin map 中 port id 1 表示 GPIOB。 */
 BMS_BUILD_ASSERT(BMS_AFE_ALERT_PORT_ID == BMS_GPIO_PORT_B_ID,
                  alert_pin_is_on_port_b);
 BMS_BUILD_ASSERT(BMS_AFE_ALERT_PIN == 1U,
@@ -25,35 +23,35 @@ bool BSP_ALERT_EXTI_Init(void)
     GPIO_InitTypeDef gpio_config;
     NVIC_InitTypeDef nvic_config;
 
-    /* GPIOB clock (PB1). */
+    /* 为 PB1 打开 GPIOB clock。 */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-    /* AFIO clock is required for EXTI line routing. */
+    /* EXTI line routing 依赖 AFIO clock。 */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
-    /* PB1 input (floating; board provides pull-up/pull-down as designed). */
+    /* PB1 floating input；外部电路提供设计所需 pull-up/down。 */
     GPIO_StructInit(&gpio_config);
     gpio_config.GPIO_Pin = GPIO_Pin_1;
     gpio_config.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOB, &gpio_config);
 
-    /* EXTI1 rising edge. */
+    /* EXTI1 只捕获 rising edge。 */
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource1);
     EXTI_StructInit(&exti_config);
     exti_config.EXTI_Line = EXTI_Line1;
     exti_config.EXTI_Mode = EXTI_Mode_Interrupt;
     exti_config.EXTI_Trigger = EXTI_Trigger_Rising;
     exti_config.EXTI_LineCmd = ENABLE;
-    /* Drop a stale controller latch before unmasking. ProtectTask performs an
-     * explicit PB1 level check immediately after init, so an AFE ALERT already
-     * high during startup is still converted into task work. */
+    /*
+     * unmask 前清 STM32 stale pending；随后 ProtectTask 直接读 PB1，因此 startup
+     * 期间已经为高的 AFE ALERT 仍会转成任务工作。
+     */
     EXTI_ClearITPendingBit(EXTI_Line1);
     EXTI_Init(&exti_config);
 
     /*
-     * C-02: logical priority 6 (raw 0x60) >= max-syscall 5, so FromISR
-     * calls in the handler are legal. PriorityGroup_4 must already be set
-     * by main before scheduler start. This function itself runs from the first
-     * ProtectTask context, after the FreeRTOS port initialized ISR validation.
+     * C-02：logical priority 6（raw 0x60）满足 max-syscall 5 的 FromISR 约束。
+     * main 已设置 PriorityGroup_4；本函数从首个 ProtectTask context 调用，此时
+     * FreeRTOS port 的 ISR validator 已完成初始化。
      */
     nvic_config.NVIC_IRQChannel = EXTI1_IRQn;
     nvic_config.NVIC_IRQChannelPreemptionPriority =
@@ -73,6 +71,6 @@ bool BSP_ALERT_EXTI_IsInitialized(void)
 
 bool BSP_ALERT_PinActive(void)
 {
-    /* PB1 readback. */
+    /* 直接 PB1 level readback。 */
     return (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) != Bit_RESET);
 }

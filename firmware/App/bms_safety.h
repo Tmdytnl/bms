@@ -7,11 +7,11 @@
 
 typedef uint32_t BMS_InhibitReasonBitmap_t;
 
-/* Fault-backed reasons retain the stable fault-ID bit position. */
+/* fault-backed inhibit reason 保持稳定 fault-ID bit position。 */
 #define BMS_INHIBIT_REASON_FAULT(id_) \
     ((BMS_InhibitReasonBitmap_t)BMS_Fault_Mask((id_)))
 
-/* Technical reasons occupy bits above the stable 20-fault range. */
+/* technical inhibit 使用稳定 20-fault 区间以上 bit，避免与诊断 fault 混淆。 */
 #define BMS_INHIBIT_REASON_RECOVERY              \
     ((BMS_InhibitReasonBitmap_t)1UL << 20)
 #define BMS_INHIBIT_REASON_POLICY_INVALID        \
@@ -23,4 +23,4 @@ typedef uint32_t BMS_InhibitReasonBitmap_t;
 #define BMS_INHIBIT_REASON_UNKNOWN_SOURCE        \
     ((BMS_InhibitReasonBitmap_t)1UL << 31)
 
-#endif /* BMS_SAFETY_H */
+#endif /* BMS_SAFETY_H：include guard */

@@ -13,6 +13,12 @@
 #define BMS_POLICY_REQUIRED_TASK_COUNT          (7U)
 #define BMS_POLICY_CAN_TX_ID_COUNT              (6U)
 
+/*
+ * 所有 threshold、debounce、hysteresis、task liveness、SOC、balance、CAN 与
+ * Flash 参数集中为 immutable profile。业务模块只读取 const policy，不在运行期
+ * 原地修改，从而使一次 decision 所依赖的配置稳定且可被 verifier 复现。
+ */
+
 typedef struct
 {
     int32_t trigger;
@@ -178,10 +184,10 @@ typedef struct
     BMS_FlashPolicy_t flash;
 } BMS_Policy_t;
 
-/* The returned profile and every referenced table remain immutable. */
+/* 返回的 profile 与其引用 table 在整个运行期保持 immutable。 */
 const BMS_Policy_t *BMS_Policy_Get(void);
 
-/* A false result is a fail-closed configuration error. */
+/* false 表示 fail-closed configuration error，启动层不得继续创建任务。 */
 bool BMS_Policy_Validate(const BMS_Policy_t *policy);
 
-#endif /* BMS_POLICY_H */
+#endif /* BMS_POLICY_H：include guard */

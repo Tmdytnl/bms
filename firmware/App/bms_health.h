@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    uint32_t generation[BMS_HEALTH_TASK_COUNT];
+    uint32_t generation[BMS_HEALTH_TASK_COUNT]; /* 每任务独立、单调、sole-writer */
 } BMS_HealthSnapshot_t;
 
 typedef struct
@@ -33,7 +33,10 @@ typedef struct
 
 void BMS_Health_Init(void);
 
-/* Each task calls only its own ID; there is deliberately no clear API. */
+/*
+ * 每个任务只推进自己的 ID。generation 而非 bool alive 可以证明“持续前进”，
+ * 且无需 supervisor 与任务竞争 clear bit；因此刻意不存在 clear API。
+ */
 void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id);
 
 BMS_HealthSnapshot_t BMS_Health_GetSnapshot(void);
@@ -44,4 +47,4 @@ BMS_HealthDecision_t BMS_Health_Evaluate(
     const BMS_HealthPolicy_t *policy,
     uint32_t now_ms);
 
-#endif /* BMS_HEALTH_H */
+#endif /* BMS_HEALTH_H：include guard */

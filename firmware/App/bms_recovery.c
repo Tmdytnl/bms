@@ -1,5 +1,12 @@
 #include "bms_recovery.h"
 
+/*
+ * Recovery Coordinator 只协调分阶段证据，不接管 Protect W1C、FET SYS_CTRL2、
+ * Balance CELLBAL 或 Sample measurement ownership。整个非 COMPLETE 流程发布
+ * BOTH inhibit；old-generation calibration/sample 永远不能证明 new generation
+ * 恢复完成。
+ */
+
 #include <stddef.h>
 
 #include "app_rtos.h"
@@ -190,9 +197,10 @@ static bool BMS_Recovery_StageRegisterPlan(void)
         return false;
     }
 
-    /* SYS_CTRL2 and CELLBAL1..3 are intentionally absent: their scheduler
-     * ownership belongs to FET Manager and BalanceTask respectively.
-     * PRE_CLEAR_PREPARE waits for both owners' verified safe state. */
+    /*
+     * 配置表刻意不含 SYS_CTRL2 与 CELLBAL1..3：它们分别属于 FET Manager 和
+     * BalanceTask。PRE_CLEAR_PREPARE 只等待两个 owner 的 verified safe state。
+     */
     s_recovery.register_addresses[0] = BQ76940_REG_CC_CFG;
     s_recovery.register_values[0] = BQ76940_CC_CFG_REQUIRED_VALUE;
     s_recovery.register_addresses[1] = BQ76940_REG_OV_TRIP;
@@ -373,6 +381,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
     switch (s_recovery.snapshot.phase)
     {
         case BMS_RECOVERY_PHASE_PRE_CLEAR_PREPARE:
+            /*
+             * 等待 FET Manager 回读 CHG/DSG 全关且 CC_EN 保持、BalanceTask 回读
+             * CELLBAL 全关，并要求两者都绑定本 xready_generation。跳过此门槛会在
+             * AFE 状态重建前留下旧执行命令。
+             */
             balance = BMS_Balance_GetSnapshot();
             fet = BMS_FetManager_GetSnapshot();
             if (balance.register_state_confirmed &&
@@ -387,6 +400,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_PRE_CLEAR_READY:
+            /*
+             * safe execution state 已由两个 sole writer 证明；这里只提交带
+             * generation/recovery_revision 的 clear authorization，真正 W1C 仍由
+             * ProtectTask 执行，保证 XREADY generation 只有一个权威来源。
+             */
             if (BMS_Protect_AuthorizeXreadyClear(
                     s_recovery.snapshot.xready_generation,
                     s_recovery.snapshot.recovery_revision))
@@ -396,6 +414,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_WAIT_CLEAR_ACK:
+            /*
+             * 等待 Protect ack 与本次 request identity 完全一致，并确认 XREADY
+             * 已 inactive。ambiguous finalization 不能猜测成功或 replay，必须失败
+             * 并保持 BOTH inhibit。
+             */
             if (BMS_Protect_GetXreadyClearAck(&ack) && ack.accepted &&
                 (ack.xready_generation ==
                  s_recovery.snapshot.xready_generation) &&
@@ -412,9 +435,18 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_POST_CLEAR_CONFIG:
+            /*
+             * XREADY 清除后按短 transaction 重新写入并回读 runtime configuration。
+             * 每次 service 最多一次 I2C 操作，既保持状态机可抢占，也避免长期占用
+             * I2C mutex 阻塞 ProtectTask。
+             */
             BMS_Recovery_ServiceConfiguration(now_ms);
             break;
         case BMS_RECOVERY_PHASE_POST_CLEAR_SETTLE:
+            /*
+             * configuration 完成后释放 mutex 等待 AFE settle。直接在锁内 delay 会
+             * 阻塞 ALERT/CC/Sample；跳过 settle 又可能把瞬态状态当成稳定 readback。
+             */
             if (BMS_Recovery_TimeElapsed(now_ms,
                                          s_recovery.settle_started_ms,
                                          BMS_RECOVERY_SETTLE_MS))
@@ -424,6 +456,10 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_POST_CLEAR_VERIFY:
+            /*
+             * 重新读取 SYS_STAT，确认 XREADY 与 blocking status 未重现。此前写入
+             * 成功只证明 transport transaction，不等于器件已进入可采样稳定态。
+             */
             sys_stat = 0U;
             status = BMS_Recovery_OneRead(BQ76940_REG_SYS_STAT, &sys_stat);
             if (status != BQ76940_STATUS_OK)
@@ -444,6 +480,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_CALIBRATION_HANDOFF:
+            /*
+             * 捕获当前 sample baseline，并把 calibration 与 xready_generation、
+             * recovery_revision、post_clear_verified 一起交给 Sample owner。
+             * old-generation calibration 即使数值相同，也不能作为新代 provenance。
+             */
             if (!BMS_Data_GetIdentity(&identity))
             {
                 break;
@@ -483,6 +524,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_WAIT_FIRST_VALID_SAMPLE:
+            /*
+             * 等待 handoff 后 sample_sequence 真正推进，且 afe_generation 精确匹配
+             * 本次恢复。只有这帧完整 measurement 被接受，才证明新配置/校准已贯通
+             * 到数据面；随后才能释放 XREADY action latch 与 BOTH inhibit。
+             */
             if (BMS_Data_GetIdentity(&identity) &&
                 (identity.afe_generation ==
                  s_recovery.snapshot.xready_generation) &&
@@ -508,8 +554,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
             }
             break;
         case BMS_RECOVERY_PHASE_IDLE:
+            /* IDLE 只存在于尚未观察到运行期 XREADY 的稳态，不携带恢复证据。 */
         case BMS_RECOVERY_PHASE_COMPLETE:
+            /* COMPLETE 表示全证据链成立；若新 generation 到达会立即 reset/restart。 */
         case BMS_RECOVERY_PHASE_FAILED:
+            /* FAILED 不自动降级重试为 ready，双向 inhibit 继续由快照保持。 */
         default:
             break;
     }

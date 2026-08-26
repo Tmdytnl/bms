@@ -1334,11 +1334,9 @@ def verify_gate_decision() -> None:
     check(all(call not in main_without_comments for call in integration_calls),
           "current main does not connect AFE startup, calibration or NTC table")
 
-    # These are revision-locked approval gates, not source-discovery
-    # heuristics. No newly added table, policy-looking identifier or call can
-    # make this verifier silently approve a safety policy. A future gate must
-    # be intentionally revised to bind the exact user-approved immutable
-    # artifact revision and its approval evidence.
+    # 这些是 revision-locked approval gate，不是 source-discovery heuristic；新增
+    # table/identifier/call 不能让 verifier 静默批准 policy，任何更新都必须显式绑定
+    # 精确 immutable artifact revision 与 approval evidence。
     block(
         f"UNCONDITIONAL {GATE_POLICY_REVISION}: no user-approved immutable "
         "production NTC table revision is bound; update a future gate "

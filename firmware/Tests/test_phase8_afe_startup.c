@@ -170,8 +170,8 @@ BQ76940_Status_t BQ76940_WriteByte(BQ76940_t *device,
         if (s_test_afe_fake.reset_on_xready_clear &&
             ((value & BMS_AFE_STARTUP_STAT_DEVICE_XREADY) != 0U))
         {
-            /* Model the reset epoch that makes all pre-clear configuration
-             * evidence stale. Factory calibration registers remain intact. */
+            /* 模拟 reset epoch：所有 pre-clear configuration evidence 失效，
+             * factory calibration register 保持。 */
             s_test_afe_fake.registers[BQ76940_REG_SYS_CTRL2] = 0x03U;
             s_test_afe_fake.registers[BQ76940_REG_CELLBAL1] = 0x1FU;
             s_test_afe_fake.registers[BQ76940_REG_CELLBAL2] = 0x1FU;

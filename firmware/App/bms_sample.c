@@ -1,5 +1,12 @@
 #include "bms_sample.h"
 
+/*
+ * 一次 sampling transaction 先捕获 device/configuration/XREADY identity，
+ * 再在 I2C mutex 边界内完成 mandatory core 与可选 TS1 读取。发布前重新核对
+ * 所有 identity；任一读失败、binding 改变或 mutex 不可用，都保留上一完整
+ * snapshot，绝不把半更新数据暴露给 State、FET 或诊断消费者。
+ */
+
 #include <stddef.h>
 
 #include "app_rtos.h"
@@ -369,8 +376,7 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
     resume_scheduler = BMS_Sample_BeginConfigUpdate();
     have_latest_cc = BMS_Protect_GetLatestCc(&latest_cc);
     s_device = device;
-    /* Calibration belongs to one device/XREADY epoch. Rebinding the device
-     * always requires an explicit SetCalibration call. */
+    /* calibration 只属于一个 device/XREADY epoch；重绑 device 必须显式重装 calibration。 */
     s_calibration.gain_uv_per_lsb = 0U;
     s_calibration.offset_mv = 0;
     s_calibration.valid = false;
@@ -378,9 +384,10 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
     s_calibration_generation_bound = false;
     s_calibration_recovery_revision = 0UL;
     s_calibration_post_clear_verified = false;
-    /* Treat any mailbox value that predates the device binding as consumed.
-     * A later sequence/generation can still satisfy the first new-device
-     * core frame, while an unconsumed old-device sample cannot cross over. */
+    /*
+     * 把早于 device binding 的 mailbox 值视为已消费。新 device 首个 core frame
+     * 仍可接收后续 sequence/generation，但未消费的旧 device current 不能跨界。
+     */
     if (have_latest_cc && latest_cc.valid)
     {
         s_last_published_cc_sequence = latest_cc.sequence;
@@ -415,8 +422,10 @@ bool BMS_Sample_SetCalibration(
     xready_available = false;
     if (valid)
     {
-        /* Nested scheduler suspension is intentional: it keeps the Protect
-         * snapshot and calibration binding inside this same outer exclusion. */
+        /*
+         * 嵌套 scheduler suspension 是有意的：Protect snapshot 与 calibration
+         * binding 必须落在同一个外层 exclusion，内层 helper 不得提前恢复调度。
+         */
         xready_available =
             BMS_Protect_GetXreadyState(&xready_state);
     }
@@ -499,9 +508,10 @@ void BMS_Sample_InvalidateCalibrationForXready(
     bool resume_scheduler;
 
     resume_scheduler = BMS_Sample_BeginConfigUpdate();
-    /* This latch is deliberately never cleared by the legacy calibration
-     * setter. Once runtime XREADY has been observed, only a generation- and
-     * recovery-revision-bound coordinator handoff may restore sampling. */
+    /*
+     * legacy calibration setter 永不清除此 latch。观察到运行期 XREADY 后，
+     * 只有绑定 generation 与 recovery revision 的 coordinator handoff 能恢复采样。
+     */
     s_recovery_provenance_required = true;
     if (!s_calibration_generation_bound ||
         (s_calibration_xready_generation != xready_generation) ||
@@ -770,9 +780,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     }
     else if (current_invalidation_required)
     {
-        /* The first successfully published core frame in a new AFE epoch
-         * atomically retires previous-epoch current when no same-epoch CC is
-         * available. A failed core publish leaves this invalidation pending. */
+        /*
+         * 新 AFE epoch 的首个成功 core publication 若没有同代 CC，会原子淘汰
+         * 上一代 current；core publish 失败则保留 invalidation pending 到下次。
+         */
         frame.update_current = true;
         frame.current_timestamp_ms = now_ms;
         frame.current_valid = false;
@@ -837,11 +848,9 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     }
 
     /*
-     * ProtectTask has higher priority than SampleTask. Suspend task
-     * scheduling across the final generation check and zero-wait publish so
-     * an observed XREADY transition cannot be inserted between them. An ALERT
-     * that has asserted physically but has not yet been captured by
-     * ProtectTask remains a target/hardware validation boundary.
+     * ProtectTask 优先级高于 SampleTask。最终 generation check 与 zero-wait
+     * publish 必须处在同一 scheduler exclusion 内，否则 ProtectTask 可能在两者
+     * 之间发布 XREADY 新代，使旧 staging frame 误进入新生命周期。
      */
     publish_succeeded = false;
     vTaskSuspendAll();

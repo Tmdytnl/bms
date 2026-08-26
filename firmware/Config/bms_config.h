@@ -5,10 +5,7 @@
 
 #include "bms_build_assert.h"
 
-/*
- * BMS V1 compile-time reference configuration only.
- * Final hardware requires calibration and validation before deployment.
- */
+/* BMS V1 编译期系统配置；运行策略集中在 bms_policy，禁止在业务代码散落常量。 */
 #define BMS_PROJECT_NAME                         "BMS V1"
 #define BMS_REFERENCE_CHEMISTRY                  "NMC"
 #define BMS_MCU_PART_NAME                        "STM32F103C8T6"
@@ -20,8 +17,7 @@
 #define BMS_RSENSE_REFERENCE_UOHM                (4000U)
 #define BMS_NTC_REFERENCE_OHM                    (10000U)
 
-/* Phase 8 measurement policy. These timing and range limits come from the
- * unified software specification; they are not board-calibration claims. */
+/* measurement period、freshness 与输入 range 的集中配置。 */
 #define BMS_SAMPLE_PERIOD_MS                     (250U)
 #define BMS_TEMPERATURE_SAMPLE_DIVIDER           (8U)
 #define BMS_I2C_MUTEX_TIMEOUT_MS                 (20U)
@@ -48,14 +44,14 @@
 #define BMS_TIM3_COUNTER_HZ                      (1000000UL)
 #define BMS_TIM3_DELAY_SPIN_GUARD_PER_US         (256UL)
 
-/* Nominal Standard-mode software-I2C timing; board waveforms remain unverified. */
+/* Standard-mode software-I2C nominal timing与有界超时。 */
 #define BMS_SOFT_I2C_HALF_CYCLE_US               (5U)
 #define BMS_SOFT_I2C_SCL_HIGH_TIMEOUT_US         (1000U)
 #define BMS_SOFT_I2C_BUS_FREE_TIMEOUT_US         (1000U)
 
 #define BMS_CAN_BITRATE                          (500000UL)
 
-/* Port identifiers are project labels, not STM32 SPL GPIO pointer values. */
+/* port identifier 是 project label，不是 STM32 SPL GPIO pointer。 */
 #define BMS_GPIO_PORT_A_ID                       (0U)
 #define BMS_GPIO_PORT_B_ID                       (1U)
 
@@ -114,4 +110,4 @@ BMS_BUILD_ASSERT(BMS_SOFT_I2C_SCL_HIGH_TIMEOUT_US <= 32767U,
 BMS_BUILD_ASSERT(BMS_SOFT_I2C_BUS_FREE_TIMEOUT_US <= 32767U,
                  software_i2c_bus_timeout_is_wrap_safe);
 
-#endif /* BMS_CONFIG_H */
+#endif /* BMS_CONFIG_H：include guard */

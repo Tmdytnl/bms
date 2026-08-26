@@ -1,5 +1,12 @@
 #include "bms_balance.h"
 
+/*
+ * 独立 BalanceTask 是调度器启动后 CELLBAL sole writer。Evaluate 只产生 bitmap；
+ * RunOnce 在 I2C mutex 内 write+readback，并在写期间重新核对 sample/revision/
+ * generation。任一证据变化或 transport 不确定都尝试 verified all-off，防止旧
+ * 高电芯选择跨过 fault、温度变化或 AFE reset 继续均衡。
+ */
+
 #include <stddef.h>
 #include <string.h>
 

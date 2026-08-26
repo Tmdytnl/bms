@@ -5,33 +5,23 @@
 #include <stdint.h>
 
 /*
- * BQ ALERT EXTI1 BSP (Phase 7).
- *
- * PB1 / EXTI1 rising-edge ALERT input (spec §20.1, Gate §3.3):
- *   - logical preemption priority 6 (raw 0x60), below the FreeRTOS
- *     max-syscall priority 5 so FromISR calls are legal (C-02);
- *   - the ISR only clears the STM32 pending bit, gives xAfeAlertSem and
- *     yields; it never touches the BQ or I2C (H-05).
- *
- * NVIC grouping must be PriorityGroup_4 (set once before scheduler start).
- * EXTI/NVIC enable occurs from ProtectTask after the FreeRTOS port starts, so
- * no FromISR API can run before the port's priority validator is initialized.
+ * BQ ALERT 使用 PB1/EXTI1 rising edge。logical priority 6（raw 0x60）不高于
+ * FreeRTOS max-syscall priority 5，因此 ISR 可以合法调用 FromISR API。
+ * ISR 只清 STM32 pending、give xAfeAlertSem、按需 yield，不访问 BQ/I2C。
+ * NVIC PriorityGroup_4 在 scheduler 前一次配置；EXTI 由 ProtectTask 启用，
+ * 确保 port priority validator 已初始化。
  */
 
-/* EXTI1 logical priority (C-02/Gate §3.3). */
+/* EXTI1 logical priority（C-02/Gate §3.3）。 */
 #define BSP_EXTI1_LOGICAL_PRIORITY              (6U)
 
-/*
- * Configure PB1 as EXTI1 rising-edge interrupt with the locked logical
- * priority. Returns false if the configuration cannot be applied.
- * Idempotent: calling again reconfigures the same line.
- */
+/* 按冻结 priority 配置 PB1/EXTI1 rising edge；重复调用幂等重配同一 line。 */
 bool BSP_ALERT_EXTI_Init(void);
 
-/* True after BSP_ALERT_EXTI_Init succeeded. */
+/* BSP_ALERT_EXTI_Init 成功后为 true。 */
 bool BSP_ALERT_EXTI_IsInitialized(void);
 
-/* Direct read of the ALERT pin (H-05: active polling fallback). */
+/* 直接读取 ALERT level，补偿 rising-edge 无法报告 startup-high 的情况。 */
 bool BSP_ALERT_PinActive(void);
 
-#endif /* BSP_EXTI_H */
+#endif /* BSP_EXTI_H：include guard */

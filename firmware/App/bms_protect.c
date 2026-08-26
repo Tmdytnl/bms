@@ -10,7 +10,7 @@
 #include "stm32f10x_exti.h"
 
 /* ------------------------------------------------------------------ */
-/* Module state.                                                       */
+/* ProtectTask 私有状态；其他模块只能通过一致快照或 identity request 访问。 */
 /* ------------------------------------------------------------------ */
 static BMS_FaultSummary_t s_fault;
 static BMS_ProtectDiagnostics_t s_diagnostics;
@@ -433,15 +433,19 @@ static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
     s_w1c_finalization_ambiguous_mask &= stat;
     if ((resolved_mask & BMS_PROTECT_STAT_CC_READY) != 0U)
     {
-        /* The queued sample remains accepted. Observed-low is the only
-         * software-safe point at which its quarantined W1C can retire. */
+        /*
+         * 已入队 sample 仍然有效；只有 observed-low 能证明 quarantine 的 W1C
+         * 已不再需要，软件才能安全退休该 transaction marker。
+         */
         s_cc_clear_pending = false;
     }
     if (((resolved_mask & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U) &&
         s_xready_recovery_pending)
     {
-        /* The full recovery hook already succeeded before the ambiguous W1C.
-         * Observing XREADY low confirms that no W1C replay is needed. */
+        /*
+         * ambiguous W1C 之前 full recovery hook 已成功；观察到 XREADY low
+         * 证明无需 replay，避免重复执行可能具有 side effect 的清除。
+         */
         s_fault.active &=
             ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
         s_xready_state.active = false;
@@ -540,7 +544,7 @@ void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms)
 #endif
 
 /* ------------------------------------------------------------------ */
-/* CC queue (H-02: newest sample always wins).                         */
+/* CC queue：H-02 newest sample always wins，SOC 是 queue 唯一消费者。 */
 /* ------------------------------------------------------------------ */
 bool BMS_Protect_PushCcSample(int16_t cc_raw)
 {
@@ -565,9 +569,10 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
     newest_was_missed = false;
     inserted = pdFAIL;
 
-    /* The full-check, single-oldest discard, and newest enqueue are one
-     * scheduler-protected nonblocking operation. This prevents a concurrent
-     * task consumer from making the wrapper discard two samples. */
+    /*
+     * full-check、只丢一个 oldest、enqueue newest 在同一 scheduler exclusion
+     * 内非阻塞完成，避免并发消费者穿插后让 wrapper 错丢两个 sample。
+     */
     vTaskSuspendAll();
     if (xQueueSend(xCcSampleQueue, &sample, 0U) == pdPASS)
     {
@@ -589,8 +594,7 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
     }
     if (overflowed)
     {
-        /* Publish the multi-field diagnostic snapshot before resuming another
-         * task, so a task-level reader cannot observe half an increment. */
+        /* 恢复调度前发布多字段诊断快照，读者不会看到只更新一半的计数。 */
         BMS_Protect_RecordCcOverflow(oldest_was_dropped,
                                      newest_was_missed);
     }
@@ -606,8 +610,7 @@ bool BMS_Protect_PushCcSample(int16_t cc_raw)
     }
     else if ((inserted == pdPASS) && s_xready_state.active)
     {
-        /* Preserve the queue/SOC contract, but never expose a CC value read
-         * while the AFE reset epoch is active. */
+        /* 保持 queue/SOC contract，但 AFE reset epoch active 时不发布 CC mailbox。 */
         s_latest_cc.valid = false;
     }
     (void)xTaskResumeAll();
@@ -667,7 +670,7 @@ bool BMS_Protect_XreadyBindingIsCurrent(
 }
 
 /* ------------------------------------------------------------------ */
-/* XREADY recovery (H-03).                                             */
+/* XREADY recovery：request/ack 划分 coordinator 与 Protect W1C ownership。 */
 /* ------------------------------------------------------------------ */
 bool BMS_Protect_RecoverXready(BQ76940_t *device)
 {
@@ -678,9 +681,10 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     {
         return false;
     }
-    /* A prior full recovery reached an ambiguous W1C finalization. Re-running
-     * either the hook or W1C while XREADY remains high could replay a
-     * non-idempotent recovery or clear a newer event. Wait for observed-low. */
+    /*
+     * 上一次 full recovery 到达 ambiguous W1C finalization。XREADY 仍高时重跑
+     * hook 或 W1C，可能 replay 非幂等恢复或清除更新事件，因此等待 observed-low。
+     */
     if ((s_w1c_finalization_ambiguous_mask &
          BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
     {
@@ -699,8 +703,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
         return false;
     }
 
-    /* XREADY is W1C only after the authoritative hook confirms the complete
-     * recovery contract. The history latch intentionally remains set. */
+    /* 权威 hook 确认完整 recovery contract 后才 W1C；history latch 有意保留。 */
     s_xready_recovery_pending = true;
     status = BQ76940_WriteByte(device, BQ76940_REG_SYS_STAT,
                                BMS_PROTECT_STAT_DEVICE_XREADY);
@@ -723,7 +726,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     }
     if (status != BQ76940_STATUS_OK)
     {
-        /* The clear was rejected: keep the fault pending. */
+        /* clear 明确被拒绝，保留 fault pending，等待下一次有界 service。 */
         BMS_Protect_RecordAfeFailure(status);
         return false;
     }
@@ -1125,7 +1128,7 @@ static void BMS_Protect_ServiceReset(uint32_t now_ms)
 }
 
 /* ------------------------------------------------------------------ */
-/* SYS_STAT drain (H-05) + per-bit handling (H-01/H-02/H-03).          */
+/* SYS_STAT drain（H-05）与逐 bit 处理（H-01/H-02/H-03）。 */
 /* ------------------------------------------------------------------ */
 static void BMS_Protect_HandleCcReady(BQ76940_t *device,
                                       uint8_t *clear_mask)
@@ -1133,23 +1136,24 @@ static void BMS_Protect_HandleCcReady(BQ76940_t *device,
     int16_t cc_raw;
     BQ76940_Status_t status;
 
-    /* ACKed bytes plus failed STOP leave old/new event identity unknowable.
-     * Do not W1C replay and do not enqueue again while that bit remains high. */
+    /*
+     * data byte 已 ACK 而 STOP 失败时提交点未知，无法分辨 old/new event identity。
+     * 对应 bit 持续高期间既不 replay W1C，也不重复 enqueue。
+     */
     if ((s_w1c_finalization_ambiguous_mask &
          BMS_PROTECT_STAT_CC_READY) != 0U)
     {
         return;
     }
 
-    /* A previous sample was committed to the queue but its W1C was definitely
-     * rejected. Retry only the clear so the sample cannot be enqueued twice. */
+    /* sample 已提交 queue、W1C 又明确失败时，只重试 clear，不能二次 enqueue。 */
     if (s_cc_clear_pending)
     {
         *clear_mask |= BMS_PROTECT_STAT_CC_READY;
         return;
     }
 
-    /* H-02: only clear CC_READY when the newest sample entered the queue. */
+    /* H-02：newest sample 确已入队后才允许 clear CC_READY。 */
     status = BQ76940_ReadCcRaw(device, &cc_raw);
     if (status == BQ76940_STATUS_OK)
     {
@@ -1177,8 +1181,7 @@ void BMS_Protect_Decide(uint8_t stat,
 
     *clear_mask = 0U;
 
-    /* OV event: capture unresolved active + inhibit CHG. Only the Phase 9
-     * recovery owner may clear it after the full recovery contract. */
+    /* OV：捕获 unresolved active 并 inhibit CHG；只能通过完整 recovery handshake 清除。 */
     if ((stat & BMS_PROTECT_STAT_OV) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_OV);
@@ -1186,7 +1189,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OV;
     }
 
-    /* UV event: capture unresolved active + inhibit DSG; not auto-cleared. */
+    /* UV：捕获 unresolved active 并 inhibit DSG，不随 SYS_STAT W1C 自动清 active。 */
     if ((stat & BMS_PROTECT_STAT_UV) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_UV);
@@ -1194,7 +1197,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_UV;
     }
 
-    /* OCD event: capture unresolved active + inhibit DSG; not auto-cleared. */
+    /* OCD：捕获 unresolved active 并 inhibit DSG，不随 SYS_STAT W1C 自动清 active。 */
     if ((stat & BMS_PROTECT_STAT_OCD) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_OCD);
@@ -1202,7 +1205,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OCD;
     }
 
-    /* SCD event: active + permanent-policy latch + inhibit both. */
+    /* SCD：active + policy latch，并同时 inhibit CHG/DSG。 */
     if ((stat & BMS_PROTECT_STAT_SCD) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_HW_SCD);
@@ -1212,8 +1215,7 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_SCD;
     }
 
-    /* OVRD_ALERT (H-01): active+latched independent capture, inhibit both.
-     * Phase 7 has no physical-source recovery policy and never auto-clears. */
+    /* OVRD_ALERT（H-01）独立捕获 active+latched，并双向 inhibit，绝不自动恢复。 */
     if ((stat & BMS_PROTECT_STAT_OVRD_ALERT) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_OVRD_ALERT);
@@ -1223,16 +1225,17 @@ void BMS_Protect_Decide(uint8_t stat,
         *clear_mask |= BMS_PROTECT_STAT_OVRD_ALERT;
     }
 
-    /* XREADY (H-03): active+latched + both off. Full reinitialization may
-     * clear active through BMS_Protect_RecoverXready; latched remains owned by
-     * the Phase 9 explicit-reset policy and is never cleared here. */
+    /*
+     * XREADY（H-03）：active+latched 并双向 inhibit。完整 reinitialization 只可
+     * 通过 BMS_Protect_RecoverXready 清 active；latched 由独立策略持有。
+     */
     if ((stat & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
     {
         faults->active |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY);
         faults->latched |= BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY);
         request->chg = BQ76940_FET_DESIRE_DISABLE;
         request->dsg = BQ76940_FET_DESIRE_DISABLE;
-        /* XREADY is NOT added to the clear mask here (H-03). */
+        /* H-03：此处绝不把 XREADY 加入普通 clear mask。 */
     }
 }
 
@@ -1264,7 +1267,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         status = BQ76940_ReadByte(device, BQ76940_REG_SYS_STAT, &stat);
         if (status != BQ76940_STATUS_OK)
         {
-            /* I2C/CRC failure: keep pending (H-05); AFE comm fault. */
+            /* I2C/CRC 失败：按 H-05 保留 pending，并发布 AFE comm fault。 */
             BMS_Protect_RecordAfeFailure(status);
             return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
         }
@@ -1274,9 +1277,10 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         BMS_Protect_RecordNewSourceEvents(stat);
         (void)xTaskResumeAll();
 
-        /* A definitely rejected W1C can later be rendered moot by reset or an
-         * authorized external clear. A successful low read retires its retry
-         * marker. Ambiguous finalization uses the separate quarantine above. */
+        /*
+         * 明确拒绝的 W1C 可能被 reset 或受权外部 clear 变得无须重试；成功读到
+         * low 即退休 retry marker。ambiguous finalization 使用独立 quarantine。
+         */
         if ((stat & BMS_PROTECT_STAT_CC_READY) == 0U)
         {
             s_cc_clear_pending = false;
@@ -1296,9 +1300,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         }
 
         clear_mask = 0U;
-        /* The getter also suspends the scheduler, so active+latched publish as
-         * one task-context generation rather than two independently torn
-         * words. ProtectTask remains the only Phase 7 writer. */
+        /* getter 同样 suspend scheduler，使 active+latched 作为一代发布而非 torn words。 */
         vTaskSuspendAll();
         previous_fault = s_fault;
         xready_was_active = s_xready_state.active;
@@ -1310,8 +1312,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
                 s_xready_state.xready_generation =
                     BMS_PROTECT_XREADY_GENERATION_NEXT(
                         s_xready_state.xready_generation);
-                /* The prior AFE epoch's current must not survive recovery as
-                 * a consumable latest-CC mailbox value. */
+                /* 上一 AFE epoch 的 current 不能以可消费 latest-CC mailbox 跨过恢复。 */
                 s_latest_cc.valid = false;
                 s_xready_clear_authorization.valid = false;
                 s_xready_clear_ack.accepted = false;
@@ -1335,8 +1336,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         {
             BMS_Protect_HandleCcReady(device, &clear_mask);
         }
-        /* Never replay a W1C whose previous finalization is unresolved. Other
-         * newly captured bits in the same snapshot may still be cleared. */
+        /* 前次 finalization 未决的 W1C 永不 replay；同 snapshot 其他新 bit 可独立清除。 */
         clear_mask = (uint8_t)(clear_mask &
                                (uint8_t)(~s_w1c_finalization_ambiguous_mask));
 
@@ -1346,16 +1346,17 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
                                        clear_mask);
             if (status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS)
             {
-                /* Contain, diagnose and quarantine. With no documented BQ
-                 * commit point, software cannot safely pick replay versus a
-                 * new event identity while the requested bit stays high. */
+                /*
+                 * containment、diagnostic、quarantine 三者同时执行。BQ 无可见 commit
+                 * point 时，只要目标 bit 仍高，软件就不能安全选择 replay 或新事件。
+                 */
                 BMS_Protect_RecordW1cFinalizationAmbiguity(clear_mask);
                 BMS_Protect_RecordAfeFailure(status);
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
             if (status != BQ76940_STATUS_OK)
             {
-                /* Clear was rejected: keep pending and retry it. */
+                /* clear 明确失败：保留 pending，后续只重试对应 W1C。 */
                 BMS_Protect_RecordAfeFailure(status);
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
@@ -1365,9 +1366,10 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
             }
         }
 
-        /* Clear XREADY last, and only after the externally supplied complete
-         * recovery contract succeeds. A failed or absent hook releases the
-         * mutex promptly and retains pending state for a delayed retry. */
+        /*
+         * XREADY 最后清，且必须先完成外部完整 recovery contract。hook 缺失/失败时
+         * 立即释放 mutex 并保留 pending，等待下一次短步骤，绝不持锁 delay。
+         */
         if (s_xready_recovery_pending)
         {
             if (!BMS_Protect_RecoverXready(device))
@@ -1375,7 +1377,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
         }
-        /* Loop to re-read: new events may have arrived (H-05 drain). */
+        /* H-05：重新读取 SYS_STAT，捕获 drain 期间新到达的事件。 */
     }
     return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
 }
@@ -1413,17 +1415,17 @@ void Task_Protect(void *argument)
 
     (void)argument;
 
-    /* FreeRTOS initializes its Cortex-M ISR-priority validator inside
-     * xPortStartScheduler. Enabling EXTI before that point would let a real
-     * edge enter xSemaphoreGiveFromISR with uninitialized port state. This
-     * highest-priority task therefore owns EXTI activation. */
+    /*
+     * FreeRTOS 在 xPortStartScheduler 内初始化 Cortex-M ISR priority validator。
+     * 若提前启用 EXTI，真实边沿可能在 port state 未初始化时进入 FromISR API；
+     * 因此由已经运行的最高优先级 ProtectTask 启用 EXTI。
+     */
     while (!BSP_ALERT_EXTI_Init())
     {
         vTaskDelay(pdMS_TO_TICKS(BMS_PROTECT_RETRY_DELAY_MS));
     }
 
-    /* Rising-edge EXTI cannot report a level that was already high while the
-     * line was disabled. Seed task-level work directly from PB1 after enable. */
+    /* EXTI rising edge 无法补报禁用期间已为高的电平，启用后直接读 PB1 seed 工作。 */
     retry_pending = BSP_ALERT_PinActive();
 
     for (;;)
@@ -1451,7 +1453,7 @@ void Task_Protect(void *argument)
 }
 
 /* ------------------------------------------------------------------ */
-/* EXTI1 ISR (spec §20.1, H-05).                                      */
+/* EXTI1 ISR：只清 pending、give semaphore、按需 yield，不做复杂 Protect logic。 */
 /* ------------------------------------------------------------------ */
 void EXTI1_IRQHandler(void)
 {

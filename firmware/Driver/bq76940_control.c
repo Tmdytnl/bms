@@ -2,12 +2,9 @@
 
 #include <stddef.h>
 
-/*
- * Official threshold/delay tables from BQ769x0 Datasheet SLUSBK2I Rev.I
- * (Tables 8-9..8-11). RSNS=0 tables are the lower input range.
- */
+/* TI SLUSBK2I Rev.I Tables 8-9..8-11 threshold/delay；RSNS=0 为 lower range。 */
 
-/* OCD threshold (mV): code 0x0..0xF. */
+/* OCD threshold（mV）：code 0x0..0xF。 */
 static const uint16_t s_ocd_threshold_rsns1[BQ76940_CONTROL_OCD_THRESHOLD_COUNT] =
 {
     17U, 22U, 28U, 33U, 39U, 44U, 50U, 56U,
@@ -20,13 +17,13 @@ static const uint16_t s_ocd_threshold_rsns0[BQ76940_CONTROL_OCD_THRESHOLD_COUNT]
     31U, 33U, 36U, 39U, 42U, 44U, 47U, 50U
 };
 
-/* OCD delay (ms): code 0x0..0x7. */
+/* OCD delay（ms）：code 0x0..0x7。 */
 static const uint16_t s_ocd_delay_ms[BQ76940_CONTROL_OCD_DELAY_COUNT] =
 {
     8U, 20U, 40U, 80U, 160U, 320U, 640U, 1280U
 };
 
-/* SCD threshold (mV): code 0x0..0x7. */
+/* SCD threshold（mV）：code 0x0..0x7。 */
 static const uint16_t s_scd_threshold_rsns1[BQ76940_CONTROL_SCD_THRESHOLD_COUNT] =
 {
     44U, 67U, 89U, 111U, 133U, 155U, 178U, 200U
@@ -37,26 +34,26 @@ static const uint16_t s_scd_threshold_rsns0[BQ76940_CONTROL_SCD_THRESHOLD_COUNT]
     22U, 33U, 44U, 56U, 67U, 78U, 89U, 100U
 };
 
-/* SCD delay (us): code 0x0..0x3. */
+/* SCD delay（us）：code 0x0..0x3。 */
 static const uint16_t s_scd_delay_us[BQ76940_CONTROL_SCD_DELAY_COUNT] =
 {
     70U, 100U, 200U, 400U
 };
 
-/* OV delay (s): code 0x0..0x3. */
+/* OV delay（s）：code 0x0..0x3。 */
 static const uint8_t s_ov_delay_s[BQ76940_CONTROL_OV_DELAY_COUNT] =
 {
     1U, 2U, 4U, 8U
 };
 
-/* UV delay (s): code 0x0..0x3. */
+/* UV delay（s）：code 0x0..0x3。 */
 static const uint8_t s_uv_delay_s[BQ76940_CONTROL_UV_DELAY_COUNT] =
 {
     1U, 4U, 8U, 16U
 };
 
 /* ------------------------------------------------------------------ */
-/* OV / UV trip encoding                                               */
+/* OV / UV trip encoding。 */
 /* ------------------------------------------------------------------ */
 
 static BQ76940_Status_t BQ76940_Control_RequireCalibration(
@@ -72,7 +69,7 @@ static BQ76940_Status_t BQ76940_Control_RequireCalibration(
     return BQ76940_STATUS_OK;
 }
 
-/* full_code = (target_mv - offset) * 1000 / gain; trip = (full>>4)&0xFF. */
+/* full_code=(target_mv-offset)×1000/gain；trip=(full>>4)&0xFF。 */
 static BQ76940_Status_t BQ76940_Control_EncodeTrip(
     uint16_t target_mv,
     const BQ76940_Calibration_t *calibration,
@@ -108,13 +105,12 @@ static BQ76940_Status_t BQ76940_Control_EncodeTrip(
     }
     code = (uint16_t)full_code;
 
-    /* Verify the fixed MSB prefix of the full 14-bit code. */
+    /* 验证 14-bit full code 的固定 MSB prefix。 */
     if ((uint8_t)(code >> 12) != msb_prefix)
     {
         return BQ76940_STATUS_RANGE_ERROR;
     }
-    /* The register stores only the middle 8 bits; the 4 LSB preset is a
-     * decode-time reconstruction, not an encode-time constraint. */
+    /* register 只存中间 8 bit；4-bit LSB preset 在 decode 时重建。 */
 
     *trip_value = (uint8_t)((code >> 4) & 0xFFU);
     return BQ76940_STATUS_OK;
@@ -125,7 +121,7 @@ BQ76940_Status_t BQ76940_Control_EncodeOvTrip(
     const BQ76940_Calibration_t *calibration,
     uint8_t *trip_value)
 {
-    /* OV: upper 2 MSB = "10", lower 4 LSB = "1000". */
+    /* OV：upper MSB=10，lower LSB=1000。 */
     return BQ76940_Control_EncodeTrip(target_mv, calibration,
                                       0x2U, 0x8U, trip_value);
 }
@@ -135,7 +131,7 @@ BQ76940_Status_t BQ76940_Control_EncodeUvTrip(
     const BQ76940_Calibration_t *calibration,
     uint8_t *trip_value)
 {
-    /* UV: upper 2 MSB = "01", lower 4 LSB = "0000". */
+    /* UV：upper MSB=01，lower LSB=0000。 */
     return BQ76940_Control_EncodeTrip(target_mv, calibration,
                                       0x1U, 0x0U, trip_value);
 }
@@ -194,7 +190,7 @@ uint16_t BQ76940_Control_DecodeUvTripMv(
 }
 
 /* ------------------------------------------------------------------ */
-/* OCD / SCD encoding                                                  */
+/* OCD / SCD encoding。 */
 /* ------------------------------------------------------------------ */
 
 static BQ76940_Status_t BQ76940_Control_SelectFromTable(
@@ -209,7 +205,7 @@ static BQ76940_Status_t BQ76940_Control_SelectFromTable(
     {
         return BQ76940_STATUS_INVALID_ARGUMENT;
     }
-    /* Choose the smallest legal code whose value is >= requested. */
+    /* 选择 value>=requested 的最小合法 code，避免低于请求门限。 */
     for (index = 0U; index < count; ++index)
     {
         if (table[index] >= requested)
@@ -359,7 +355,7 @@ BQ76940_Status_t BQ76940_Control_ComposeProtect3(
 }
 
 /* ------------------------------------------------------------------ */
-/* FET arbitration                                                     */
+/* FET bit composition。 */
 /* ------------------------------------------------------------------ */
 
 uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
@@ -367,10 +363,11 @@ uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
 {
     uint8_t next;
 
-    /* Preserve only the production control required by the V1 contract:
-     * CC_EN (bit6). DELAY_DIS (bit7) bypasses protection delays for factory
-     * testing and must never propagate from readback. CC_ONESHOT (bit5) and
-     * reserved bits4..2 are also forced low. A missing request is fail-safe. */
+    /*
+     * 只保留 V1 contract 所需 CC_EN(bit6)。factory-test DELAY_DIS(bit7) 会绕过
+     * protection delay，禁止从 readback 传播；CC_ONESHOT 与 reserved bits 也清零。
+     * 缺失 request 按 fail-safe 双关处理。
+     */
     next = (uint8_t)(current_ctrl2 & 0x40U);
     if (request == NULL)
     {
@@ -378,11 +375,11 @@ uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
     }
     if (request->chg == BQ76940_FET_DESIRE_ENABLE)
     {
-        next |= 0x01U;   /* CHG_ON */
+        next |= 0x01U;   /* 设置 CHG_ON */
     }
     if (request->dsg == BQ76940_FET_DESIRE_ENABLE)
     {
-        next |= 0x02U;   /* DSG_ON */
+        next |= 0x02U;   /* 设置 DSG_ON */
     }
     return next;
 }
@@ -420,14 +417,10 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
 }
 
 /* ------------------------------------------------------------------ */
-/* Internal balancing                                                  */
+/* Internal balancing mapping。 */
 /* ------------------------------------------------------------------ */
 
-/*
- * Logical cell 1..13 -> CELLBAL bit:
- *   1..8 -> CB1..CB8, 9..12 -> CB10..CB13, 13 -> CB15.
- * CB9 and CB14 are skipped (same short channels as VC mapping).
- */
+/* logical cell 1..13→CB1..8、CB10..13、CB15；跳过 short channel CB9/CB14。 */
 static const uint8_t s_logical_cell_to_cb[BMS_CELL_COUNT] =
 {
     1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U,
@@ -443,7 +436,7 @@ uint8_t BQ76940_Control_CellBalBitOfLogicalCell(uint8_t logical_cell_index)
     return s_logical_cell_to_cb[logical_cell_index];
 }
 
-/* CBx bit index within the three 8-bit registers (bit n in reg n/8). */
+/* 将 CBx index 映射到三个 8-bit register 的局部 bit。 */
 static bool BQ76940_Control_CellBalSetBit(uint8_t *bal1,
                                           uint8_t *bal2,
                                           uint8_t *bal3,
@@ -491,7 +484,7 @@ bool BQ76940_Control_ComposeCellBal(
     {
         return false;
     }
-    /* V1 policy: exactly one logical cell may be balanced. */
+    /* frozen one-cell API：只允许一个 logical cell。 */
     if (balance_bitmap == 0U)
     {
         *bal1 = 0U;
@@ -501,11 +494,11 @@ bool BQ76940_Control_ComposeCellBal(
     }
     if ((balance_bitmap & (balance_bitmap - 1U)) != 0U)
     {
-        return false;   /* more than one bit set */
+        return false;   /* 设置了多个 bit */
     }
     if (balance_bitmap >= (1U << BMS_CELL_COUNT))
     {
-        return false;   /* out of range */
+        return false;   /* bitmap 越界 */
     }
 
     *bal1 = 0U;

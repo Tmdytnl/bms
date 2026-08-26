@@ -3,7 +3,7 @@
 volatile uint32_t g_phase2_test_failures;
 volatile uint32_t g_phase2_test_completed;
 
-/* The production startup calls this test-only no-op before __main. */
+/* production startup 在 __main 前调用的 test-only no-op。 */
 void SystemInit(void)
 {
 }

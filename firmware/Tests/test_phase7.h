@@ -15,8 +15,7 @@ uint32_t Test_Phase7_Xready(void);
 uint32_t Test_Phase7_BoundaryContracts(void);
 uint32_t Test_Phase7_SimCommPolicy(void);
 
-/* Deterministic RTOS/BQ/BSP fakes used to execute the production Phase 7
- * queue, drain and service functions under ARMCC5. */
+/* ARMCC5 下执行 production queue/drain/service 的确定性 RTOS/BQ/BSP fake。 */
 void TestP7_StubReset(void);
 BQ76940_t *TestP7_Device(void);
 void TestP7_SetMutexFailures(uint8_t failures);

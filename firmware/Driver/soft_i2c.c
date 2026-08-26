@@ -1,5 +1,11 @@
 #include "soft_i2c.h"
 
+/*
+ * 软件 I2C 按 open-drain 时序实现 START/STOP、address/data ACK/NACK、read response
+ * 与 clock-stretch timeout。驱动本身不持 RTOS mutex；完整 BQ transaction 的
+ * 互斥边界由上层 xI2CMutex 统一包围，避免逐 byte 加锁后发生 transaction 交叉。
+ */
+
 #include <stddef.h>
 
 #define SOFT_I2C_TIMEOUT_MAX_US     (32767U)
@@ -428,10 +434,9 @@ SoftI2C_Status_t SoftI2C_RecoverBus(SoftI2C_t *bus)
     }
 
     /*
-     * Nine clocks plus STOP is a generic I2C bus-clear strategy only. It is
-     * not a TI/BQ76940 device-level recovery guarantee; an unpowered AFE,
-     * SHIP/POR state, pull-up/rise-time fault, or hard-stuck line still needs
-     * board-level diagnosis and validation.
+     * 9 个 SCL pulse + STOP 是通用 bus-clear：给可能停在输出 byte 的 slave 提供
+     * 完成机会，再释放 transaction。它只恢复总线协议状态；AFE 无电、SHIP/POR、
+     * pull-up/rise-time 异常或 hard-stuck line 不会被该算法伪装成成功。
      */
     bus->started = false;
     bus->read_response_pending = false;

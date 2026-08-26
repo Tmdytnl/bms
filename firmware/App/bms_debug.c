@@ -27,8 +27,10 @@ static uint16_t s_line_offset;
 static uint32_t s_last_output_ms;
 static bool s_first_output;
 
-/* Static projections keep the diagnostic path out of the CANTx task's
- * already-reviewed stack budget. Task_CANTx is the sole caller/writer. */
+/*
+ * 大型诊断投影使用 static storage，避免挤占已审查的 CANTx task stack。
+ * Task_CANTx 是 sole caller/writer，因此无需额外 mutex，也不会产生并发 torn data。
+ */
 static BMS_DataSnapshot_t s_measurement;
 static BMS_StateSafetySnapshot_t s_state;
 static BMS_ProtectSafetySnapshot_t s_protect;
@@ -227,6 +229,11 @@ static void BMS_Debug_CellRange(uint16_t *minimum_mv,
 
 static void BMS_Debug_FlushChunk(void)
 {
+    /*
+     * 一次最多发送 BMS_DEBUG_MAX_BYTES_PER_SERVICE。TryWriteByte 只在 USART
+     * 当前可写时提交一个 byte；busy 就立即返回并保留 s_line_offset，形成
+     * partial-line continuation，而不是让 debug 阻塞安全控制或 CAN mailbox。
+     */
     uint16_t remaining;
     uint16_t chunk;
 

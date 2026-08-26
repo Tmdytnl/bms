@@ -1,5 +1,11 @@
 #include "bsp_flash.h"
 
+/*
+ * BSP 只提供受地址边界保护的 read、page erase、halfword program。每次修改都
+ * 临时 unlock 并在返回前 lock；不在此层选择 slot，也不把写成功等同于 record
+ * 有效，最终 CRC/readback/commit 判断属于 persistence owner。
+ */
+
 #include <stddef.h>
 
 #include "bms_memory_map.h"

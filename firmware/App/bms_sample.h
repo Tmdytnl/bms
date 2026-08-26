@@ -8,19 +8,20 @@
 #include "bms_types.h"
 #include "bq76940.h"
 
-/* Configuration revision advance shared with production-C wrap tests.
- * Natural uint32_t wrap is intentional: an immediate UINT32_MAX-to-zero
- * change still differs from the captured revision. Equality does not claim
- * to detect alias after a complete 2^32 configuration-change cycle; that
- * boundary depends on the product lifecycle/watchdog constraint. */
+/*
+ * production-C wrap test 与正式代码共用的 configuration revision 推进规则。
+ * uint32_t 自然回绕是设计的一部分：UINT32_MAX→0 仍与事务捕获值不同。
+ * 完整 2^32 次配置变更后的 alias 不由相等比较解决，而由生命周期/watchdog
+ * 约束保证一次采样事务不会跨越如此多次配置更新。
+ */
 #define BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(revision_) \
     ((uint32_t)((uint32_t)(revision_) + 1UL))
 
 /*
- * Phase 8 measurement owner. A RunOnce call stages a complete 13-cell/BAT
- * core locally and publishes it atomically through bms_data only after all
- * mandatory transactions succeed. Current is sourced exclusively from the
- * ProtectTask latest-CC mailbox. TS1 is sampled every eighth cycle.
+ * 完整 measurement 的唯一 owner。RunOnce 先在局部变量中依次完成 13-cell/BAT
+ * mandatory core，全部成功后才经 bms_data 原子发布并推进 sample_sequence。
+ * current 只能取自 ProtectTask latest-CC mailbox，不能由 SampleTask 再读一次
+ * CC 寄存器；TS1 每八个周期采样一次，拥有独立 timestamp 与 validity。
  */
 typedef struct
 {
@@ -39,14 +40,13 @@ typedef struct
     uint32_t ntc_curve_unavailable_count;
     uint32_t data_publish_failure_count;
     uint32_t cc_mailbox_unavailable_count;
-    /* A stale sample means at least one valid voltage/current/temperature
-     * group exceeded its freshness limit. Invalid groups are not stale. */
+    /* stale 表示至少一个 valid 组超过 freshness 门限；invalid 不等于 stale。 */
     uint32_t stale_sample_count;
     uint32_t stale_transition_count;
     uint32_t stale_check_failure_count;
-    /* XREADY/calibration generation guard rejected before any AFE read. */
+    /* 首次 AFE 访问前，XREADY/calibration generation guard 已拒绝本轮。 */
     uint32_t xready_precheck_reject_count;
-    /* XREADY/calibration generation changed before atomic publication. */
+    /* staging 完成但发布前 generation 改变，本地测量必须整体作废。 */
     uint32_t xready_postcheck_reject_count;
     uint32_t consecutive_failure_count;
     uint32_t max_consecutive_failure_count;
@@ -60,25 +60,24 @@ typedef struct
     BQ76940_Calibration_t calibration;
 } BMS_SampleCalibrationEvidence_t;
 
-/* Startup initialization. It leaves the module fail-closed until a device
- * and a validated AFE calibration are supplied. A valid calibration is bound
- * to the current inactive XREADY generation and must be rebound after every
- * observed XREADY transition. */
+/*
+ * 启动初始化保持 fail-closed，直到 device 与有效 AFE calibration 都已安装。
+ * calibration 绑定当前 inactive XREADY generation；每次观察到 XREADY 转移后
+ * 都必须由 recovery coordinator 以新 provenance 重新交接。
+ */
 void BMS_Sample_Init(void);
 
-/* These configuration APIs are task/startup context only, never ISR APIs.
- * Before the scheduler starts they assign directly in the single-threaded
- * startup context. With a running scheduler they protect multi-field updates;
- * an already-suspended scheduler is not resumed by this module.
+/*
+ * 下列配置 API 只允许启动/任务上下文调用，绝不是 ISR API。调度器启动前属于
+ * 单线程直接赋值；启动后用 scheduler exclusion 保护多字段更新，而且不会误将
+ * 调用者已经 suspend 的 scheduler 提前恢复。
  *
- * The device and pointed-to NTC table must outlive all sampling calls; the
- * installed table must also remain immutable until cleared or replaced.
- * SetNtcTable(NULL, 0) deliberately clears the temperature curve. An
- * invalid nonempty table is rejected transactionally. No curve is embedded
- * in production code because the board NTC curve is not yet validated.
- * SetCalibration rejects and clears its binding while XREADY is active, and
- * is permanently denied after runtime XREADY invalidation. From that point
- * only SetRecoveryCalibration can install provenance-bound calibration. */
+ * device 与 NTC table 的生命周期必须覆盖全部 sampling call，已安装 table 在
+ * clear/replace 前保持 immutable。SetNtcTable(NULL, 0) 明确清空曲线，非法的
+ * nonempty table 以 transaction 方式整体拒绝。XREADY active 时 SetCalibration
+ * 会拒绝并清除 binding；一旦发生运行期 XREADY invalidation，只有带 generation
+ * 与 recovery revision provenance 的 SetRecoveryCalibration 能恢复采样。
+ */
 void BMS_Sample_SetDevice(BQ76940_t *device);
 bool BMS_Sample_SetCalibration(
     const BQ76940_Calibration_t *calibration);
@@ -92,21 +91,21 @@ bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
                              uint16_t point_count);
 
 #if defined(TEST_PHASE8_SAMPLE_IMAGE)
-/* Test-image-only seam for exercising the production revision guard across
- * its immediate natural wrap. This symbol is absent from production images. */
+/* 仅 test image 暴露，用于验证 revision 立即自然回绕；production image 无此符号。 */
 void BMS_Sample_TestSeedConfigurationRevision(uint32_t revision);
 #endif
 
-/* One bounded 250 ms-cycle body. Returns true only when bms_data accepted a
- * fully staged core frame. No I2C mutex is held while data is published. The
- * first successful core publication after a device/XREADY epoch change also
- * invalidates previous-epoch current unless same-epoch CC is available. */
+/*
+ * 一个有界 250 ms cycle body。只有 bms_data 接受完整 core frame 才返回 true；
+ * 发布时不持有 I2C mutex。device/XREADY epoch 改变后的首帧若没有同代 CC，
+ * 会同时使上一代 current 失效，防止电压来自新 AFE 而电流仍来自旧 AFE。
+ */
 bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms);
 
-/* Same-generation task-context snapshot; not callable from an ISR. */
+/* 同 generation 的任务上下文诊断快照；ISR 不得调用。 */
 BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void);
 
-/* Production FreeRTOS entry owned by the measurement module. */
+/* measurement owner 自己持有的正式 FreeRTOS 任务入口。 */
 void Task_Sample(void *argument);
 
-#endif /* BMS_SAMPLE_H */
+#endif /* BMS_SAMPLE_H：include guard */

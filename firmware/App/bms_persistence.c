@@ -1,5 +1,12 @@
 #include "bms_persistence.h"
 
+/*
+ * A/B page record 使用 magic+version+sequence+payload+CRC32+commit marker。
+ * decode 只有在格式、CRC 与 commit 全部有效时才接纳；两个 slot 都有效时用
+ * wrap-safe sequence 选择 newest-valid。保存永远写 inactive slot，因此掉电前
+ * active old slot 保持不动。
+ */
+
 #include <stddef.h>
 #include <string.h>
 
@@ -267,9 +274,12 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
             &store->diagnostics.save_io_failure_count);
         return BMS_PERSISTENCE_STORE_IO_ERROR;
     }
-    /* Program the CRC-covered body first. The erased 0xFFFF commit word keeps
-     * the candidate invalid across every possible interruption before the
-     * final halfword write. */
+    /*
+     * 先 erase inactive page，再写 CRC 覆盖的 payload/body 并逐字节 readback；
+     * commit halfword 在最后一步前保持 erased 0xFFFF，使任一中途掉电得到的
+     * candidate 都是 invalid。只有 body 完整验证后才写 commit marker，因此旧
+     * slot 至少一直可用到新 slot 真正提交。
+     */
     for (offset = 0U; offset < BMS_PERSISTENCE_BODY_BYTES; offset += 2U)
     {
         halfword = BMS_Persistence_GetU16(&record[offset]);

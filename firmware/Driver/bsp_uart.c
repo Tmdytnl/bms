@@ -1,5 +1,11 @@
 #include "bsp_uart.h"
 
+/*
+ * USART1 固定 115200 8N1。TryWriteByte/TryReadByte 只观察一次状态位，适合
+ * best-effort runtime service；Write 会等待每个 TXE，调用者必须选择允许阻塞
+ * 的上下文。驱动不解析命令，也不拥有任何安全状态。
+ */
+
 #include <stddef.h>
 
 #include "bms_build_assert.h"

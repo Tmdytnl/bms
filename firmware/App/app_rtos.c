@@ -20,7 +20,12 @@
 #endif
 
 /* ------------------------------------------------------------------ */
-/* IPC objects (spec §11.2).                                           */
+/*
+ * 七个任务共享的 IPC 对象。
+ * xI2CMutex 保证软件 I2C transaction 不交叉；xDataMutex 保护一致测量快照；
+ * xAfeAlertSem 把 EXTI 的最小事件通知交给 ProtectTask；三个 queue 分别划分
+ * CAN Tx、CAN Rx 与 CC sample 的唯一消费者；xSysEvents 只传递系统事件位。
+ */
 /* ------------------------------------------------------------------ */
 SemaphoreHandle_t xI2CMutex;
 SemaphoreHandle_t xDataMutex;
@@ -49,7 +54,7 @@ BaseType_t App_Rtos_CreateObjects(void)
         (xCanRxQueue == NULL) || (xCcSampleQueue == NULL) ||
         (xSysEvents == NULL))
     {
-        /* No partial object set: delete everything that was created. */
+        /* 任一对象创建失败就回收已创建对象，禁止带着半套 IPC 启动调度器。 */
         if (xI2CMutex != NULL) { vSemaphoreDelete(xI2CMutex); xI2CMutex = NULL; }
         if (xDataMutex != NULL) { vSemaphoreDelete(xDataMutex); xDataMutex = NULL; }
         if (xAfeAlertSem != NULL) { vSemaphoreDelete(xAfeAlertSem); xAfeAlertSem = NULL; }
@@ -63,11 +68,20 @@ BaseType_t App_Rtos_CreateObjects(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* Seven task bodies. Task_Protect is implemented in bms_protect.c and
- * Task_Sample in bms_sample.c. This file owns the five remaining scheduler
- * contexts and delegates each bounded loop body to its owner module. */
+/*
+ * 七任务入口。
+ * ProtectTask 与 SampleTask 分别由 bms_protect.c、bms_sample.c 实现，
+ * 因为 ALERT fault lifecycle 与完整测量发布都必须由各自 owner 封装。
+ * 本文件持有其余五个调度上下文，但每个循环仍把业务决策委托给 owner 模块。
+ */
 /* ------------------------------------------------------------------ */
 
+/*
+ * StateTask 是系统协调核心：每 10 ms 汇合 Recovery、State、Protect、
+ * measurement 与 health 的同代快照，依次推进恢复、软件保护、硬件恢复
+ * handshake 和 FET transaction。它只发布诊断聚合，不把 BMS_Data 当成
+ * safety authority；紧急通知只缩短等待，不改变同一循环的所有权顺序。
+ */
 void Task_State(void *argument)
 {
 #if defined(TEST_PHASE6_IMAGE)
@@ -138,7 +152,11 @@ void Task_State(void *argument)
             }
             else
             {
-                /* StateTask is the sole production feeder. */
+                /*
+                 * 只有所有必需任务的 heartbeat generation 都持续推进时，
+                 * health 才允许到达这里。StateTask 是唯一喂狗者，避免某个
+                 * 卡死任务被其他正常任务继续喂狗而掩盖。
+                 */
                 BSP_IWDG_Feed();
             }
         }
@@ -149,6 +167,10 @@ void Task_State(void *argument)
 #endif
 }
 
+/*
+ * SOCTask 按策略周期消费 ProtectTask 投递的独立 CC queue，并把 SOC owner
+ * 结果交给 persistence service。它不重复读取 CC 寄存器，也不参与 FET 仲裁。
+ */
 void Task_SOC(void *argument)
 {
     TickType_t period;
@@ -185,6 +207,10 @@ void Task_SOC(void *argument)
     }
 }
 
+/*
+ * BalanceTask 每 1 s 评估电芯差值与所有安全门禁，是调度器启动后唯一允许
+ * 写 CELLBAL 的任务；独立周期使均衡控制不会延长 10 ms 安全协调路径。
+ */
 void Task_Balance(void *argument)
 {
     TickType_t period;
@@ -208,6 +234,11 @@ void Task_Balance(void *argument)
     }
 }
 
+/*
+ * CANTxTask 每 10 ms 排空硬件发送服务，以保证 mailbox 有界推进；周期诊断帧
+ * 每 100 ms 生成一次。UART debug 也挂在此任务，但使用 best-effort 非阻塞
+ * service，TX busy 时立即让路，不能反向拖慢 CAN 或安全任务。
+ */
 void Task_CANTx(void *argument)
 {
     const TickType_t period = pdMS_TO_TICKS(10U);
@@ -240,6 +271,10 @@ void Task_CANTx(void *argument)
     }
 }
 
+/*
+ * CANRxTask 只消费 ISR 写入的服务帧队列。协议处理可以更新诊断/服务状态，
+ * 但不能直接写 FET、CELLBAL、fault bitmap 或 IWDG，从入口处守住 ownership。
+ */
 void Task_CANRx(void *argument)
 {
 #if !defined(TEST_PHASE6_IMAGE)
@@ -272,7 +307,7 @@ void Task_CANRx(void *argument)
 }
 
 /* ------------------------------------------------------------------ */
-/* Task creation.                                                      */
+/* 任务创建顺序固定；失败后停止继续创建，由启动层决定是否进入安全失败路径。 */
 /* ------------------------------------------------------------------ */
 static BaseType_t App_Rtos_CreateOne(TaskFunction_t function,
                                      const char *name,

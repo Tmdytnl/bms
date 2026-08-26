@@ -18,10 +18,8 @@
     } while (0)
 
 /*
- * Phase 7 pure-decision tests. BMS_Protect_Decide maps a raw SYS_STAT
- * snapshot to fault/request/clear decisions without any I2C or RTOS
- * dependency, so it is verified here without the transport/FreeRTOS
- * combination that the Keil simulator cannot execute together.
+ * Protect 纯决策测试：BMS_Protect_Decide 不依赖 I2C/RTOS，把同一 SYS_STAT
+ * snapshot 映射为 fault/request/clear，因而可独立验证每个 bit 的 ownership。
  */
 
 uint32_t Test_Phase7_ProtectLogic(void)
@@ -34,7 +32,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
 
     failures = 0UL;
 
-    /* OV bit: active HW_OV fault, CHG inhibited, OV bit cleared. */
+    /* OV：HW_OV active、CHG inhibit，并把已捕获 OV 加入 W1C mask。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -46,7 +44,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
     TEST_CHECK(request.dsg == BQ76940_FET_DESIRE_ENABLE);
     TEST_CHECK(clear_mask == BMS_PROTECT_STAT_OV);
 
-    /* SCD: active+latched HW_SCD, both FETs inhibited. */
+    /* SCD：HW_SCD active+latched，双向 inhibit。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -58,7 +56,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
     TEST_CHECK(request.dsg == BQ76940_FET_DESIRE_DISABLE);
     TEST_CHECK(clear_mask == BMS_PROTECT_STAT_SCD);
 
-    /* OVRD_ALERT (H-01): independent fault + both FETs inhibited. */
+    /* OVRD_ALERT（H-01）：独立 fault 并双向 inhibit。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -73,7 +71,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
     TEST_CHECK(request.dsg == BQ76940_FET_DESIRE_DISABLE);
     TEST_CHECK(clear_mask == BMS_PROTECT_STAT_OVRD_ALERT);
 
-    /* XREADY (H-03): latched fault, both off, but NOT in clear mask. */
+    /* XREADY（H-03）：latched+双向 inhibit，但普通 decision 绝不 clear。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -84,9 +82,9 @@ uint32_t Test_Phase7_ProtectLogic(void)
     TEST_CHECK(BMS_Fault_Contains(faults.latched, BMS_FAULT_ID_AFE_XREADY));
     TEST_CHECK(request.chg == BQ76940_FET_DESIRE_DISABLE);
     TEST_CHECK(request.dsg == BQ76940_FET_DESIRE_DISABLE);
-    TEST_CHECK(clear_mask == 0U);   /* XREADY never cleared by Decide */
+    TEST_CHECK(clear_mask == 0U);   /* Decide 永不清 XREADY */
 
-    /* Combined CC_READY + OV (spec §20): CC_READY adds no fault, OV does. */
+    /* CC_READY+OV：CC_READY 不产生 fault，OV 独立产生。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -95,15 +93,13 @@ uint32_t Test_Phase7_ProtectLogic(void)
                        &faults, &request, &clear_mask);
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_OV));
     TEST_CHECK(request.chg == BQ76940_FET_DESIRE_DISABLE);
-    /* Decide handles fault bits; CC_READY bit is added by the caller
-     * (HandleCcReady) after the queue push succeeds. */
+    /* Decide 处理 fault bit；CC_READY 只有 queue push 成功后由 caller 加入 clear。 */
     TEST_CHECK((clear_mask & BMS_PROTECT_STAT_CC_READY) == 0U);
     TEST_CHECK((clear_mask & BMS_PROTECT_STAT_OV) != 0U);
 
-    /* Phase 5/7 integration boundary: protection decisions feed the pure FET
-     * compositor without replaying factory/command/reserved SYS_CTRL2 bits. */
+    /* protection decision 进入纯 FET compositor，不传播 factory/command/reserved bit。 */
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0xFFU, &request);
-    TEST_CHECK(ctrl2 == 0x42U);  /* OV: CC_EN + DSG only */
+    TEST_CHECK(ctrl2 == 0x42U);  /* OV：只保留 CC_EN+DSG */
 
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
@@ -111,7 +107,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
     BMS_Protect_Decide(BMS_PROTECT_STAT_UV | BMS_PROTECT_STAT_OCD,
                        &faults, &request, &clear_mask);
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0xFFU, &request);
-    TEST_CHECK(ctrl2 == 0x41U);  /* UV/OCD: CC_EN + CHG only */
+    TEST_CHECK(ctrl2 == 0x41U);  /* UV/OCD：只保留 CC_EN+CHG */
 
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
@@ -120,9 +116,9 @@ uint32_t Test_Phase7_ProtectLogic(void)
                        BMS_PROTECT_STAT_DEVICE_XREADY,
                        &faults, &request, &clear_mask);
     ctrl2 = BQ76940_Control_SysCtrl2WithFets(0xFFU, &request);
-    TEST_CHECK(ctrl2 == 0x40U);  /* SCD/XREADY: both FETs off */
+    TEST_CHECK(ctrl2 == 0x40U);  /* SCD/XREADY：双关 */
 
-    /* Clean SYS_STAT: no faults, nothing cleared. */
+    /* SYS_STAT 全零：无 fault，也无 W1C。 */
     BMS_Fault_Init(&faults);
     request.chg = BQ76940_FET_DESIRE_ENABLE;
     request.dsg = BQ76940_FET_DESIRE_ENABLE;
@@ -131,7 +127,7 @@ uint32_t Test_Phase7_ProtectLogic(void)
     TEST_CHECK(faults.active == 0U);
     TEST_CHECK(clear_mask == 0U);
 
-    /* HasFaultBits classification. */
+    /* HasFaultBits 只区分 fault-class 与单独 CC_READY。 */
     TEST_CHECK(BMS_Protect_HasFaultBits(BMS_PROTECT_STAT_OV));
     TEST_CHECK(BMS_Protect_HasFaultBits(BMS_PROTECT_STAT_DEVICE_XREADY));
     TEST_CHECK(!BMS_Protect_HasFaultBits(BMS_PROTECT_STAT_CC_READY));
@@ -155,8 +151,7 @@ uint32_t Test_Phase7_CcQueue(void)
 
     failures = 0UL;
 
-    /* Latest-CC mailbox starts invalid and its multi-field getter is copied
-     * under the same scheduler exclusion used by the producer. */
+    /* latest-CC mailbox 初始 invalid，多字段 getter 与 producer 共用 scheduler exclusion。 */
     TestP7_StubReset();
     TEST_CHECK(!BMS_Protect_GetLatestCc(NULL));
     suspend_before = TestP7_SchedulerSuspendCount();
@@ -172,7 +167,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_SchedulerResumeCount() == (resume_before + 1UL));
     TEST_CHECK(TestP7_SchedulerProtectionBalanced());
 
-    /* A mailbox generation is published only after queue acceptance. */
+    /* queue 确认接纳后才发布 mailbox generation。 */
     TEST_CHECK(BMS_Protect_PushCcSample(77));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.valid);
@@ -187,7 +182,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(latest_cc.sequence == 2UL);
     TEST_CHECK(latest_cc.xready_generation == 0UL);
 
-    /* Single overflow: exactly one oldest sample is replaced by newest. */
+    /* 单次 overflow：只用 newest 替换一个 oldest。 */
     TestP7_StubReset();
     for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
@@ -213,7 +208,7 @@ uint32_t Test_Phase7_CcQueue(void)
         TEST_CHECK(sample.xready_generation == 0UL);
     }
 
-    /* Continuous producer overflow remains exactly-one-drop and newest wins. */
+    /* 连续 producer overflow 仍保持每次只丢一个且 newest wins。 */
     TestP7_StubReset();
     for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
@@ -232,8 +227,7 @@ uint32_t Test_Phase7_CcQueue(void)
         TEST_CHECK(sample.raw == (int16_t)(3 + index));
     }
 
-    /* If the full-queue replacement enqueue fails after dropping the oldest,
-     * the rejected newest sample must not advance or alter the mailbox. */
+    /* 丢 oldest 后 replacement enqueue 失败，rejected newest 不得推进 mailbox。 */
     TestP7_StubReset();
     for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
@@ -250,9 +244,8 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(latest_cc.xready_generation ==
                previous_cc.xready_generation);
 
-    /* If the post-discard replacement itself fails, do not W1C. The next
-     * bounded drain read retries the still-pending hardware sample. Diagnostics
-     * distinguish the one lost oldest sample from the failed enqueue attempt. */
+    /* replacement 失败时不 W1C，下次 bounded drain 重试 pending hardware sample；
+     * diagnostics 分开记录 lost oldest 与 failed enqueue。 */
     TestP7_StubReset();
     for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
@@ -284,7 +277,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_QueuePop(&sample));
     TEST_CHECK(sample.raw == 900);
 
-    /* Combined CC_READY + OV is sampled once and cleared in one W1C. */
+    /* CC_READY+OV 同一 snapshot 各处理一次，并合并到一次 W1C。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY | BMS_PROTECT_STAT_OV;
     stat_values[1] = 0U;
@@ -301,7 +294,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_QueuePop(&sample));
     TEST_CHECK(sample.raw == 321);
 
-    /* A failed W1C retries only the clear, never duplicates the sample. */
+    /* W1C 明确失败时只重试 clear，不重复 sample。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
@@ -320,10 +313,9 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_WriteValue(1U) == BMS_PROTECT_STAT_CC_READY);
     TEST_CHECK(TestP7_QueueCount() == 1U);
 
-    /* Payload+CRC ACKed but STOP finalization failed: commit is ambiguous. A
-     * continuously high bit cannot identify old versus new conversion. The
-     * production path quarantines CC_READY, neither replaying W1C nor
-     * enqueueing again, and exposes the possible coalescence to Phase 10. */
+    /* payload+CRC ACK 而 STOP 失败：commit ambiguous。持续高位无法区分 old/new
+     * conversion；正式路径 quarantine CC_READY，不 replay、不再 enqueue，并暴露
+     * possible coalescence 供 SOC 处理。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
@@ -345,15 +337,13 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask ==
                BMS_PROTECT_STAT_CC_READY);
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_latched);
-    /* Four continuously-high reads consume the next bounded attempt without
-     * replaying or inventing a second sample. */
+    /* 连续四次 high read 消耗下一次 bounded attempt，但不 replay 或虚构第二 sample。 */
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     TEST_CHECK(TestP7_CcReadCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
     TEST_CHECK(TestP7_QueueCount() == 1U);
-    /* Only an observed-low read retires the current quarantine. History and
-     * the CC ambiguity counter remain available to later consumers. */
+    /* 只有 observed-low 能退休 quarantine；history 与 ambiguity counter 保留。 */
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
     diagnostics = BMS_Protect_GetDiagnostics();
@@ -378,15 +368,14 @@ uint32_t Test_Phase7_AlertRetry(void)
 
     failures = 0UL;
 
-    /* ISR path executes only clear/give/yield plumbing and no BQ access. */
+    /* ISR path 只执行 clear/give/yield plumbing，无 BQ access。 */
     TestP7_StubReset();
     TEST_CHECK(TestP7_ExerciseAlertIsr());
     TEST_CHECK(TestP7_StatReadCount() == 0U);
     TEST_CHECK(TestP7_WriteCount() == 0U);
 
-    /* H-05 Case A executes the production Task_Protect loop: one semaphore
-     * token is consumed, the first mutex take fails, the task delays 10 ms,
-     * retries without a new edge, drains OV, then reaches its next wait. */
+    /* H-05 Case A：正式 Task_Protect 消费 token，首次 mutex 失败后 delay 10 ms，
+     * 无新 edge 也会 retry/drain OV，再回到下一次 wait。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_OV;
     stat_values[1] = 0U;
@@ -401,8 +390,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_OV);
     TEST_CHECK(TestP7_MutexAvailable());
 
-    /* Startup-high regression: the task enables EXTI only after scheduler
-     * entry, observes PB1 already high, and drains without any ISR token. */
+    /* startup-high：任务进入 scheduler 后启用 EXTI，直接观察 PB1 high，无 ISR token 也 drain。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_OV;
     stat_values[1] = 0U;
@@ -414,8 +402,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_OV);
     TEST_CHECK(TestP7_MutexAvailable());
 
-    /* H-05 Case B: budget exhaustion and a still-active pin both retain
-     * pending state without requiring another EXTI edge. */
+    /* H-05 Case B：budget exhausted 且 pin 仍 active 时保留 pending，不等新 edge。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_OV;
     stat_values[1] = BMS_PROTECT_STAT_OV;
@@ -436,8 +423,7 @@ uint32_t Test_Phase7_AlertRetry(void)
                BMS_PROTECT_SERVICE_IDLE);
     TEST_CHECK(TestP7_MutexAvailable());
 
-    /* H-05 Case C: a new UV event appearing while OV is being cleared is
-     * observed on the next drain read and handled independently. */
+    /* H-05 Case C：clear OV 期间新 UV 在下一次 drain read 被独立捕获。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_OV;
     stat_values[1] = BMS_PROTECT_STAT_UV;
@@ -452,7 +438,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_OV));
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_HW_UV));
 
-    /* SYS_STAT read timeout is observable and retains pending state. */
+    /* SYS_STAT read timeout 可诊断并保留 pending。 */
     TestP7_StubReset();
     stat_values[0] = 0U;
     stat_statuses[0] = BQ76940_STATUS_I2C_TIMEOUT;
@@ -465,8 +451,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     TEST_CHECK(TestP7_WriteCount() == 0U);
     TEST_CHECK(TestP7_MutexAvailable());
 
-    /* CC CRC failures never W1C the unread sample and are classified as CRC,
-     * not a generic communication fault. */
+    /* CC CRC failure 不 W1C unread sample，并保留 CRC 分类而非 generic comm。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
@@ -510,8 +495,7 @@ uint32_t Test_Phase7_Xready(void)
     stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
     stat_values[1] = 0U;
 
-    /* XREADY epoch starts inactive at generation zero and the public getter
-     * copies both fields under scheduler exclusion. */
+    /* XREADY epoch 从 inactive/generation 0 开始，getter 一致复制两个字段。 */
     TestP7_StubReset();
     TEST_CHECK(!BMS_Protect_GetXreadyState(NULL));
     suspend_before = TestP7_SchedulerSuspendCount();
@@ -530,9 +514,8 @@ uint32_t Test_Phase7_Xready(void)
     xready_state.active = true;
     TEST_CHECK(!BMS_Protect_XreadyBindingIsCurrent(&xready_state, 0UL));
 
-    /* A combined XREADY+CC_READY queues the CC sample for the SOC owner but
-     * cannot expose either it or an unconsumed old-epoch sample through the
-     * SampleTask mailbox. Only a later inactive-epoch CC restores latest. */
+    /* XREADY+CC_READY 可把 CC 入 SOC queue，但 Sample mailbox 既不暴露它也不暴露
+     * 未消费旧代；只有随后 inactive-epoch CC 恢复 latest。 */
     TEST_CHECK(BMS_Protect_PushCcSample((int16_t)111));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.xready_generation == 0UL);
@@ -566,7 +549,7 @@ uint32_t Test_Phase7_Xready(void)
     stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
     stat_values[1] = 0U;
 
-    /* No authoritative recovery hook: retain active+latched and never W1C. */
+    /* 无权威 recovery hook：保留 active+latched，绝不 W1C。 */
     TestP7_StubReset();
     TestP7_SetStatScript(stat_values, NULL, 1U);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
@@ -580,7 +563,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(TestP7_WriteCount() == 0U);
     TEST_CHECK(TestP7_RecoveryCallCount() == 0U);
 
-    /* Re-reading the same active event does not advance the generation. */
+    /* 重读同一 active event 不推进 generation。 */
     TestP7_SetStatScript(stat_values, NULL, 1U);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
@@ -588,7 +571,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(xready_state.xready_generation == 1UL);
     TEST_CHECK(xready_state.active);
 
-    /* An incomplete hook also keeps the fault pending and uncleared. */
+    /* incomplete hook 同样保留 fault pending/uncleared。 */
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(false);
@@ -598,7 +581,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 0U);
 
-    /* Only the complete hook may W1C XREADY. Active clears, history remains. */
+    /* 只有 complete hook 可 W1C XREADY；active 清除但 history 保留。 */
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
@@ -615,8 +598,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(xready_state.xready_generation == 1UL);
     TEST_CHECK(!xready_state.active);
 
-    /* A new inactive-to-active observation advances again; recovery clears
-     * only active and never rewinds the epoch. */
+    /* 新 inactive→active 再推进 generation；recovery 只清 active，不倒退 epoch。 */
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
@@ -624,9 +606,8 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(xready_state.xready_generation == 2UL);
     TEST_CHECK(!xready_state.active);
 
-    /* A definitely rejected XREADY W1C keeps the same generation active.
-     * Retrying the bounded recovery/clear may retire it, but must neither
-     * advance the generation nor expose an inactive window before success. */
+    /* 明确拒绝的 XREADY W1C 保持同 generation active；bounded retry 可退休它，
+     * 但成功前不能推进 generation 或暴露 inactive window。 */
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
@@ -655,9 +636,8 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(TestP7_RecoveryCallCount() == 2U);
     TEST_CHECK(TestP7_WriteCount() == 2U);
 
-    /* If XREADY W1C finalization is ambiguous, active remains set and neither
-     * recovery nor W1C is replayed. Observed-low then confirms retirement;
-     * history remains for the Phase 9 explicit-reset policy. */
+    /* XREADY W1C ambiguous 时 active 保留，recovery/W1C 都不 replay；observed-low
+     * 确认退休，history 仍留给 explicit-reset policy。 */
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
@@ -713,9 +693,8 @@ uint32_t Test_Phase7_BoundaryContracts(void)
 
     failures = 0UL;
 
-    /* Phase 7 captures events; a later zero SYS_STAT does not clear physical
-     * recovery state. OV/UV/OCD are recovery-eligible but not history-latched;
-     * SCD/OVRD are active+latched and never auto-clear in this phase. */
+    /* event capture 后的 SYS_STAT=0 不清 recovery state。OV/UV/OCD 可恢复但不锁
+     * history；SCD/OVRD active+latched 且不自动清。 */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_OV | BMS_PROTECT_STAT_UV |
                      BMS_PROTECT_STAT_OCD | BMS_PROTECT_STAT_SCD |
@@ -725,8 +704,7 @@ uint32_t Test_Phase7_BoundaryContracts(void)
     TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
                BMS_PROTECT_DRAIN_COMPLETE);
 
-    /* Getter itself must bracket the two-word active+latched copy. The static
-     * verifier additionally checks the exact production source ordering. */
+    /* getter 必须包围 active+latched 两个 word 的复制；static verifier 检查正式顺序。 */
     suspend_before = TestP7_SchedulerSuspendCount();
     resume_before = TestP7_SchedulerResumeCount();
     faults = BMS_Protect_GetFaultSummary();
@@ -747,8 +725,7 @@ uint32_t Test_Phase7_BoundaryContracts(void)
     TEST_CHECK(BMS_Fault_Contains(faults.latched,
                                   BMS_FAULT_ID_AFE_OVRD_ALERT));
 
-    /* The pure decision API is capture-only. Feeding a zero status cannot be
-     * misused as a physical-recovery shortcut. */
+    /* pure decision API 只捕获；输入 zero status 不能作为 recovery shortcut。 */
     active_before = faults.active;
     latched_before = faults.latched;
     request.chg = BQ76940_FET_DESIRE_ENABLE;

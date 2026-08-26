@@ -130,7 +130,7 @@ def check_stat_mapping_oracle() -> None:
     header = PROTECT_H.read_text(encoding="utf-8")
     source = PROTECT_C.read_text(encoding="utf-8")
 
-    # Bit masks must match SLUSBK2I 8.3.1.3.
+    # bit mask 必须匹配 SLUSBK2I 8.3.1.3。
     masks = {
         "BMS_PROTECT_STAT_CC_READY": 0x80,
         "BMS_PROTECT_STAT_DEVICE_XREADY": 0x20,
@@ -144,17 +144,17 @@ def check_stat_mapping_oracle() -> None:
         require(re.search(rf"#define\s+{name}\s+\(\(uint8_t\)0x{value:02X}U\)", header),
                 f"{name} != 0x{value:02X}")
 
-    # Decision function must exist and be public.
+    # pure decision API 必须 public。
     require("BMS_Protect_Decide" in header, "Decide API missing")
     require("BMS_Protect_HasFaultBits" in header, "HasFaultBits API missing")
     require("void BMS_Protect_Decide(" in source, "Decide impl missing")
 
-    # Golden decision behavior (independent oracle).
-    # OV -> HW_OV active, CHG inhibit, OV in clear mask.
+    # 独立 oracle 的 golden decision。
+    # OV→HW_OV active、CHG inhibit、OV 进入 clear mask。
     require("BMS_FAULT_ID_HW_OV" in source, "OV fault id missing")
     require("BMS_FAULT_ID_AFE_OVRD_ALERT" in source, "OVRD fault id missing")
     require("BMS_FAULT_ID_AFE_XREADY" in source, "XREADY fault id missing")
-    # XREADY must never be in the clear mask.
+    # XREADY 不得进入普通 clear mask。
     m = re.search(r"never cleared|NOT added to the clear mask", source)
     require(m is not None, "XREADY clear-mask exclusion not documented")
     print("PASS: SYS_STAT bit mapping oracle (SLUSBK2I 8.3.1.3)")
@@ -164,16 +164,16 @@ def check_protect_logic() -> None:
     source = PROTECT_C.read_text(encoding="utf-8")
     header = PROTECT_H.read_text(encoding="utf-8")
 
-    # FET request uses Phase 5 single-writer types.
+    # FET request 使用冻结 single-writer type。
     require("BQ76940_FetRequest_t" in header, "FET request type missing")
     require("BQ76940_FET_DESIRE_DISABLE" in source, "FET desire missing")
 
-    # H-01/H-02/H-03/H-05 markers.
+    # H-01/H-02/H-03/H-05 marker。
     for marker in ("H-01", "H-02", "H-03", "H-05"):
         require(marker in source or marker in header,
                 f"errata marker {marker} missing")
 
-    # CC_READY handled separately from fault bits.
+    # CC_READY 与 fault bit 分开处理。
     require("BMS_Protect_HandleCcReady" in source, "CC_READY handler missing")
     require("BMS_Protect_PushCcSample" in header, "CC queue API missing")
     require("newest sample" in header, "H-02 newest-wins policy missing")
@@ -190,7 +190,7 @@ def check_exti_boundary() -> None:
             "EXTI logical priority != 6")
     require("BSP_ALERT_EXTI_Init" in exti_h, "EXTI init API missing")
 
-    # ISR must only give the semaphore and yield; no I2C/BQ/printf.
+    # ISR 只 give semaphore/yield，不得 I2C/BQ/printf。
     handler = protect_c[protect_c.index("void EXTI1_IRQHandler"):]
     for token in ("BQ76940_", "SoftI2C_", "printf", "vTaskDelay",
                   "BQ_Write", "BQ_Read"):
@@ -199,7 +199,7 @@ def check_exti_boundary() -> None:
     require("xSemaphoreGiveFromISR" in handler, "ISR does not give semaphore")
     require("portYIELD_FROM_ISR" in handler, "ISR does not yield")
 
-    # EXTI init must use the locked priority (C-02).
+    # EXTI init 使用冻结 C-02 priority。
     require("NVIC_IRQChannelPreemptionPriority" in exti_c,
             "EXTI priority not configured")
     print("PASS: ALERT EXTI boundary (ISR minimal, priority 6)")
@@ -209,13 +209,13 @@ def check_boundaries() -> None:
     source = PROTECT_C.read_text(encoding="utf-8")
     header = PROTECT_H.read_text(encoding="utf-8")
 
-    # ProtectTask must not implement state machine / SOC / balance / CAN.
+    # ProtectTask 不实现 state/SOC/balance/CAN。
     for token in ("BMS_STATE_", "BMS_SocPermille", "CELLBAL", "CAN_",
                   "BQ76940_Control_ComposeCellBal", "vTaskStartScheduler"):
         require(token not in source,
                 f"forbidden Phase 8+/system symbol in bms_protect.c: {token}")
 
-    # g_bms_data is Phase 8 publication; protect must not write it.
+    # Protect 不得写诊断 aggregate g_bms_data。
     require("g_bms_data" not in source, "protect writes global snapshot")
     print("PASS: Phase 7 boundary (no state/SOC/balance/CAN in protect)")
 
@@ -233,10 +233,7 @@ def check_execution() -> None:
         "test_phase7_logic.o",
     ):
         require(token in test_map, f"actual-C test map missing {token}")
-    # The simulator image intentionally links the pure decision path only;
-    # the bq76940 transport must be absent (stub i2c would otherwise be
-    # needed and the FreeRTOS+transport combination cannot execute in the
-    # Keil simulator, see Phase 7 report evidence-boundary section).
+    # 该 test image 只链接 pure decision path，故意不引入 bq76940 transport。
     require("i.SoftI2C_WriteByte" not in test_map,
             "transport accidentally linked into decision-only test")
 

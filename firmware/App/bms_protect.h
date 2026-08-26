@@ -12,48 +12,30 @@
 #include "bq76940_control.h"
 
 /*
- * BMS V1 ProtectTask / ALERT path (Phase 7).
+ * BMS V1 ProtectTask / ALERT 路径。
  *
- * Official TI basis (BQ769x0 Datasheet SLUSBK2I Rev.I §8.3.1.3):
- *   - SYS_STAT is write-1-to-clear; each bit indicates an event.
- *   - CC_READY (bit7): fresh coulomb reading; latches if not cleared.
- *   - DEVICE_XREADY (bit5): device fault or SHIP->NORMAL entry; clears
- *     CHG/DSG automatically; host must clear it and rewrite FETs.
- *   - OVRD_ALERT (bit4): external ALERT override; disables both FETs.
- *   - UV/OV/SCD/OCD bits 3..0.
+ * TI BQ769x0 datasheet SLUSBK2I Rev.I §8.3.1.3 定义 SYS_STAT 为 W1C：
+ * 写 1 只清对应事件位，写 0 保持不变。CC_READY(bit7) 表示新库仑采样；
+ * DEVICE_XREADY(bit5) 表示器件异常或 SHIP→NORMAL，并由 AFE 自动清 CHG/DSG；
+ * OVRD_ALERT(bit4) 是外部 ALERT override；bit3..0 为 UV/OV/SCD/OCD。
  *
- * Errata application:
- *   - H-01: OVRD_ALERT handled independently (fault + FET inhibit +
- *     W1C), never swallowed by another branch.
- *   - H-02: CC_READY cleared only after the CC read + queue push
- *     succeed; on queue-full the newest sample replaces the oldest and
- *     the bit is cleared only after the newest sample entered.
- *   - H-03: XREADY latches a fault, disables both FETs, and clears only
- *     after a full recovery sequence (re-init, calibration, protection
- *     config re-apply) succeeds.
- *   - H-05: ALERT is drained with retry; a stuck-high line keeps the
- *     pending state instead of waiting for a new edge.
+ * 本模块把“寄存器事件”与“安全源生命周期”分开：
+ * - H-01：OVRD_ALERT 独立捕获 fault、双向 inhibit 与 W1C，不被其他分支吞掉；
+ * - H-02：CC_READY 只有在 CC read 与 newest-wins queue publish 成功后才清除；
+ * - H-03：XREADY active+latched 且双向 inhibit，完整恢复成功后才允许 W1C；
+ * - H-05：ALERT 采用有界 drain/retry，电平持续为高时不依赖下一次边沿。
  *
- * Phase 7 fault-lifecycle boundary:
- *   - SYS_STAT is an event-capture source. W1C/observed-low is not evidence
- *     that the underlying voltage/current/physical condition recovered.
- *   - HW_OV, HW_UV and HW_OCD set active only. They are recovery-eligible,
- *     but remain active until the Phase 9 recovery owner proves fresh valid
- *     measurements, threshold+hysteresis+delay, policy and hardware status.
- *   - HW_SCD, AFE_XREADY and AFE_OVRD_ALERT set active+latched. Phase 7 never
- *     auto-clears their latches. SCD/OVRD require an explicit later policy;
- *     XREADY active may clear only after full recovery and confirmed W1C.
- *   - ProtectTask is the Phase 7 hardware-event capture/publish owner. Other
- *     modules receive snapshots and must not infer recovery from SYS_STAT=0.
+ * SYS_STAT=0 只表示当前寄存器位低，不证明电压/电流条件已经恢复。HW_OV、
+ * HW_UV、HW_OCD 的 active 只能由带 identity 的 recovery request/ack 清除；
+ * HW_SCD、AFE_XREADY、AFE_OVRD_ALERT 还具有独立 latched 生命周期。
+ * ProtectTask 是这些 HW/AFE source 的唯一发布 owner，也是运行期 XREADY W1C
+ * 唯一执行者；其他任务只能读取快照或提交请求，不能从寄存器低电平推断授权。
  *
- * This module owns the ALERT ISR entry (EXTI1_IRQHandler) and the
- * ProtectTask body. It reuses the Phase 5 FET arbitration primitives and
- * the shared IPC objects; State, SOC, balancing and CAN remain separate
- * owner modules.
+ * ALERT ISR 只投递最小事件通知，复杂 I2C、W1C、fault 与恢复判断全部留在
+ * ProtectTask 任务上下文，避免 ISR 持锁、阻塞或破坏 owner 顺序。
  */
 
-/* SYS_STAT bit masks (SLUSBK2I §8.3.1.3; Phase 3 regs.h has the address,
- * these bit definitions are Phase 7 additions kept local to this module). */
+/* SYS_STAT bit mask；寄存器地址在 regs.h，事件语义保持在 Protect owner 内。 */
 #define BMS_PROTECT_STAT_CC_READY       ((uint8_t)0x80U)
 #define BMS_PROTECT_STAT_DEVICE_XREADY  ((uint8_t)0x20U)
 #define BMS_PROTECT_STAT_OVRD_ALERT     ((uint8_t)0x10U)
@@ -62,15 +44,16 @@
 #define BMS_PROTECT_STAT_SCD            ((uint8_t)0x02U)
 #define BMS_PROTECT_STAT_OCD            ((uint8_t)0x01U)
 
-/* I2C mutex take timeout for the ALERT path (spec §27 uses 20 ms). */
+/* ALERT 路径获取 I2C mutex 的最长等待；超时后保留 pending 并重试。 */
 #define BMS_PROTECT_I2C_TIMEOUT_MS      (20U)
 
-/* Drain-retry budget (H-05): bounded retries per ALERT wake. */
+/* 每次 ALERT 唤醒的 drain retry 上限，防止最高优先级任务无限占用 CPU。 */
 #define BMS_PROTECT_DRAIN_MAX_ITER      (4U)
 
-/* Delay between task-level retry attempts. This prevents a stuck ALERT or
- * unavailable I2C mutex from turning the highest-priority task into a busy
- * loop while keeping retry independent of another EXTI edge. */
+/*
+ * 任务级 retry 间隔：即使 ALERT stuck-high 或 I2C mutex 忙，也不会形成最高
+ * 优先级 busy loop；同时 retry 不依赖另一个 EXTI edge 才能继续。
+ */
 #define BMS_PROTECT_RETRY_DELAY_MS      (10U)
 #define BMS_PROTECT_HEALTH_WAIT_MS       (100U)
 
@@ -89,36 +72,35 @@ typedef enum
 typedef struct
 {
     uint32_t cc_queue_overflow_count;
-    /* Number of already-queued samples irrecoverably dropped to make room. */
+    /* queue 满时为 newest sample 腾位而不可恢复丢弃的 oldest sample 数。 */
     uint32_t cc_sample_missed_count;
-    /* Newest-sample enqueue attempts that failed during overflow recovery.
-     * CC_READY remains set in this case, so the hardware sample is retried. */
+    /* overflow recovery 后 newest enqueue 仍失败的次数；此时保留 CC_READY 供重试。 */
     uint32_t cc_enqueue_failure_count;
-    /* SYS_STAT W1C transactions whose payload/CRC were ACKed but final STOP
-     * failed. This is transaction history, not a claim of register commit. */
+    /*
+     * SYS_STAT W1C 的 payload/CRC 已 ACK、但最终 STOP 失败的 transaction 数。
+     * 这是“提交点未知”的历史，不能解释为寄存器已经写入。
+     */
     uint32_t w1c_finalization_ambiguous_count;
-    /* Subset of the above transactions that included CC_READY. A nonzero
-     * value means CC event identity may have coalesced and Phase 10 must not
-     * claim exact-zero-loss integration across the event. */
+    /*
+     * 上述 ambiguous transaction 中包含 CC_READY 的子集；非零表示事件 identity
+     * 可能合并，SOC 不能跨过该边界宣称精确无损积分。
+     */
     uint32_t cc_event_identity_ambiguous_count;
-    /* Currently quarantined SYS_STAT bits. A quarantined bit is neither W1C
-     * replayed nor treated as a new event until an observed-low read retires
-     * it. A continuously high old/new event cannot be disambiguated in
-     * software. */
+    /*
+     * 当前 quarantine 的 SYS_STAT 位。观察到低电平前既不 replay W1C，也不把
+     * 持续高位当成新事件；软件无法区分“旧位未清”与“刚到达的新同类事件”。
+     */
     uint8_t w1c_finalization_ambiguous_mask;
     bool cc_queue_overflow_latched;
     bool w1c_finalization_ambiguous_latched;
 } BMS_ProtectDiagnostics_t;
 
 /*
- * Scheduler-coherent mirror of the newest inactive/current-epoch CC sample
- * which was accepted by xCcSampleQueue. SampleTask reads this mailbox; it
- * must never receive/peek the SOC-owned queue or perform a second CC register
- * read.
- * sequence is a mailbox generation tag (natural unsigned wrap is
- * intentional). xready_generation binds the sample to the AFE epoch in
- * which it was read; an XREADY transition invalidates the mailbox even when
- * the SOC-owned queue still accepts a CC sample under its existing contract.
+ * xCcSampleQueue 已接受的最新 current-epoch CC sample 的 scheduler-coherent
+ * mirror。SampleTask 只读此 mailbox，绝不 receive/peek SOC-owned queue，也不
+ * 进行第二次 CC register read。sequence 是 mailbox generation tag；
+ * xready_generation 把读数绑定到 AFE epoch，XREADY 转移会立即使旧 mailbox
+ * 对 SampleTask 失效，即使 SOC queue 仍按自身契约处理已入队记录。
  */
 typedef struct
 {
@@ -130,12 +112,10 @@ typedef struct
 } BMS_ProtectLatestCc_t;
 
 /*
- * Scheduler-coherent XREADY epoch. The generation advances only on the
- * first inactive-to-active observation and wraps naturally. Clearing active
- * after recovery never rewinds the generation. Equality rejects a binding
- * across the observed transition, including the immediate UINT32_MAX-to-zero
- * wrap. Avoiding alias after a complete 2^32 XREADY-event cycle depends on
- * the system watchdog/rebinding assumption and is not claimed here.
+ * scheduler-coherent XREADY epoch。generation 只在第一次 inactive→active
+ * 观察时推进并自然回绕；恢复后清 active 不会倒退代号。相等检查可以拒绝跨过
+ * 一次已观察转移的 binding，包括 UINT32_MAX→0；完整 2^32 事件 alias 由
+ * watchdog 与及时 rebinding 的系统约束覆盖。
  */
 typedef struct
 {
@@ -228,147 +208,122 @@ typedef struct
     bool accepted;
 } BMS_ServiceResetAck_t;
 
-/* Modular generation advance shared with the production-C wrap regression. */
+/* 正式代码与 production-C wrap regression 共用的模加 generation 推进。 */
 #define BMS_PROTECT_CC_SEQUENCE_NEXT(sequence_) \
     ((uint32_t)((uint32_t)(sequence_) + 1UL))
 #define BMS_PROTECT_XREADY_GENERATION_NEXT(generation_) \
     ((uint32_t)((uint32_t)(generation_) + 1UL))
 
-/* Phase 9 supplies the authoritative XREADY recovery implementation. The
- * hook may return true only after device re-initialization, required settling,
- * calibration reload, authoritative protection/configuration re-apply with
- * readback, and status-group verification have all succeeded. The hook runs
- * while the I2C mutex is held, so each call must be bounded and nonblocking;
- * a multi-step/settling state machine returns false between short steps and
- * never delays while holding the mutex. Phase 7 keeps XREADY pending when no
- * such hook is installed. */
+/*
+ * XREADY recovery hook 只有在 device re-init、settle、calibration reload、
+ * protection/config re-apply+readback 与 status-group verify 全部完成后才能
+ * 返回 true。hook 调用时持有 I2C mutex，因此每一步必须短小、非阻塞；需要等待
+ * 的阶段返回 false，由外部 state machine 下次推进，绝不能持锁 delay。
+ */
 typedef bool (*BMS_ProtectXreadyRecoveryHook_t)(BQ76940_t *device);
 
-/* FET request helpers (H-04: modules only submit requests). */
+/* FET request helper：Protect 只提交安全输入，不直接写 SYS_CTRL2。 */
 extern BQ76940_FetRequest_t g_bms_fet_request;
 
-/*
- * Initialize the protect module state (fault summary, FET request to
- * all-off, no XREADY recovery in progress). Called once before the
- * scheduler starts.
- */
+/* 调度器启动前初始化 fault、双向 inhibit、mailbox 与 recovery identity。 */
 void BMS_Protect_Init(void);
 
-/*
- * Bind the shared BQ transport device used by the ALERT drain path.
- * Phase 8 will own the canonical handle; this setter allows Phase 7 to
- * inject the device for testing and early integration.
- */
+/* 绑定 ALERT drain 共用的 BQ transport handle；指向对象必须覆盖任务生命周期。 */
 void BMS_Protect_SetDevice(BQ76940_t *device);
 void BMS_Protect_SetPolicy(const BMS_Policy_t *policy);
 
 void BMS_Protect_SetXreadyRecoveryHook(
     BMS_ProtectXreadyRecoveryHook_t recovery_hook);
 
-/*
- * ProtectTask entry (priority 5, registered by App_Rtos_CreateTasks).
- * Waits on xAfeAlertSem, then drains SYS_STAT with bounded retries.
- */
+/* ProtectTask（priority 5）等待 xAfeAlertSem，并以有界 retry drain SYS_STAT。 */
 void Task_Protect(void *argument);
 
 /*
- * EXTI1 ALERT ISR. Only gives xAfeAlertSem and yields; never touches the
- * BQ or I2C (spec §20.1, H-05). Defined here so the interrupt entry is
- * co-located with the protect path.
+ * EXTI1 ALERT ISR 只 give xAfeAlertSem 并按需 yield；不访问 BQ、不取 I2C mutex、
+ * 不做 fault decision。中断入口与 Protect owner 同文件，便于审计完整边界。
  */
 void EXTI1_IRQHandler(void);
 
-/* Return one same-generation active+latched snapshot. This task-context API
- * is scheduler-protected against the ProtectTask publisher; it is not an ISR
- * API. The returned value is read-only and SYS_STAT=0 must not be interpreted
- * as a recovery authorization. */
+/*
+ * 返回同一 publication generation 的 active+latched 快照。任务上下文通过
+ * scheduler exclusion 防止 torn read，ISR 不得调用；返回值只读，不能由
+ * SYS_STAT=0 推导恢复授权。
+ */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
 
-/* Authoritative Protect-owned action snapshot consumed directly by FET. */
+/* FET Manager 直接消费的 Protect-owned 权威方向性 inhibit 快照。 */
 BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void);
 
-/* Latched, task-context H-02 diagnostics. The returned multi-field snapshot is
- * scheduler-protected; counters saturate at UINT32_MAX rather than wrapping. */
+/* H-02 诊断快照在任务上下文一致读取；计数器在 UINT32_MAX 饱和而不回绕。 */
 BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void);
 
 /*
- * Pure decision function (no I2C, no RTOS): map a SYS_STAT snapshot to
- * the fault/request/clear decisions. Testable without hardware.
- *   stat        : raw SYS_STAT byte
- *   faults      : in/out fault summary (updated)
- *   request     : in/out FET request (updated)
- *   clear_mask  : out, write-1-clear bits that were successfully handled
+ * 纯 decision function（无 I2C/RTOS），把同一 SYS_STAT snapshot 映射为 fault、
+ * FET request 与 W1C mask，便于 production-C test image 直接覆盖每一 bit：
+ * stat=原始寄存器；faults/request=输入输出状态；clear_mask=已完成处理的 W1C 位。
  */
 void BMS_Protect_Decide(uint8_t stat,
                         BMS_FaultSummary_t *faults,
                         BQ76940_FetRequest_t *request,
                         uint8_t *clear_mask);
 
-/*
- * Pure decision: given a raw SYS_STAT byte, does it contain any
- * fault-class bit (OV/UV/SCD/OCD/XREADY/OVRD) as opposed to only
- * CC_READY? Used to decide urgent reporting.
- */
+/* 纯判断 SYS_STAT 是否含 fault-class bit，而非只有 CC_READY，用于紧急唤醒。 */
 bool BMS_Protect_HasFaultBits(uint8_t stat);
 
 /*
- * Drain SYS_STAT once with bounded retries (H-05). Public so tests and
- * the task can drive the same path. Reads SYS_STAT, handles every set
- * bit independently, and write-1-clears the successfully handled bits.
+ * 以 H-05 有界策略 drain 一轮 SYS_STAT。测试与任务驱动同一正式路径；每个
+ * set bit 独立处理，只把已成功接纳/捕获的事件加入 W1C mask。
  */
 BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device);
 
-/* Perform one bounded task-level service attempt. A retry result means the
- * caller must retain pending state, delay briefly, and call again without
- * waiting for another semaphore edge. */
+/*
+ * 执行一次有界任务级 service。RETRY 表示保留 pending、短暂 delay 后直接再调，
+ * 不等待另一个 semaphore edge；这样 ALERT 持续为高也不会丢失工作。
+ */
 BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device);
 
 /*
- * Feed a fresh CC sample into xCcSampleQueue with the H-02 policy:
- * newest sample always wins; on full queue exactly one oldest sample is
- * dropped and the newest is enqueued; returns true only if the newest
- * sample is now in the queue.
+ * 按 H-02 newest-wins 策略写 xCcSampleQueue：满时在同一 scheduler exclusion
+ * 内只丢一个 oldest，再放入 newest；只有 newest 确已入队才返回 true。
  */
 bool BMS_Protect_PushCcSample(int16_t cc_raw);
 
-/* Copy the latest current-epoch CC sample under scheduler exclusion. Returns
- * false for NULL, while XREADY is active, before an inactive-epoch mailbox
- * publication, or if the mailbox epoch differs from the current AFE epoch.
- * On a non-NULL unavailable result, snapshot->valid is false. */
+/*
+ * 在 scheduler exclusion 内复制 current-epoch latest CC。NULL、XREADY active、
+ * 尚无本代 mailbox 或 epoch 不匹配时返回 false；非 NULL 输出会明确 valid=false。
+ */
 bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot);
 
-/* Copy the current XREADY generation/active pair under scheduler exclusion.
- * Returns false only for a NULL output. Task context only, never ISR context. */
+/* 任务上下文一致复制 XREADY generation/active；仅 NULL 输出失败，ISR 不得调用。 */
 bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot);
 
-/* Pure binding decision used by SampleTask and generation-wrap tests. */
+/* SampleTask 与 generation-wrap test 共用的纯 binding 判断。 */
 bool BMS_Protect_XreadyBindingIsCurrent(
     const BMS_ProtectXreadyState_t *state,
     uint32_t bound_generation);
 
 /*
- * Complete the XREADY recovery contract (H-03) through the authoritative
- * hook and only then W1C XREADY. Active clears only after a successful final
- * STOP, or after a prior ambiguous finalization is resolved by observing the
- * bit low. The historical latch remains for the Phase 9 explicit-reset policy.
+ * 先完成 H-03 权威 recovery contract，之后才 W1C XREADY。只有最终 STOP 明确
+ * 成功，或先前 ambiguous transaction 经 observed-low 消歧后才清 active；
+ * latched 生命周期独立保留，不能随 active 一起顺手清除。
  */
 bool BMS_Protect_RecoverXready(BQ76940_t *device);
 
-/* Recovery Coordinator requests; Protect remains the sole runtime W1C owner. */
+/* Recovery Coordinator 只发 request；Protect 仍是运行期 W1C sole owner。 */
 bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
                                      uint32_t recovery_revision);
 bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack);
 
-/* SIM_POLICY_V1 source-specific XREADY action-latch release. */
+/* 按当前策略执行 source-specific XREADY action-latch release。 */
 bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
                                          uint32_t recovery_revision);
 
-/* State qualification -> Protect fresh-status two-party recovery. */
+/* State qualification 与 Protect fresh-status 组成两方 HW recovery 证据。 */
 bool BMS_Protect_SubmitHwRecoveryRequest(
     const BMS_ProtectHwRecoveryRequest_t *request);
 bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack);
 
-/* Source-specific service reset request; never a bitmap clear command. */
+/* source-specific service reset request；不存在通用 bitmap clear command。 */
 bool BMS_Protect_SubmitServiceResetRequest(
     const BMS_ServiceResetRequest_t *request);
 bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
@@ -377,4 +332,4 @@ bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
 void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms);
 #endif
 
-#endif /* BMS_PROTECT_H */
+#endif /* BMS_PROTECT_H：include guard */

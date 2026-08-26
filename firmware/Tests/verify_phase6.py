@@ -89,8 +89,7 @@ def require(condition: bool, message: str) -> None:
 
 
 def check_regression() -> None:
-    # Phase 5 report hash is filled by the Phase 6 report author after the
-    # Phase 5 report is finalized; the uvprojx is now extended by Phase 6.
+    # 检查既有 report hash 与当前 uvprojx 授权增量。
     tree = ET.parse(PROJECT)
     paths = [node.text or "" for node in tree.findall(".//FilePath")]
     joined = "\n".join(paths).lower()
@@ -106,7 +105,7 @@ def check_regression() -> None:
         require(expected in joined, f"target source missing {expected}")
     require("stm32f10x_i2c.c" not in joined, "hardware-I2C SPL source linked")
 
-    # FreeRTOS include paths present.
+    # FreeRTOS include path 必须存在。
     inc = tree.findtext(".//VariousControls/IncludePath") or ""
     require("docs\\FreeRTOS\\include" in inc or "docs/FreeRTOS/include" in inc,
             "FreeRTOS include path missing")
@@ -143,19 +142,19 @@ def check_freertos_config() -> None:
         require(re.search(rf"#define\s+{name}\s+{re.escape(value)}", text),
                 f"FreeRTOSConfig {name} != {value}")
 
-    # C-02 raw priorities.
+    # C-02 raw priority。
     require(re.search(r"configKERNEL_INTERRUPT_PRIORITY.*0xF0|configKERNEL_INTERRUPT_PRIORITY.*15 <<", text),
             "kernel raw priority not 0xF0")
     require(re.search(r"configMAX_SYSCALL_INTERRUPT_PRIORITY.*0x50|configMAX_SYSCALL_INTERRUPT_PRIORITY.*5 <<", text),
             "max syscall raw priority not 0x50")
 
-    # Handler mapping to startup vector names.
+    # handler 映射到 startup vector name。
     for h in ("vPortSVCHandler", "xPortPendSVHandler", "xPortSysTickHandler"):
         require(h in text, f"handler mapping missing {h}")
     require("SVC_Handler" in text and "PendSV_Handler" in text and
             "SysTick_Handler" in text, "vector name mapping incomplete")
 
-    # Diagnostics (H-09).
+    # H-09 diagnostics。
     require("configASSERT" in text, "configASSERT missing")
     require("vApplicationAssertFailedHandler" in text,
             "assert handler missing")
@@ -175,7 +174,7 @@ def check_objects_and_tasks() -> None:
         require(obj in header and obj in source,
                 f"IPC object {obj} missing")
 
-    # Seven task entries with C-01 priorities.
+    # 七任务入口与 C-01 priority。
     for task in ("Task_Protect", "Task_Sample", "Task_State", "Task_SOC",
                  "Task_Balance", "Task_CANTx", "Task_CANRx"):
         require(task in header and task in source, f"task {task} missing")
@@ -195,7 +194,7 @@ def check_objects_and_tasks() -> None:
     require("APP_RTOS_PRIO_CAN_RX                    (2)" in header,
             "CANRx priority != 2")
 
-    # Hooks.
+    # fatal hook。
     require("vApplicationAssertFailedHandler" in hooks,
             "assert handler implementation missing")
     require("vApplicationMallocFailedHook" in hooks,
@@ -212,7 +211,7 @@ def check_main_integration() -> None:
     require("App_Rtos_CreateObjects" in main, "objects not created in main")
     require("App_Rtos_CreateTasks" in main, "tasks not created in main")
     require("vTaskStartScheduler" in main, "scheduler not started in main")
-    # Order: objects before tasks before scheduler.
+    # 顺序：objects→tasks→scheduler。
     require(main.index("App_Rtos_CreateObjects") <
             main.index("App_Rtos_CreateTasks"), "objects/tasks order wrong")
     require(main.index("App_Rtos_CreateTasks") <
@@ -224,8 +223,7 @@ def check_boundaries() -> None:
     header = RTOS_H.read_text(encoding="utf-8")
     source = RTOS_C.read_text(encoding="utf-8")
 
-    # Strip /* */ and // comments so future-phase responsibility notes in
-    # comments do not trip the executable-code boundary check.
+    # 去掉 C comment 后检查 executable boundary，避免说明文本触发误报。
     code = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
     code = re.sub(r"//[^\n]*", "", code)
 
@@ -235,7 +233,7 @@ def check_boundaries() -> None:
                   "SYS_STAT", "CC_READY", "xEventGroupSetBits"):
         require(token not in code,
                 f"forbidden Phase 7+/hardware symbol in app_rtos.c: {token}")
-    # Task bodies must be placeholders in Phase 6 (no functional logic).
+    # 历史阶段 snapshot 要求 task body 不含后续业务逻辑。
     for task_body in ("Task_Protect", "Task_Sample"):
         idx = source.find(f"void {task_body}(")
         require(idx >= 0, f"{task_body} missing")

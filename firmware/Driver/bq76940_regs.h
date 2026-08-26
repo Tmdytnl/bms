@@ -5,7 +5,7 @@
 
 #include "bms_build_assert.h"
 
-/* BQ7694003: CRC-enabled, 3.3 V REGOUT, 7-bit address 0x08. */
+/* BQ7694003：CRC enabled、3.3 V REGOUT、7-bit address 0x08。 */
 #define BQ76940_I2C_ADDRESS_7BIT          (0x08U)
 #define BQ76940_I2C_WIRE_WRITE           (0x10U)
 #define BQ76940_I2C_WIRE_READ            (0x11U)
@@ -90,4 +90,4 @@ BMS_BUILD_ASSERT(BQ76940_ADC_GAIN_MAX_UV_PER_LSB ==
                      (BQ76940_ADC_GAIN_BASE_UV_PER_LSB + 31U),
                  bq_adc_gain_trim_range_is_thirty_two_values);
 
-#endif /* BQ76940_REGS_H */
+#endif /* BQ76940_REGS_H：include guard */

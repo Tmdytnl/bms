@@ -12,19 +12,20 @@
 #define BMS_AFE_STARTUP_SYS_CTRL2_FET_OFF         ((uint8_t)0x00U)
 #define BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF      ((uint8_t)0x40U)
 
-/* SYS_STAT ownership during startup is deliberately narrow. CC_READY is
- * preserved for ProtectTask. Protection-class events are never W1C here;
- * they abort startup after FET-off and all three balancing-off writes are
- * read back. XREADY is the sole startup-owned W1C; it is serviced only after
- * a settled full pass and is followed by a second complete configuration
- * pass rather than by reuse of pre-clear evidence. */
+/*
+ * startup 对 SYS_STAT 的 ownership 刻意收窄：CC_READY 留给 ProtectTask；保护类
+ * event 绝不在此 W1C，而是在 FET-off 与三组 CELLBAL-off 都回读确认后终止启动。
+ * XREADY 是启动期唯一允许清除的位，而且必须先完成一遍配置与 settle；W1C 后
+ * 旧 register/calibration evidence 全部失效，必须重新执行完整配置，不能复用。
+ */
 #define BMS_AFE_STARTUP_STAT_CC_READY              ((uint8_t)0x80U)
 #define BMS_AFE_STARTUP_STAT_DEVICE_XREADY         ((uint8_t)0x20U)
 #define BMS_AFE_STARTUP_STAT_BLOCKING_MASK         ((uint8_t)0x1FU)
 
-/* The callback emits one board-specific PA8 -> TS1 rising edge. It must be a
- * bounded GPIO action: no delay, I2C transaction, retry loop or RTOS wait.
- * Electrical polarity and waveform remain board-validation responsibilities. */
+/*
+ * callback 只产生一次 board-specific PA8→TS1 rising edge，必须是有界 GPIO
+ * 动作：无 delay、I2C transaction、retry loop 或 RTOS wait。
+ */
 typedef bool (*BMS_AfeStartupWakeFn_t)(void *context);
 
 typedef struct
@@ -42,8 +43,7 @@ typedef struct
     uint8_t protect2_ocd_delay_code;
     uint8_t protect2_ocd_threshold_code;
 
-    /* Required even when either exact code is zero. This prevents a
-     * zero-initialized/missing PROTECT3 delay from becoming code zero. */
+    /* 即使 exact code 为 0 也必须显式 present，防止缺失 PROTECT3 被零初始化伪装。 */
     bool protect3_present;
     uint8_t protect3_uv_delay_code;
     uint8_t protect3_ov_delay_code;
@@ -93,9 +93,10 @@ typedef enum
     BMS_AFE_STARTUP_RESULT_FAILED
 } BMS_AfeStartupResult_t;
 
-/* Caller-owned state. No RTOS object, dynamic allocation or module global is
- * used, so startup can run before the scheduler and can be independently
- * instantiated by production-C tests. */
+/*
+ * state 由 caller 持有，不用 RTOS object、dynamic allocation 或 module global，
+ * 因而可在 scheduler 前运行，也可被 production-C test 独立实例化。
+ */
 typedef struct
 {
     BQ76940_t *device;
@@ -130,29 +131,27 @@ typedef struct
     bool xready_clear_completed;
 } BMS_AfeStartup_t;
 
-/* Validate and stage startup. No GPIO or I2C action occurs here. Every
- * protection group needs an explicit present flag; no default threshold or
- * PROTECT3 delay is guessed. */
+/*
+ * 只验证并 staging startup plan，不执行 GPIO/I2C。每组 protection 都要求
+ * explicit present flag，缺失 threshold 或 PROTECT3 delay 时整体拒绝，不猜默认值。
+ */
 bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
                          BQ76940_t *device,
                          const BMS_AfeStartupConfig_t *config,
                          BMS_AfeStartupWakeFn_t wake,
                          void *wake_context);
 
-/* Advance one bounded state. A call performs at most one wake callback or one
- * BQ register transaction. The 10 ms wake settle and 800 ms initial-data
- * settle are elapsed-time states and never hold an I2C transaction open.
- * After settling, XREADY is W1C once only when the current final-status read
- * observes it high; an initial historical observation never authorizes a
- * blind clear. A successful clear invalidates all configuration evidence, so
- * the complete safe-register/calibration/protection plan and 800 ms settle
- * run again before a final status read may complete startup. A second XREADY
- * fails closed and is never W1C again. Ambiguous W1C finalization is terminal.
+/*
+ * 每次只推进一个有界 state，最多一次 wake callback 或一次 BQ transaction。
+ * 10 ms WAKE settle 与 800 ms initial-data settle 都按 elapsed time 等待，绝不
+ * 持有 I2C transaction。只有当前 final-status read 看到 XREADY high 才允许一次
+ * W1C；早期历史观察不能授权 blind clear。clear 成功后所有旧配置证据失效，
+ * 必须重跑 safe-register/calibration/protection plan 与 settle。第二次 XREADY、
+ * 或 ambiguous W1C finalization 都 fail closed，且绝不 replay。
  *
- * SYS_STAT provides no event identity. Therefore hardware cannot distinguish
- * a new XREADY that asserts between the authorizing read and its one W1C; the
- * final-only authorization and no-replay policy minimize but cannot remove
- * that physical interface limitation. */
+ * SYS_STAT 不提供 event identity；final-read authorization + no-replay 用于缩小
+ * “读后新事件”竞态窗口，并确保软件不会自行选择一个无法证明的事件身份。
+ */
 BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
                                            uint32_t now_ms);
 
@@ -166,4 +165,4 @@ bool BMS_AfeStartup_GetCalibration(
 bool BMS_AfeStartup_IsFetOffConfirmed(
     const BMS_AfeStartup_t *startup);
 
-#endif /* BMS_AFE_STARTUP_H */
+#endif /* BMS_AFE_STARTUP_H：include guard */

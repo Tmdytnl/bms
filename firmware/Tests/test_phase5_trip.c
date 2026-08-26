@@ -5,8 +5,7 @@
 #include "bq76940_control.h"
 
 /*
- * OV/UV trip golden vectors. Expected values are produced by the
- * independent Python oracle (tmp/golden_phase5.py), never by the C code.
+ * OV/UV trip golden vector；expected value 来自独立 Python oracle，不由被测 C 生成。
  */
 static const BQ76940_Calibration_t CAL_382_0 = { 382U, 0, true };
 static const BQ76940_Calibration_t CAL_382_30 = { 382U, 30, true };
@@ -28,7 +27,7 @@ uint32_t Test_Phase5_Trip(void)
 
     failures = 0UL;
 
-    /* TI official example: OV 4.30V, GAIN=382, OFFSET=0 -> 0xBF. */
+    /* TI official example：OV 4.30 V、GAIN=382、OFFSET=0→0xBF。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(4300U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_OK);
@@ -36,7 +35,7 @@ uint32_t Test_Phase5_Trip(void)
     back = BQ76940_Control_DecodeOvTripMv(trip, &CAL_382_0);
     TEST_CHECK(back == 4300U);
 
-    /* TI official example: UV 2.50V -> 0x99. */
+    /* TI official example：UV 2.50 V→0x99。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeUvTrip(2500U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_OK);
@@ -44,22 +43,22 @@ uint32_t Test_Phase5_Trip(void)
     back = BQ76940_Control_DecodeUvTripMv(trip, &CAL_382_0);
     TEST_CHECK(back == 2500U);
 
-    /* Reference defaults: OV 4.25V -> 0xB7, UV 2.80V -> 0xCA. */
+    /* 默认 vector：OV 4.25 V→0xB7，UV 2.80 V→0xCA。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(4250U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(trip == 0xB7U);
     back = BQ76940_Control_DecodeOvTripMv(trip, &CAL_382_0);
-    TEST_CHECK(back == 4251U);   /* 4250.8 rounds to 4251 */
+    TEST_CHECK(back == 4251U);   /* 4250.8 舍入为 4251 */
 
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeUvTrip(2800U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(trip == 0xCAU);
     back = BQ76940_Control_DecodeUvTripMv(trip, &CAL_382_0);
-    TEST_CHECK(back == 2799U);   /* 2799.2 rounds to 2799 */
+    TEST_CHECK(back == 2799U);   /* 2799.2 舍入为 2799 */
 
-    /* With OFFSET=+30 mV: OV 4.25V -> 0xB2, UV 2.80V -> 0xC5. */
+    /* OFFSET=+30 mV：OV 4.25 V→0xB2，UV 2.80 V→0xC5。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(4250U, &CAL_382_30, &trip) ==
                BQ76940_STATUS_OK);
@@ -74,24 +73,23 @@ uint32_t Test_Phase5_Trip(void)
     back = BQ76940_Control_DecodeUvTripMv(trip, &CAL_382_30);
     TEST_CHECK(back == 2799U);
 
-    /* MSB window violations -> RANGE_ERROR. */
-    /* OV full code must have bits 13:12 = 10: e.g. 1.0V is below OV window
-     * (full = 2617 = 0x0A39, MSB=00 -> error). */
+    /* MSB window 违规→RANGE_ERROR。 */
+    /* OV full bits13:12 必须为 10；1.0 V 得到 MSB=00，必须失败。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(1000U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_RANGE_ERROR);
-    /* UV 4.5V full=11780=0x2E04, MSB=10 -> error (not UV window). */
+    /* UV 4.5 V 得到 MSB=10，不在 UV window。 */
     trip = 0xEEU;
     TEST_CHECK(BQ76940_Control_EncodeUvTrip(4500U, &CAL_382_0, &trip) ==
                BQ76940_STATUS_RANGE_ERROR);
 
-    /* NULL output. */
+    /* NULL output。 */
     TEST_CHECK(BQ76940_Control_EncodeOvTrip(4250U, &CAL_382_0, NULL) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(BQ76940_Control_EncodeUvTrip(2800U, &CAL_382_0, NULL) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
 
-    /* Invalid calibration. */
+    /* calibration 非法。 */
     {
         BQ76940_Calibration_t bad = { 100U, 0, false };
         trip = 0xEEU;
@@ -101,7 +99,7 @@ uint32_t Test_Phase5_Trip(void)
                    BQ76940_STATUS_CALIBRATION_INVALID);
     }
 
-    /* Decode with invalid calibration returns 0. */
+    /* 非法 calibration decode 返回 0。 */
     {
         BQ76940_Calibration_t bad = { 100U, 0, false };
         TEST_CHECK(BQ76940_Control_DecodeOvTripMv(0xBFU, &bad) == 0U);

@@ -12,10 +12,8 @@
 #include "soft_i2c.h"
 
 /*
- * Trace-recording SoftI2C mock (same evidence style as Phase 3): the
- * production bq76940.c + bq76940_measurement.c are linked against this
- * mock, every bus operation is recorded, and read bytes are served from a
- * caller-provided sequence (data and CRC bytes in wire order).
+ * trace-recording SoftI2C mock：正式 bq76940 transport/measurement 与该 mock
+ * 链接，记录每个 bus operation，并按 wire 顺序提供 caller 指定 data/CRC byte。
  */
 
 #define TRACE_CAPACITY              (192U)
@@ -128,9 +126,7 @@ static uint32_t Mock_CountEvent(uint16_t type)
     return count;
 }
 
-/* Mock backend for the production transport: every symbol below is
- * referenced from another translation unit (bq76940.c), so the compiler
- * must not localize or inline them away. */
+/* 正式 transport 跨 translation unit 引用这些 mock symbol，禁止编译器 localize。 */
 __attribute__((used))
 bool SoftI2C_IsInitialized(const SoftI2C_t *bus)
 {
@@ -204,20 +200,13 @@ static void Mock_ReadyDevice(BQ76940_t *device, SoftI2C_t *bus)
     (void)BQ76940_Init(device, bus);
 }
 
-/*
- * Golden constants below were produced by the independent Python oracle
- * (tmp/golden_phase4.py), never by the C code under test.
- */
+/* 下列 golden constant 来自独立 Python oracle，不由被测 C 自己生成。 */
 
-/* Calibration: GAIN=380 uV/LSB (trim 0x0F), OFFSET=+30 mV. */
+/* Calibration：GAIN=380 uV/LSB（trim 0x0F），OFFSET=+30 mV。 */
 static const BQ76940_Calibration_t GOLD_CAL = { 380U, 30, true };
 
-/*
- * 30-byte VC1_HI..VC15_LO window: physical VC1..VC15 raw14 =
- * 0x1800,0x1900,... (see golden). Read sequence on the wire is
- * data0, crc0, data1, crc1, ... where crc0 covers [0x11,data0] and
- * later CRCs cover [dataN].
- */
+/* 30-byte VC window 的 raw14 依次为 0x1800、0x1900…；wire read 顺序是
+ * data0/crc0/data1/crc1…，首 CRC 覆盖 read address+data，后续各覆盖单 data。 */
 static const uint8_t GOLD_VC_WINDOW_READS[60] =
 {
     0x18, 0x0A, 0x00, 0x00, 0x19, 0x4F, 0x00, 0x00,
@@ -230,7 +219,7 @@ static const uint8_t GOLD_VC_WINDOW_READS[60] =
     0x26, 0xF2, 0x00, 0x00
 };
 
-/* Expected logical cell mV (13 entries). */
+/* 13 节 logical cell 的 expected mV。 */
 static const uint16_t GOLD_CELL_MV[13] =
 {
     2365U, 2462U, 2559U, 2657U, 2754U, 2851U, 2948U,
@@ -238,13 +227,13 @@ static const uint16_t GOLD_CELL_MV[13] =
 };
 
 static const uint8_t GOLD_BAT_READS[4] =
-    { 0x4EU, 0xAFU, 0x20U, 0xE0U };   /* BAT raw 0x4E20 -> 30790 mV */
+    { 0x4EU, 0xAFU, 0x20U, 0xE0U };   /* BAT raw 0x4E20→30790 mV */
 
 static const uint8_t GOLD_BAT_ZERO_READS[4] =
-    { 0x00U, 0x42U, 0x00U, 0x00U };   /* BAT raw 0x0000 -> 390 mV */
+    { 0x00U, 0x42U, 0x00U, 0x00U };   /* BAT raw 0x0000→390 mV */
 
 static const uint8_t GOLD_BAT_MAX_READS[4] =
-    { 0xFFU, 0xB1U, 0xFFU, 0xF3U };   /* BAT raw 0xFFFF -> 100003 mV */
+    { 0xFFU, 0xB1U, 0xFFU, 0xF3U };   /* BAT raw 0xFFFF→100003 mV */
 
 static const uint8_t GOLD_CC_READS[4] =
     { 0x7FU, 0x38U, 0xFFU, 0xF3U };   /* CC raw 0x7FFF */
@@ -271,7 +260,7 @@ static uint32_t Test_CellWindowGolden(void)
 
     failures = 0UL;
 
-    /* Happy path: full 30-byte window, all CRCs valid. */
+    /* 成功路径：完整 30-byte window，全部 CRC 有效。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_VC_WINDOW_READS, 60U);
     for (index = 0U; index < 13U; ++index)
@@ -285,15 +274,15 @@ static uint32_t Test_CellWindowGolden(void)
         TEST_CHECK(cell_mv[index] == GOLD_CELL_MV[index]);
     }
 
-    /* Exactly ONE block transaction: one START, one RESTART, one STOP. */
+    /* 恰好一个 block transaction：一次 START、RESTART、STOP。 */
     TEST_CHECK(Mock_CountEvent(TRACE_START) == 1UL);
     TEST_CHECK(Mock_CountEvent(TRACE_RESTART) == 1UL);
     TEST_CHECK(Mock_CountEvent(TRACE_STOP) == 1UL);
-    /* Pointer write is VC1_HI and read address is the wire-read byte. */
+    /* pointer 写 VC1_HI，随后使用 wire-read address。 */
     TEST_CHECK(s_mock.trace[2] == EVT(TRACE_WRITE_BYTE, BQ76940_REG_VC1_HI));
     TEST_CHECK(s_mock.trace[4] == EVT(TRACE_WRITE_ADDRESS, 0x11U));
 
-    /* 30 data + 30 CRC bytes = 60 read-byte events. */
+    /* 30 data+30 CRC=60 个 read-byte event。 */
     TEST_CHECK(Mock_CountEvent(TRACE_READ_BYTE) == 60UL);
 
     return failures;
@@ -313,8 +302,7 @@ static uint32_t Test_CellTransactional(void)
 
     failures = 0UL;
 
-    /* CRC failure on the 20th data byte (wire index 39+40) -> CRC_MISMATCH,
-     * caller array must stay byte-for-byte unchanged. */
+    /* 第 20 个 data CRC 失败返回 CRC_MISMATCH，caller array 逐 byte 不变。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_VC_WINDOW_READS, 60U);
     for (index = 0U; index < 13U; ++index)
@@ -322,8 +310,7 @@ static uint32_t Test_CellTransactional(void)
         expected[index] = (uint16_t)(0x1000U + index);
         cell_mv[index] = expected[index];
     }
-    /* Override one CRC byte in the served stream: reads[41] is crc of
-     * data reads[40]; corrupt it. */
+    /* reads[41] 是 data reads[40] 的 CRC，故意破坏该 byte。 */
     s_mock.reads[41] = (uint8_t)(s_mock.reads[41] ^ 0xFFU);
     TEST_CHECK(BQ76940_ReadCellVoltages13(&device, &GOLD_CAL, cell_mv) ==
                BQ76940_STATUS_CRC_MISMATCH);
@@ -332,7 +319,7 @@ static uint32_t Test_CellTransactional(void)
         TEST_CHECK(cell_mv[index] == expected[index]);
     }
 
-    /* Mid-window I2C timeout -> caller array unchanged. */
+    /* window 中途 I2C timeout，caller array 不变。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_VC_WINDOW_READS, 60U);
     Mock_FailAt(50, SOFT_I2C_STATUS_TIMEOUT);
@@ -347,7 +334,7 @@ static uint32_t Test_CellTransactional(void)
         TEST_CHECK(cell_mv[index] == expected[index]);
     }
 
-    /* Invalid calibration -> CALIBRATION_INVALID, array untouched. */
+    /* calibration 非法返回 CALIBRATION_INVALID，array 不变。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_VC_WINDOW_READS, 60U);
     invalid_cal.gain_uv_per_lsb = 100U;
@@ -364,8 +351,7 @@ static uint32_t Test_CellTransactional(void)
         TEST_CHECK(cell_mv[index] == expected[index]);
     }
 
-    /* A valid negative offset can make one raw cell unrepresentable. The
-     * entire 13-cell destination remains transactional in that case. */
+    /* 合法 negative offset 仍可能使某 raw cell 不可表示，此时整组 13-cell 保持 transaction。 */
     zero_window_reads[0] = 0U;
     zero_window_reads[1] = BQ76940_CRC8_FirstRead(0x11U, 0U);
     for (index = 1U; index < 30U; ++index)
@@ -390,12 +376,12 @@ static uint32_t Test_CellTransactional(void)
         TEST_CHECK(cell_mv[index] == expected[index]);
     }
 
-    /* NULL output pointer. */
+    /* NULL output。 */
     Mock_ReadyDevice(&device, &bus);
     TEST_CHECK(BQ76940_ReadCellVoltages13(&device, &GOLD_CAL, NULL) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
 
-    /* Uninitialized device. */
+    /* device 尚未初始化。 */
     bus.initialized = false;
     TEST_CHECK(BQ76940_ReadCellVoltages13(&device, &GOLD_CAL, cell_mv) ==
                BQ76940_STATUS_NOT_INITIALIZED);
@@ -414,7 +400,7 @@ static uint32_t Test_PackVoltage(void)
 
     failures = 0UL;
 
-    /* Nominal: BAT=0x4E20, GAIN=380, OFFSET=+30, 13 cells -> 30790 mV. */
+    /* nominal：BAT=0x4E20、GAIN=380、OFFSET=+30、13 cells→30790 mV。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_BAT_READS, 4U);
     original = 0xDEADBEEFUL;
@@ -425,7 +411,7 @@ static uint32_t Test_PackVoltage(void)
     TEST_CHECK(Mock_CountEvent(TRACE_START) == 1UL);
     TEST_CHECK(Mock_CountEvent(TRACE_STOP) == 1UL);
 
-    /* Zero BAT -> offset-only floor: 13*30 mV = 390 mV. */
+    /* BAT=0 时只剩 offset floor：13×30 mV=390 mV。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_BAT_ZERO_READS, 4U);
     pack_mv = original;
@@ -433,7 +419,7 @@ static uint32_t Test_PackVoltage(void)
                BQ76940_STATUS_OK);
     TEST_CHECK(pack_mv == 390UL);
 
-    /* Negative calibrated pack result fails without committing output. */
+    /* calibration 后 pack 为负则失败，不提交输出。 */
     negative_cal.gain_uv_per_lsb = 365U;
     negative_cal.offset_mv = -128;
     negative_cal.valid = true;
@@ -444,7 +430,7 @@ static uint32_t Test_PackVoltage(void)
                BQ76940_STATUS_RANGE_ERROR);
     TEST_CHECK(pack_mv == original);
 
-    /* Max BAT=0xFFFF -> 100003 mV (fits uint32). */
+    /* BAT=0xFFFF→100003 mV，可装入 uint32。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_BAT_MAX_READS, 4U);
     pack_mv = original;
@@ -452,16 +438,16 @@ static uint32_t Test_PackVoltage(void)
                BQ76940_STATUS_OK);
     TEST_CHECK(pack_mv == 100003UL);
 
-    /* CRC failure keeps caller value. */
+    /* CRC failure 保持 caller value。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_BAT_READS, 4U);
-    s_mock.reads[1] = 0x00U;   /* corrupt crc of data[0] */
+    s_mock.reads[1] = 0x00U;   /* 破坏 data[0] 的 CRC */
     pack_mv = original;
     TEST_CHECK(BQ76940_ReadPackVoltageMv(&device, &GOLD_CAL, &pack_mv) ==
                BQ76940_STATUS_CRC_MISMATCH);
     TEST_CHECK(pack_mv == original);
 
-    /* NULL output. */
+    /* NULL output。 */
     Mock_ReadyDevice(&device, &bus);
     TEST_CHECK(BQ76940_ReadPackVoltageMv(&device, &GOLD_CAL, NULL) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
@@ -481,7 +467,7 @@ static uint32_t Test_Cc(void)
 
     failures = 0UL;
 
-    /* 0x7FFF -> +32767; 0x0000 -> 0; 0x8000 -> -32768; 0xFFFF -> -1. */
+    /* signed16 边界：0x7FFF→32767，0x8000→-32768，0xFFFF→-1。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_CC_READS, 4U);
     original_raw = 0x7A7AU;
@@ -507,7 +493,7 @@ static uint32_t Test_Cc(void)
     TEST_CHECK(BQ76940_ReadCcRaw(&device, &cc_raw) == BQ76940_STATUS_OK);
     TEST_CHECK(cc_raw == -1);
 
-    /* CRC failure keeps caller raw. */
+    /* CRC failure 保持 caller raw。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_CC_READS, 4U);
     s_mock.reads[1] = 0x00U;
@@ -516,7 +502,7 @@ static uint32_t Test_Cc(void)
                BQ76940_STATUS_CRC_MISMATCH);
     TEST_CHECK(cc_raw == original_raw);
 
-    /* Conversion golden, Rsense=4000 u-ohm (4 m-ohm reference). */
+    /* 换算 golden：Rsense=4000 uΩ（4 mΩ）。 */
     original_ma = 0x12345678L;
 
     current_ma = original_ma;
@@ -544,7 +530,7 @@ static uint32_t Test_Cc(void)
                    -1, 4000UL, 1, &current_ma) == BQ76940_STATUS_OK);
     TEST_CHECK(current_ma == -2);
 
-    /* Polarity inversion. */
+    /* polarity 反向。 */
     current_ma = original_ma;
     TEST_CHECK(BQ76940_ConvertCcRawToCurrentMa(
                    10000, 4000UL, -1, &current_ma) == BQ76940_STATUS_OK);
@@ -555,16 +541,16 @@ static uint32_t Test_Cc(void)
                    -10000, 4000UL, -1, &current_ma) == BQ76940_STATUS_OK);
     TEST_CHECK(current_ma == 21100);
 
-    /* Invalid polarity. */
+    /* polarity 非法。 */
     TEST_CHECK(BQ76940_ConvertCcRawToCurrentMa(
                    1, 4000UL, 0, &current_ma) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
 
-    /* Zero Rsense -> RANGE_ERROR. */
+    /* Rsense=0 返回 RANGE_ERROR。 */
     TEST_CHECK(BQ76940_ConvertCcRawToCurrentMa(
                    1, 0UL, 1, &current_ma) == BQ76940_STATUS_RANGE_ERROR);
 
-    /* NULL output. */
+    /* NULL output。 */
     TEST_CHECK(BQ76940_ConvertCcRawToCurrentMa(
                    1, 4000UL, 1, NULL) == BQ76940_STATUS_INVALID_ARGUMENT);
 
@@ -583,7 +569,7 @@ static uint32_t Test_Ts1(void)
 
     failures = 0UL;
 
-    /* 0x1000 -> 9016 ohm; 0x0A00 -> 4211 ohm. */
+    /* 0x1000→9016 Ω；0x0A00→4211 Ω。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_TS_READS, 4U);
     original_raw = 0x5A5AU;
@@ -603,14 +589,13 @@ static uint32_t Test_Ts1(void)
                BQ76940_STATUS_OK);
     TEST_CHECK(resistance == 4211UL);
 
-    /* Zero raw -> zero resistance. */
+    /* raw=0→resistance=0。 */
     resistance = original_res;
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(0x0000U, &resistance) ==
                BQ76940_STATUS_OK);
     TEST_CHECK(resistance == 0UL);
 
-    /* Exact adjacent denominator boundary: 8638 is below 3.3 V; 8639 is
-     * above it. The failing call leaves the destination unchanged. */
+    /* denominator 相邻边界：8638 低于 3.3 V，8639 超出；失败保持输出不变。 */
     resistance = original_res;
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(8638U, &resistance) ==
                BQ76940_STATUS_OK);
@@ -620,22 +605,22 @@ static uint32_t Test_Ts1(void)
                BQ76940_STATUS_RANGE_ERROR);
     TEST_CHECK(resistance == original_res);
 
-    /* 0x27DC: VTS >= 3.3 V -> RANGE_ERROR, output unchanged. */
+    /* 0x27DC：VTS>=3.3 V 返回 RANGE_ERROR，输出不变。 */
     resistance = original_res;
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(0x27DCU, &resistance) ==
                BQ76940_STATUS_RANGE_ERROR);
     TEST_CHECK(resistance == original_res);
 
-    /* raw > 0x3FFF -> RANGE_ERROR. */
+    /* raw>0x3FFF 返回 RANGE_ERROR。 */
     resistance = original_res;
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(0x4000U, &resistance) ==
                BQ76940_STATUS_RANGE_ERROR);
 
-    /* NULL output. */
+    /* NULL output。 */
     TEST_CHECK(BQ76940_ConvertTs1RawToResistanceOhm(0x1000U, NULL) ==
                BQ76940_STATUS_INVALID_ARGUMENT);
 
-    /* TS1 read CRC failure keeps caller raw. */
+    /* TS1 read CRC failure 保持 caller raw。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_SetReads(GOLD_TS_READS, 4U);
     s_mock.reads[1] = 0x00U;
@@ -656,28 +641,26 @@ static uint32_t Test_WriteCommitBoundary(void)
 
     failures = 0UL;
 
-    /* A normal single-byte write is START/address/register/data/CRC/STOP. */
+    /* 正常 single-byte write 顺序：START/address/register/data/CRC/STOP。 */
     Mock_ReadyDevice(&device, &bus);
     status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
     TEST_CHECK(status == BQ76940_STATUS_OK);
     TEST_CHECK(s_mock.trace_count == 6U);
 
-    /* ACKed payload/CRC followed by a STOP failure does not prove whether the
-     * BQ7694003 register side effect was committed. */
+    /* payload/CRC ACK 后 STOP 失败，无法证明 register side effect 是否 commit。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_FailAt(5, SOFT_I2C_STATUS_TIMEOUT);
     status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
     TEST_CHECK(status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS);
     TEST_CHECK(s_mock.trace_count == 6U);
 
-    /* A data-byte NACK occurs before all payload/CRC bytes are ACKed and is a
-     * definitely rejected write, even though cleanup STOP succeeds. */
+    /* data NACK 发生在完整 payload/CRC ACK 前，属于 definite rejection。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_FailAt(3, SOFT_I2C_STATUS_NACK_DATA);
     status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);
     TEST_CHECK(status == BQ76940_STATUS_I2C_NACK);
 
-    /* CRC NACK is likewise rejected and remains distinguishable. */
+    /* CRC NACK 同样是明确拒绝，并保持独立状态。 */
     Mock_ReadyDevice(&device, &bus);
     Mock_FailAt(4, SOFT_I2C_STATUS_NACK_DATA);
     status = BQ76940_WriteByte(&device, BQ76940_REG_SYS_STAT, 0x80U);

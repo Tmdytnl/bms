@@ -5,7 +5,7 @@
 
 void BSP_GPIO_Init(void);
 
-/* Open-drain line contract: release means high-impedance, not drive-high. */
+/* open-drain contract：release 表示 high-impedance，绝不是主动 drive-high。 */
 void BSP_I2C_SCL_DriveLow(void);
 void BSP_I2C_SCL_Release(void);
 bool BSP_I2C_SCL_Read(void);
@@ -13,7 +13,7 @@ void BSP_I2C_SDA_DriveLow(void);
 void BSP_I2C_SDA_Release(void);
 bool BSP_I2C_SDA_Read(void);
 
-/* Emit one bounded PA8 low-to-high wake edge for the BQ/TS1 path. */
+/* 为 BQ/TS1 path 产生一次有界 PA8 low→high WAKE edge。 */
 bool BSP_AFE_WakePulse(void);
 
-#endif /* BSP_GPIO_H */
+#endif /* BSP_GPIO_H：include guard */

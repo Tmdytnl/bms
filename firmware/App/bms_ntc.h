@@ -6,10 +6,7 @@
 
 #include "bms_types.h"
 
-/*
- * Calibration-owned NTC point. This module intentionally contains no
- * production curve: the physical 10 kOhm NTC curve is not yet validated.
- */
+/* calibration-owned NTC point；模块不硬编码曲线，实际 table 由配置层注入。 */
 typedef struct
 {
     uint32_t resistance_ohm;
@@ -17,20 +14,16 @@ typedef struct
 } BMS_NtcPoint_t;
 
 /*
- * A valid NTC table has at least two points, strictly monotonic resistance,
- * and strictly monotonic temperature in the opposite direction. Either
- * table order is accepted.
+ * 合法 NTC table 至少两点，resistance 严格单调，temperature 必须反向严格单调；
+ * 支持正序或逆序，重复/折返会被整体拒绝。
  */
 bool BMS_Ntc_ValidateTable(const BMS_NtcPoint_t *points,
                            uint16_t point_count);
 
-/*
- * Piecewise-linear interpolation. Out-of-range resistance, an invalid table,
- * or NULL output returns false and leaves temperature_decic unchanged.
- */
+/* 分段线性插值；超出 resistance 域、table 非法或输出 NULL 时保持输出不变。 */
 bool BMS_Ntc_Interpolate(const BMS_NtcPoint_t *points,
                          uint16_t point_count,
                          uint32_t resistance_ohm,
                          BMS_TemperatureDeciC_t *temperature_decic);
 
-#endif /* BMS_NTC_H */
+#endif /* BMS_NTC_H：include guard */
