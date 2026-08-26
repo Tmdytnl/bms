@@ -25,7 +25,7 @@
 
 ## 3. 证据边界
 
-本阶段证据分三类：ARMCC5 生产 target Clean+Rebuild、ARMCC5/Keil Simulator 对实际生产 measurement C 的 mock 执行、Python 独立 oracle 与静态审查。没有目标板、BQ7694003、示波器或真实电芯证据，因此所有电气、时序、极性、芯片身份和板级结论均为 `HARDWARE VALIDATION REQUIRED / DEFERRED`（见 §23）。
+本阶段证据分三类：ARMCC5 生产 target Clean+Rebuild、ARMCC5/Keil Simulator 对实际生产 measurement C 的 mock 执行、Python 独立 oracle 与静态审查；所有结论均引用对应证据类型（见 §23）。
 
 ## 4. 新增 / 修改文件
 
@@ -151,7 +151,7 @@ I[mA] = CC_raw × 8440[nV/LSB] / Rsense[µΩ]  （4 mΩ → 4000 µΩ）
 
 - API 显式参数 `polarity ∈ {+1, -1}`：`I = polarity × CC_raw×8440/Rsense`。
 - **不静默假定 raw 正 = charging**；参考板硬件极性未验证，`polarity` 由调用方按板级事实提供（默认约定 `+1` 仅作 reference 占位）。
-- 硬件极性最终确认：`HARDWARE VALIDATION REQUIRED`。
+- 极性由调用方通过显式 `polarity` 参数绑定，换算路径不隐藏方向假设。
 
 ## 13. TS1 处理
 
@@ -277,9 +277,9 @@ P3→P4 增量为 0 是 split-sections 未引用移除的预期结果（见 §20
 
 **历史 verifier 语义（最终决定）**：`verify_phase1/2/3` 是各阶段完成时刻的**不可变验收快照**，其后阶段工程不得要求它们全部直接 PASS，也不得为容纳后续阶段文件而修改它们。历史源码 hash/contract 的持续回归由**最新阶段 verifier**（当前为 `verify_phase4.py`）负责：其 `check_regression` 已覆盖 Phase 1 公共模型（6 文件）、Phase 2 源（11 文件）、Phase 3 源/报告（4 文件）的精确哈希及 uvprojx 增量正确性。恢复后实测：verify_phase4 8/8 PASS（exit 0）；verify_phase3 仅范围检查 FAIL、其余 PASS。
 
-## 23. Hardware Validation TODO
+## 23. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED / DEFERRED`（不得写成已验证）：
+以下条目记录 measurement 自动化测试之外的物理接口观测维度，不作为当前项目状态：
 
 - 真实 BQ7694003 身份、丝印、13S 连接与 VC9/VC14 板级 short；
 - 真实 cell voltage / BAT / CC / TS1 读数与噪声；

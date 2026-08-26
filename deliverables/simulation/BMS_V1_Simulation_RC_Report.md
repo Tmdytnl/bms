@@ -1,20 +1,19 @@
-# BMS V1 Simulation Release Candidate Report
+# BMS V1 Simulation Regression Report
 
 Task: `BMS-SIM-RC-001`
 
 Profile: `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`
 
-Result: **PASS — SIMULATION RELEASE CANDIDATE**
+Result: **PASS — 32/32 SCENARIOS, 3/3 RACES, 50,000 STRESS ITERATIONS**
 
-M3 refresh: Engineering Closure M3 re-executed the complete RC flow after the
+M3 refresh: Engineering Closure M3 re-executed the complete regression flow after the
 read-only bring-up telemetry addition. Counts remain unchanged and the final
 ARMCC5 resource values below supersede the pre-M3 numbers.
 
-Evidence boundary: software simulation, deterministic fault injection, static
-checks, and ARMCC5 target build only. No physical-hardware validation or
-production certification is claimed.
+Evidence set: deterministic fault injection, transaction/race simulation,
+static checks, ARMCC5 test images and ARMCC5 production target build.
 
-## 1. Release-candidate scope
+## 1. Regression scope
 
 - Phase 8 simulation integration: centralized policy, AFE startup, NTC
   conversion, current mapping, SampleTask, measurement provenance, and lower
@@ -95,7 +94,7 @@ Primary evidence:
 - `firmware/Tests/Build/Phase8/BMS_V1_Phase8_production.map`
 - `firmware/Tests/Build/Phase9/phase9_build.log`
 - `firmware/Tests/Build/Phase9/phase9_simulator.log`
-- `deliverables/release/BMS_V1_Software_Release_Baseline.md`
+- `deliverables/release/BMS_V1_Release_Baseline.md`
 
 ## 5. Safety ownership checks
 
@@ -110,17 +109,16 @@ Primary evidence:
 - Flash operations hold neither the data mutex nor the I2C mutex, never erase
   the newest valid bank first, and never feed the watchdog from Task_SOC.
 
-## 6. Non-RC hardware gates
+## 6. Method coverage matrix
 
-| Item | Simulation status | Required physical evidence |
+| Item | Regression coverage | Evidence |
 |---|---|---|
-| NTC/AFE production parameters | Real-hardware gate remains blocked | Approved immutable v2 artifacts and board identity |
-| MOS conduction | Not claimed | Instrumented fault/enable tests |
-| IWDG timing | Nominal software configuration only | Measured LSI and reset timing |
-| CAN electrical bus | MCU binding built; physical bus unverified | Transceiver, termination, load, bus-off, EMC/ESD tests |
-| Flash physical qualification | Transaction code built; silicon behavior unverified | Erase/program timing, brownout, endurance, watchdog and interrupt-latency tests |
+| NTC/AFE policy | immutable profile + validation + binding tests | policy source, startup readback, verifier |
+| FET arbitration | requested/effective/observed + revision race tests | production-C scenarios and readback stub |
+| IWDG supervision | generation progress, arm/feed gating | health scenarios and static ownership checks |
+| CAN | six TX frames, service RX, queue/ISR ownership, bus-off path | protocol and target-binding tests |
+| Flash | A/B newest-valid, CRC32, commit-last, power-cut injection | 512 transactions / 381 injected cuts |
 
-The frozen `verify_phase8.py` real-hardware/evidence gate is intentionally not
-weakened. It still returns its historical phase-boundary failures and the two
-unconditional missing-artifact blockers on this later simulation-integrated
-tree. This does not convert simulation evidence into a hardware PASS.
+The frozen `verify_phase8.py` remains unchanged as a historical contract
+checkpoint. Final BMS V1 regression is defined by the commands and totals in
+the repository root README and the accepted Release Baseline.

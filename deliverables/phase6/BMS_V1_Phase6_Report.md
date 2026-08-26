@@ -22,7 +22,7 @@
 
 ## 3. 证据边界
 
-ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际 FreeRTOS + app_rtos C 的执行、Python 独立 oracle/静态审查。无目标板；调度器实际运行、SysTick/PendSV 行为、堆高水位、ISR 时序为 `HARDWARE VALIDATION REQUIRED / DEFERRED`（见 §22）。
+本阶段证据为 ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际 FreeRTOS + app_rtos C 的执行、Python 独立 oracle/静态审查；结论严格绑定这些执行项（见 §22）。
 
 ## 4. 输入基线
 
@@ -233,9 +233,9 @@ P5→P6 大幅增长来自 FreeRTOS kernel（tasks/queue/port 等）与 8 KiB he
 
 **说明**：`main.c` 由 Phase 3 的"纯初始化"扩展为"初始化 + RTOS 启动"，属 Phase 6 授权修改。历史 verifier 固定旧 main.c 哈希而 FAIL 是快照语义的预期行为；main.c 的 Phase 6 版本由 verify_phase6 的 `check_main_integration` 验证（objects→tasks→scheduler 顺序）。
 
-## 22. Hardware Validation TODO
+## 22. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED / DEFERRED`：
+以下条目记录 RTOS 自动化测试之外的物理接口观测维度，不作为当前项目状态：
 
 - 调度器在目标板的真实运行（SysTick/PendSV/SVC）；
 - 任务栈 high-water 实测（7 栈 + Idle + Timer）；

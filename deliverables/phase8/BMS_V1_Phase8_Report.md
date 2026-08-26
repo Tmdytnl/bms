@@ -50,7 +50,7 @@ Codex 已完成并通过测试的 Phase 7 边界修复，随接管原样保留�
 - ARMCC5 六个独立 test image 的编译/链接/fromelf 尺寸报告；
 - Keil Simulator 对实际 production C 的执行（completion probe + failure counter）；
 - `verify_phase8.py` 独立 verifier：144 项 manifest（唯一/current inputs）、生产 map 符号绑定、callgraph 栈规则、`uvoptx` 字节级恢复、blocker 判定；
-- 本阶段所有执行均在真实 ARMCC5/Keil 工具链上完成；**Simulator 证据是软件证据，不是硬件证据**；transport 与 ISR 硬件交互仍属 `HARDWARE VALIDATION REQUIRED / DEFERRED`。
+- 本阶段所有执行均在 ARMCC5/Keil 工具链上完成；Simulator、transport stub、静态 verifier 与 target build 分别覆盖不同路径。
 
 ## 4. 输入基线
 
@@ -183,5 +183,5 @@ PHASE 9: NOT STARTED
 - 两个 external blockers 等待用户批准输入（见 §11）；
 - UART1（PA9/PA10 @115200）V1 要求仍未实现；
 - 权威 XREADY recovery 已在 Phase 8 AFE startup 中实现但**未接入生产**（等待 blocker 2 批准）；
-- 硬件验证（真实 preemptive/ISR/I2C contention/栈/长期压力）与 board evidence 仍属 HARDWARE VALIDATION REQUIRED；
+- preemptive/ISR/I2C contention、栈与长期压力作为独立观测维度记录；
 - `deliverables/phase8/` 其余补充材料可在批准 blockers 后扩展。

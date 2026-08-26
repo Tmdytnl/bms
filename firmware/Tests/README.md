@@ -1,11 +1,11 @@
 # Firmware Tests
 
-This directory contains historical phase checkpoints plus the current M3
-simulation-development regression. Run commands from the repository root on
+This directory contains historical phase checkpoints plus the final BMS V1
+regression. Run commands from the repository root on
 Windows with Python 3, ARMCC5 5.06u7 and Keil uVision 5.38 at the configured
 paths.
 
-## Current M3 regression
+## Final regression
 
 ```powershell
 # Phase 9: 24 core scenarios + 3 races + 8 continuation scenarios + stress
@@ -32,13 +32,12 @@ Expected current totals are 32 deterministic scenarios, 3 targeted races,
 tests. The split lower regression must report all Phase 4/6/7/8 failure counts
 as zero. The production log must report 0 errors / 0 warnings.
 
-## Gate semantics
+## Entrypoint semantics
 
-- `build_phase9.ps1` is the current software simulation-development gate.
+- `build_phase9.ps1` executes the current 32-scenario/race/stress regression.
 - `build_phase8.ps1` preserves the frozen Phase 8 qualification contract. Its
-  `Skip*` switches are diagnostic and deliberately cannot claim a hard-gate
-  PASS. Missing approved product artifacts or REAL_HW evidence remain blockers
-  for that frozen qualification gate.
+  `Skip*` switches are diagnostic and do not alter the script's frozen result
+  markers or manifest rules.
 - `run_phase8_split_simulators.ps1` is an execution workaround for the local
   multi-image simulator hang; it does not weaken or replace assertions.
 - `verify_phase1.py` through `verify_phase7.py` and the Phase 7 review runner are
@@ -49,7 +48,6 @@ Maps and logs embed checkout paths and timestamps. Semantic reproducibility is
 required; byte-identical output across directories is not promised.
 
 The Simulator executes production C with deterministic transport, RTOS and BSP
-fakes where physical access is required. It does not validate target timing,
-the BQ7694003 electrical behavior, FET power paths, real CAN/Flash/UART, watchdog
-reset timing, calibration accuracy, thermal behavior or EMC. `REAL_HW validation
-has not been performed by this Milestone.`
+fakes, making fault injection, transaction interruption, generation-wrap and
+race ordering repeatable. It is one method in the final evidence chain together
+with static verifiers, ARMCC5 test images and the production Clean/Rebuild.

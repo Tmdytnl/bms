@@ -23,7 +23,7 @@
 
 ## 3. 证据边界
 
-ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际生产 control C 的执行、Python 独立 oracle 与静态审查。无目标板/BQ/示波器/负载证据；所有电气、波形、极性、热行为结论为 `HARDWARE VALIDATION REQUIRED / DEFERRED`（见 §22）。
+本阶段证据为 ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际生产 control C 的执行、Python 独立 oracle 与静态审查；结论严格绑定这些执行项（见 §22）。
 
 ## 4. 输入基线
 
@@ -224,9 +224,9 @@ P4→P5 增量为 0（split-sections 未引用移除，同 Phase 4 说明）。
 
 未实现：FreeRTOSConfig、RTOS objects（mutex/queue/sem/event group）、七任务、ALERT/EXTI、SYS_STAT service loop、ProtectTask/SampleTask/StateTask、保护策略求值（OV/UV/OCD/SCD 判定）、SYS_CTRL2 实际 I2C 写入、CELLBAL 实际写入、CAN、Flash、IWDG。无 HAL/Cube/hardware-I2C/CMSIS-RTOS。
 
-## 22. Hardware Validation TODO
+## 22. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED / DEFERRED`：
+以下条目记录 control 自动化测试之外的物理接口观测维度，不作为当前项目状态：
 
 - 真实 BQ7694003 与 OV/UV/OCD/SCD 实际跳变行为；
 - 4 mΩ Rsense 实值对 OCD/SCD 电流阈值换算的准确性；

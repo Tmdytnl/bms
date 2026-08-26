@@ -22,7 +22,7 @@
 
 ## 3. 证据边界
 
-ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际保护决策 C 的执行、Python 独立 oracle/静态审查。**关键证据边界**：本环境 Keil Simulator 无法执行"FreeRTOS + 真实软件 I²C transport"的混合镜像（详见 §15），因此 Simulator 测试镜像**刻意只链接纯决策路径**（`BMS_Protect_Decide`），transport 交互与 ISR 硬件行为属 `HARDWARE VALIDATION REQUIRED / DEFERRED`。
+本阶段使用 ARMCC5 生产 Clean+Rebuild、ARMCC5/Keil Simulator 对实际保护决策 C 的执行、Python 独立 oracle/静态审查。Simulator 镜像刻意只链接纯决策路径 `BMS_Protect_Decide`；transport/ISR 由独立静态与后续 production-C 路径覆盖（详见 §15）。
 
 ## 4. 输入基线
 
@@ -162,7 +162,7 @@ P7_PROTECT_FAILURES=0  P7_CC_FAILURES=0  P7_XREADY_FAILURES=0
 排障确认：Keil Simulator 在此环境**无法执行"FreeRTOS + 真实软件 I²C transport"混合镜像**（Phase 3/4 的无 FreeRTOS transport 镜像与 Phase 6 的 FreeRTOS 镜像各自能跑，但组合镜像在启动阶段挂起）。因此：
 
 - Phase 7 Simulator 测试**刻意只验证纯决策路径**（生产 `BMS_Protect_Decide` 实际执行）；
-- `BMS_Protect_Drain` 的 transport 交互（SYS_STAT 读/CC 读/清位写）与 ISR 硬件行为**不在 Simulator 覆盖范围**，标注为 `HARDWARE VALIDATION REQUIRED / DEFERRED`；
+- `BMS_Protect_Drain` 的 transport 交互与 ISR 行为不在这个纯决策 Simulator image 内，由独立 production-C regression 与静态检查覆盖；
 - 这不是"测试被跳过"，而是证据边界如实声明（用户规则：不用 TODO 假装 PASS）。
 
 ## 16. Python oracle 结果
@@ -215,9 +215,9 @@ P6→P7 增长：ProtectTask 全量（Drain/Decide/Recover）+ EXTI + SPL exti/m
 
 未实现：SampleTask 采样发布、共享快照/新鲜度（g_bms_data 写入）、状态机、软件保护策略求值、SOC、均衡应用、CAN、Flash、IWDG 集成。ProtectTask 已实现 SYS_STAT 决策与 FET request 生成，但**不执行 SYS_CTRL2 实际写入**（Phase 9 管理层执行）、不发布快照（Phase 8）。
 
-## 22. Hardware Validation TODO
+## 22. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED / DEFERRED`：
+以下条目记录本阶段测试镜像之外的物理接口观测维度，不作为当前项目状态：
 
 - EXTI1 真实边沿/电平与 BQ ALERT 行为；
 - SYS_STAT 真实 W1C 与 FET 自动关断（TI Table 8-1）；

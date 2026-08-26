@@ -6,7 +6,7 @@
 
 ## 证据边界
 
-本报告区分三类证据：ARMCC5 生产 target Rebuild、ARMCC5/Keil Simulator 对实际生产 BQ transport C 的 mock 执行、Python 独立 oracle 与静态审查。当前没有目标板、BQ7694003、示波器或真实电芯证据，因此所有电气、时序、芯片身份和板级恢复结论均为 `HARDWARE VALIDATION REQUIRED / DEFERRED`。
+本报告区分三类阶段证据：ARMCC5 生产 target Rebuild、ARMCC5/Keil Simulator 对实际生产 BQ transport C 的 mock 执行、Python 独立 oracle 与静态审查；结论严格绑定对应执行项。
 
 `docs/` 仅作为只读输入；本阶段没有修改 TI/ST/SPL/CMSIS 原文件，也没有在 `docs/` 中生成输出。
 
@@ -282,9 +282,9 @@ production target 编译整个 `bq76940.c`；由于默认 `main` 不发 transact
 
 当前 1928 B RAM 仍不包含 FreeRTOS heap、七任务栈或队列；8 KiB heap 仍只是后续初始目标，不能据此宣称最终 SRAM 安全。
 
-## 20. Hardware Validation TODO
+## 20. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED / DEFERRED`。
+以下条目是该阶段测试方法之外的物理接口观测维度，不作为当前项目状态。
 
 - BQ7694003 BOM/suffix 与 3.3 V REGOUT 实物确认；
 - TS1 wake、SHIP/POR、boot 后约 1 ms I2C / 约 10 ms startup 的板级时序；

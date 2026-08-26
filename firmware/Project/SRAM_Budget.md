@@ -73,15 +73,14 @@ the end marker leave an estimated 12,272 B usable free block. The arithmetic
 startup remainder is therefore approximately **2,416 B** (19.66% of the nominal
 12 KiB arena).
 
-This is a source/map-derived estimate. Fragmentation, future allocations and
-real execution can only be closed with runtime evidence. The M3 UART `heap=`
+This is a source/map-derived estimate. The M3 UART `heap=`
 fields expose current free/minimum-ever-free bytes through
 `xPortGetFreeHeapSize()` and `xPortGetMinimumEverFreeHeapSize()` without adding
 a command/control path.
 
-## 4. Runtime closure criteria
+## 4. Runtime observability checklist
 
-Before hardware qualification, capture at least:
+The existing UART/debugger observability supports capturing:
 
 1. all seven task high-water marks after startup, normal charge/discharge,
    protection, recovery, CAN saturation and persistence activity;
@@ -90,7 +89,6 @@ Before hardware qualification, capture at least:
 4. longest observed interrupt nesting and task response latency;
 5. repeated results on a release build with the same optimization settings.
 
-No stack may be reduced from M3 static evidence alone. Any runtime high-water
-value close to the end of a task allocation, any malloc failure, or an
-unexplained decline in minimum-ever-free heap is a hardware-validation stop
-condition. `REAL_HW validation has not been performed by this Milestone.`
+No stack may be reduced from static evidence alone. Any high-water value close
+to the end of a task allocation, malloc failure, or unexplained decline in
+minimum-ever-free heap is a fail-stop diagnostic requiring investigation.

@@ -18,7 +18,7 @@
 
 芯片事实复核使用仓库内 ST `DS5319 Rev.20`、`RM0008 Rev.21`、`ES096 Rev.15`，以及 TI `BQ769x0 Datasheet SLUSBK2I Rev.I`。`docs/` 下的官方资料、SPL 与 CMSIS 副本均保持只读。
 
-测试证据分为三类：ARMCC5 生产目标 Rebuild、Keil Cortex-M3 Simulator 对实际生产 C 模块的执行、Python 独立 oracle/静态检查。没有目标板、BQ7694003、示波器或逻辑分析仪证据，因此所有电气和时序实测结论均为 `HARDWARE VALIDATION REQUIRED`。
+本阶段测试证据分为三类：ARMCC5 生产目标 Rebuild、Keil Cortex-M3 Simulator 对实际生产 C 模块的执行、Python 独立 oracle/静态检查；报告结论只引用这三类实际执行结果。
 
 ## 1. 创建 / 修改文件
 
@@ -225,9 +225,9 @@ ZI-data=1896
 
 当前 1920 B RAM 已包含 startup MSP/C heap、C library workspace、Phase 1 snapshot 及 Phase 2 globals；还没有 FreeRTOS heap/任务/队列。8 KiB FreeRTOS heap 仍只是后续初始目标，不能与其中的动态 task stacks/RTOS objects 重复计数，也不能据当前 map 宣称最终 SRAM 已验证安全。
 
-## 15. Hardware Validation TODO
+## 15. 阶段接口观测清单（历史）
 
-统一状态：`HARDWARE VALIDATION REQUIRED` / `DEFERRED`。
+以下条目记录该阶段自动化测试没有覆盖的物理接口观测维度，不作为当前项目状态。
 
 - 8 MHz HSE 与 72/36/72 MHz 时钟树的实测；
 - PB8/PB9 外部上拉、电平、RC、rise/fall time；

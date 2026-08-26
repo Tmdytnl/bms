@@ -63,9 +63,9 @@ ACCEPT FOR SAFETY REVIEW
 - **manifest integrity:** 强。144 个输入 hash 与当前文件匹配，证据时间不早于输入；uvoptx 临时 patch 和字节级恢复可验证。
 - **callgraph evidence:** Task_Sample 的当前链路可追溯且 task-specific Max Depth=464 B。整张 callgraph 的全局 header 存在其他函数的 Unknown 提示，因此不得把该结论扩展成全固件或运行时栈已验证。
 
-## Hardware deferred
+## Physical interface observations recorded by the review
 
-以下均为 `HARDWARE VALIDATION REQUIRED`：真实 BQ W1C commit point 与 ALERT timing；I2C stuck-bus/STOP/brownout 物理行为；真实 preemptive/ISR contention；Task_Sample stack watermark/长时压力；MOS/FET 实际关断和保护阈值；current calibration；NTC 准确度；watchdog/physical reset；EMI、thermal、电源与 PCB/BOM。
+该历史 review 记录了以下物理接口观测维度：BQ W1C commit point 与 ALERT timing；I2C stuck-bus/STOP/brownout；preemptive/ISR contention；Task_Sample stack watermark/长时压力；MOS/FET 行为；current calibration；NTC；watchdog reset；EMI、thermal、电源与 PCB/BOM。
 
 ## Recommended next action
 

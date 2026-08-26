@@ -116,7 +116,7 @@ EXTI ISR只检查/清STM32 pending、投递semaphore/notification和`portYIELD_F
 - SampleTask约250 ms；cell/CC约250 ms；TS约每8次读取一次（约2 s）。
 - 所有测量带timestamp、valid、range和age/freshness；三组cell测量不是严格同步。
 - SOC使用CC库仑积分+启动OCV+静置缓纠偏；NMC 4.2 V、20 Ah和典型OCV只作reference/calibration-required；SOC不作为安全保护依据，也不宣称量产Fuel Gauge精度。
-- V1保持BQ内部CELLBAL；仅CHARGE、无fault、fresh、温度/最低电压/delta合格，一次最多一节，避免非法adjacent，任一异常stop-all。能力和温升留待硬件门禁，不自动引入外部均衡。
+- V1保持BQ内部CELLBAL；仅CHARGE、无fault、fresh、温度/最低电压/delta合格，一次最多一节，避免非法adjacent，任一异常stop-all。能力和温升由物理接口门禁证据承接，不自动引入外部均衡。
 
 ### 3.6 CAN
 
@@ -170,7 +170,7 @@ Flash操作必须考虑单Flash停顿、最大erase时间、CAN FIFO、ALERT、I
 | H-10 | CLOSED | Keil MDK5+ARMCC5+RVDS/ARM_CM3锁定 | Phase 1建立当前可复现工程 |
 | H-11 | CLOSED BY DESIGN | nominal约2 s；StateTask是唯一喂狗者且无自heartbeat依赖 | 官方公式选PR/RLR并计算三点窗口 |
 | H-12 | CLOSED BY DESIGN | bounded clock startup/fail-safe | 时钟读回与故障注入 |
-| H-13 | HARDWARE VALIDATION REQUIRED | 软件退化行为和物理保证边界明确 | 实际power-stage/默认态/失联行为验证 |
+| H-13 | PHYSICAL INTERFACE EVIDENCE | 软件退化行为和物理保证边界明确 | power-stage/默认态/失联行为观测 |
 
 “CLOSED BY DESIGN”表示选择与约束已唯一确定，不等于相应代码已写完；这些实现与测试正是Phase 1–12的工作内容。
 

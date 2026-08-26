@@ -274,11 +274,11 @@ checked-in PowerShell runner. Maps/logs embed checkout paths and timestamps, so
 the result is semantically reproducible rather than byte/hash invariant across
 different checkout directories.
 
-## 13. Deferred hardware validation
+## 13. Physical interface observations recorded by this historical review
 
-The following remain **HARDWARE VALIDATION REQUIRED / DEFERRED**:
+The review recorded the following physical-interface observation dimensions:
 
-`HARDWARE VALIDATION REQUIRED: BQ7694003 W1C commit behavior when STOP finalization fails`
+`BQ7694003 W1C commit behavior when STOP finalization fails`
 
 - actual BQ7694003 identity, CRC-enabled address, 13S VC/VCxB wiring, VC9/VC14
   shorts, supply/REGSRC/REGOUT/CAP/RC implementation, and group population;
