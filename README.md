@@ -38,9 +38,9 @@ ProtectTask 持有 HW/AFE fault 与运行期 XREADY W1C；StateTask 持有软件
 
 | 任务 | 核心职责 | 周期 / 唤醒方式 |
 |---|---|---|
-| Sample | 形成并发布完整测量快照 | 100 ms |
+| Sample | 形成并发布完整测量快照 | 250 ms |
 | Protect | 处理 ALERT、SYS_STAT、CC 与硬件 fault | ALERT 通知 + 有界等待 |
-| State | 状态分类、安全协调、FET service、健康监督和 IWDG | 10 ms |
+| State | 状态分类、安全协调、FET service、健康监督和 IWDG | 最大有界等待 100 ms；安全事件可 urgent notification 提前唤醒 |
 | SOC | 消费独立 CC 队列并更新 SOC | CC 队列 + 有界等待 |
 | Balance | 仲裁并写入 CELLBAL | 1 s |
 | CANRx | 消费服务帧但不绕过安全 ownership | RX 队列 + 有界等待 |
@@ -113,7 +113,7 @@ python firmware\Tests\verify_phase9.py
 - [Module Inventory](docs/architecture/BMS_V1_Module_Inventory.md)
 - [Task Ownership Matrix](docs/architecture/BMS_V1_Task_Ownership_Matrix.md)
 - [Runtime Walkthrough](docs/architecture/BMS_V1_Runtime_Walkthrough.md)
-- [Hardware Bring-up Guide](docs/bringup/BMS_V1_Hardware_Bringup_Guide.md)
+- [Hardware Integration Guide](docs/bringup/BMS_V1_Hardware_Bringup_Guide.md)
 - [Debugging Guide](docs/bringup/BMS_V1_Debugging_Guide.md)
 - [Configuration Guide](docs/config/BMS_V1_Configuration_Guide.md)
 - [Software Validation Matrix](docs/validation/BMS_V1_Software_Validation_Matrix.md)

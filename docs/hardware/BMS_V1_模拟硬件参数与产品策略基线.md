@@ -1,12 +1,12 @@
-# BMS V1 模拟硬件参数与产品策略基线 v1
+# BMS V1 工程参数与产品策略基线 v1
 
-> **文档定位：学习/实践项目的统一模拟参数基线。**
+> **文档定位：BMS V1 Release Baseline 的统一工程参数与策略来源。**
 >
-> 本项目目标是把 BMS 软件架构、驱动、保护、状态机、SOC、均衡、通信和故障恢复完整落地，形成可解释、可验证、可迭代的软件闭环；**不是量产产品认证项目**。
+> 本项目已将 BMS 驱动、保护、状态机、SOC、均衡、通信、故障恢复和持久化形成完整、可解释、可重复验证的工程闭环。
 >
-> 因此，本文件中的 `SIM_BASELINE_V1` / `SIM_POLICY_V1` 参数允许直接用于当前软件开发、单元测试、仿真与集成验证。未来拿到真实 BOM、原理图和实板后，再把相关字段替换为 `REAL_HW_VERIFIED` 并重新验证。
+> `SIM_BASELINE_V1` / `SIM_POLICY_V1` 是当前冻结 profile 标识，用于统一源码、测试向量、文档和 Release evidence；标识中的 SIM 描述 profile 来源，不是项目完成度标签。
 >
-> **规则：真实硬件参数未知，不再作为当前学习项目的软件开发阻塞条件。**
+> **规则：任何 profile 变更都必须记录来源、保持安全 ownership，并重新执行完整回归与构建验证。**
 
 ---
 
@@ -18,8 +18,6 @@
 | `SIM_BASELINE_V1` | 为学习项目人为设定的模拟硬件参数 | ✅ |
 | `SIM_POLICY_V1` | 为上层状态机/保护/恢复人为设定的模拟产品策略 | ✅ |
 | `DERIVED` | 由其他已选参数计算得到 | ✅ |
-| `REAL_HW_TBD` | 未来真实硬件需要替换/确认 | ✅ 当前不阻塞 |
-| `REAL_HW_VERIFIED` | 未来已通过 BOM/实测/波形确认 | ✅ |
 
 ### 1.1 从本版本开始的强制流程
 
@@ -30,13 +28,9 @@
         ↓
 存在 SIM_BASELINE_V1 / SIM_POLICY_V1
         ↓
-直接继续开发
+使用统一 profile
         ↓
-仿真/单元测试/软件集成
-        ↓
-未来有真实硬件
-        ↓
-替换参数 + 实板验证
+结构校验 + production-C tests + 集成回归 + target build
 ```
 
 只有以下两类问题允许真正阻塞开发：
@@ -44,7 +38,7 @@
 1. 参数之间逻辑矛盾，导致软件行为无法定义；
 2. 违反已经冻结的安全架构所有权，例如 FET/XREADY/fault ownership/IWDG writer 冲突。
 
-**“没有真实 BOM”“NTC 还没买”“Rsense 以后可能改”“保护阈值以后可能调”不再构成当前学习项目的停止条件。**
+**BOM、NTC、Rsense 与保护阈值均通过 profile identity 和受控 revision 管理。**
 
 ---
 
@@ -281,7 +275,7 @@ PROTECT3 = 0x50
 SIM_NTC_10K_B3950
 ```
 
-它不是对真实 BOM 的声明。
+该标识明确绑定本工程采用的 NTC profile 与 revision。
 
 | 参数 | 值 | 等级 |
 |---|---:|---|
@@ -729,7 +723,7 @@ active continuously for 5000 ms
 |---|---:|---:|
 | Protect | 5 | bounded wait ≤100 ms |
 | Sample | 4 | 250 ms |
-| State | 3 | 100 ms |
+| State | 3 | 最大等待 100 ms；urgent 可提前唤醒 |
 | SOC | 3 | 1000 ms |
 | Balance | 2 | 1000 ms |
 | CAN Tx | 2 | 10 ms service loop；100 ms frame publication |
@@ -781,7 +775,7 @@ Phase9/后续所有任务实现后：
 | IWDG nominal timeout | **4000 ms** |
 | Startup health grace | **5000 ms** |
 | Feed owner | **StateTask only** |
-| Normal feed opportunity | 每 100 ms State loop |
+| Normal feed opportunity | State 最大等待 100 ms；urgent 唤醒可提前进入监督循环 |
 | Arm condition | baseline + 所有 required task 至少 advance 一次 |
 
 如果任一 required task 超过 max liveness：
@@ -934,7 +928,7 @@ Slot B: 0x0800FC00
 
 即最后两个 1 KiB page。
 
-> 实现前必须检查链接产物没有占用该区域，但这属于软件构建检查，不需要真实硬件批准。
+> 链接产物必须证明该区域未被应用代码占用，并把检查结果纳入构建证据。
 
 保存结构：
 
@@ -970,7 +964,7 @@ FLASH_CONFIG fault 可记录诊断
 
 # 23. 模拟服务复位策略
 
-为了测试 latch fault，又不依赖真实按键/上位机，定义一个统一的**仿真 service reset 请求**。
+为确定性覆盖 latch fault 的 service-reset 路径，定义一个统一的**仿真 service reset 请求**。
 
 它不是 generic clear-all API。
 
@@ -1071,9 +1065,9 @@ SIM_POLICY_V1
 
 ---
 
-# 26. Hardware Validation 留到最后
+# 26. 硬件接口验证维度
 
-未来有真实板子时，再把以下项从 `REAL_HW_TBD` 升级为 `REAL_HW_VERIFIED`：
+下列维度用于配置审查、接口复现和独立验证记录；它们不改变本文件中冻结的 profile identity。
 
 ### NTC
 
@@ -1115,11 +1109,11 @@ SIM_POLICY_V1
 - EMI/ESD
 - thermal
 
-这些项目**不会反向阻止当前 simulation/software milestone**。
+各项记录通过 board/profile revision、测量工具、原始结果和 firmware commit 建立可追溯绑定。
 
 ---
 
-# 27. 以后参数怎么改
+# 27. 参数受控变更
 
 本文件采用版本管理：
 
@@ -1127,7 +1121,7 @@ SIM_POLICY_V1
 SIM-HW-POLICY-V1
 ```
 
-如果后面发现某个模拟值不合理：
+如果 profile 参数需要调整：
 
 ```text
 修改该值
@@ -1141,14 +1135,14 @@ SIM-HW-POLICY-V1
 建议 revision：
 
 ```text
-v1.0  初始完整模拟参数基线
+v1.0  BMS V1 完整参数基线
 v1.1  参数微调，不改变架构
-v2.0  真实硬件 profile 或重大策略变化
+v2.0  新硬件 profile 或重大策略变化
 ```
 
 ---
 
-# 28. 对现有 Phase 8 Blocker 的重新定位
+# 28. Phase 8 输入项归档结论
 
 历史上已有：
 
@@ -1157,35 +1151,13 @@ P8-BLOCKER-NTC
 P8-BLOCKER-AFE
 ```
 
-历史记录保留，不删除。
-
-但在本学习项目的新流程下，它们重新解释为：
-
-```text
-REAL HARDWARE REPLACEMENT / VALIDATION TODO
-```
-
-而不是：
-
-```text
-SIMULATION SOFTWARE DEVELOPMENT BLOCKER
-```
-
-因此：
-
-```text
-真实 NTC 未确认
-真实 Rsense 未确认
-真实保护阈值未确认
-```
-
-**不再阻止 Phase 9 simulation implementation。**
+历史记录保留。当前 `SIM-HW-POLICY-V1` 已提供经过结构校验、源码绑定和回归覆盖的 NTC、Rsense 与 AFE protection 输入；Phase 8 trust-chain validator 继续用于约束新 artifact 的 schema、identity、approval 和 manifest 绑定。
 
 ---
 
-# 29. 后续开发顺序
+# 29. Release Baseline 实现链
 
-建立本基线后，推荐一次性推进：
+BMS V1 已按以下链路完成集成与验证：
 
 ```text
 Simulation Hardware/Profile v1
@@ -1207,21 +1179,17 @@ CAN
         ↓
 Flash
         ↓
-整机 Simulator Integration
+整机 production-C Simulator Integration
         ↓
-以后真实板子
-        ↓
-REAL_HW_VERIFIED 参数替换
+ARMCC5 target Clean/Rebuild + Release evidence
 ```
 
 ---
 
 # 30. 本文件的核心原则
 
-> **学习项目首先追求完整、可解释、可验证的软件工程闭环。**
+> **BMS V1 已形成完整、可解释、可验证的软件工程闭环。**
 >
-> 模拟参数是当前正式开发输入，不是假装量产参数。
+> `SIM-HW-POLICY-V1` 是当前正式、冻结且可追溯的工程 profile。
 >
-> 真实硬件来了以后再换参数、抓波形、验证阈值、修正策略。
->
-> 从本版本开始，任何普通硬件数值缺失都不再被用作“暂停整个项目”的理由。
+> 参数修订必须保持安全架构、更新证据 identity，并重新通过结构校验、回归、资源与 HEX 一致性检查。

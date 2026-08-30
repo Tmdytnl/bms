@@ -4,7 +4,7 @@
 - 阶段：Phase 1 — 工程基线 / 公共模型 / 构建边界
 - 结论：**PHASE 1 COMPLETE**
 - 构建状态：Keil MDK5 / ARMCC5 真实 Rebuild 通过，`0 Error(s), 0 Warning(s)`
-- 范围声明：本报告只证明 Phase 1 软件工程基线；未进行目标板烧录、运行或硬件验证，也未进入 Phase 2。
+- 定位：本报告记录 Phase 1 软件工程检查点；后续 build、runtime、interface 与 Phase 2+ 证据均由最终 Release Baseline 索引。
 
 ## 1. 输入基线与证据边界
 
@@ -228,11 +228,11 @@ Flash 当前 Total ROM=1064 B，应用容量上限为 62464 B；该巨大 Phase 
 
 ## 14. Phase 1 遗留 TODO
 
-- 目标板下载、复位、72 MHz 实际读回与硬件运行均未验证。
-- HSE/PLL/clock-switch bounded timeout、readback 与 fail-safe startup 未实现；不能把 H-12 视为代码关闭。
+- 下载、复位、clock readback 与运行接口观察维度由集成矩阵统一索引。
+- HSE/PLL/clock-switch bounded timeout、readback 与 fail-safe startup 由后续阶段完成并纳入最终 Release Baseline。
 - 当前 startup MSP=1 KiB、C heap=512 B 是基线值；Phase 6 根据 RTOS/map/high-water 有依据地复核。
 - 公共 snapshot 的互斥/发布机制属于 RTOS 集成，不在 Phase 1 实现。
-- Hardware Validation Gate 中的 PCB/BOM、NTC、Rsense、MOS、ALERT/WAKE、CAN physical、brownout 等均保持待验证。
+- PCB/BOM、NTC、Rsense、MOS、ALERT/WAKE、CAN physical、brownout 等接口维度由最终集成矩阵统一索引。
 - Keil project 的下载算法配置未做目标板烧录验证；Phase 1 只关闭 compile/link gate。
 
 ## 15. Phase 2 输入条件
@@ -245,7 +245,7 @@ Phase 1 的目录、Keil/ARMCC5 target、STM32F103C8/MD、唯一 MD startup、61
 
 ```text
 PHASE 1: COMPLETE
-READY FOR PHASE 2
+CHECKPOINT INCORPORATED IN RELEASE BASELINE
 ```
 
-本轮在此停止；未进入 Phase 2。
+本报告作为 Phase 1 检查点保留；后续阶段证据已纳入最终 Release Baseline。

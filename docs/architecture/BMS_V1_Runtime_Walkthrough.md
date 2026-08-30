@@ -1,6 +1,6 @@
 # BMS V1 Runtime Walkthrough
 
-本文沿一次实际软件执行链说明模块如何协作。函数名均来自当前源码；描述的是软件行为，不声称物理硬件已经验证。
+本文沿一次实际软件执行链说明模块如何协作。函数名均来自当前源码；硬件接口观察维度由集成矩阵统一索引。
 
 ## 1. Power-on 到 normal control
 
@@ -37,7 +37,7 @@ startup calibration 与 simulation NTC table 安装到 Sample 后，依次初始
 
 SampleTask 每 250 ms 开始一次 staging：读 13 cell window、BAT，取 Protect latest CC mailbox；每第 8 cycle 读 TS1 并通过 NTC table 转换。它在 I2C 前后检查 XREADY/calibration/config revision，只在 mandatory core 完整、generation 未变时调用 `BMS_Data_PublishMeasurement()`。
 
-publication 使 `sample_sequence` 前进并携带 `afe_generation=0`（或当前 generation）。Recovery 初始 `COMPLETE/technical_ready=true` 的 startup handoff 与 fresh measurement 让 State engine 从 INIT 进入 STANDBY qualification。State 按 100 ms decision cycle 发布与该 sample identity 绑定的 snapshot；FET Manager 再独立复核 Protect/State/Recovery revisions、执行 SYS_CTRL2 transaction/readback。此时才能报告 register-level effective FET state。
+publication 使 `sample_sequence` 前进并携带 `afe_generation=0`（或当前 generation）。Recovery 初始 `COMPLETE/technical_ready=true` 的 startup handoff 与 fresh measurement 让 State engine 从 INIT 进入 STANDBY qualification。State 以 100 ms 作为最大有界等待，并可由安全事件 urgent notification 提前唤醒；它发布与该 sample identity 绑定的 snapshot，FET Manager 再独立复核 Protect/State/Recovery revisions、执行 SYS_CTRL2 transaction/readback。此时才能报告 register-level effective FET state。
 
 ### 1.5 一个典型 runtime cycle
 
@@ -105,7 +105,7 @@ State 依据 current 把运行分类为 STANDBY/CHARGE/DISCHARGE，且生成 int
 4. 当 fresh measurements 持续满足 HW recovery policy，State 的 HW recovery engine 提交携带 source generation/sample identity/expiry 的 request。
 5. Protect 复核 request，重新读取 SYS_STAT、确认没有 target/blocking status，再只清 HW_OV private active source并 ack。
 
-软件测试能证明上面 request/ack/revision 行为；真实 OV threshold、delay、ALERT、W1C 与 MOS action 必须上板验证。
+production-C 测试覆盖上述 request/ack/revision 行为；OV threshold、delay、ALERT、W1C 与 MOS action 的接口观察维度由集成矩阵统一索引。
 
 ## 4. Scenario B — measurement becomes stale
 

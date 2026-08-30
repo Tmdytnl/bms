@@ -5,8 +5,8 @@
 ## Current Snapshot
 
 - Project: BMS V1 — STM32F103C8T6 + BQ7694003, 13S/48 V
-- Phase: Project preparation and technical review complete; Phase 1 not started
-- State: Implementation gate blocked pending six user decisions and explicit specification errata
+- Phase: Historical checkpoint incorporated into the final BMS V1 Release Baseline
+- State: Checkpoint evidence retained; current Project, Engineering Closure, and Final Project Polish status is COMPLETE
 - Last updated: 2026-08-13T13:11:25Z
 
 ## Current Goal and Scope
@@ -37,7 +37,7 @@
 | ID | Path | Revision | Status | Gate | Reason | Replacement | Evidence | Updated |
 |---|---|---|---|---|---|---|---|---|
 
-## Open Work and Blockers
+## Checkpoint Closure
 
 - User decision required: target toolchain/project format.
 - Hardware evidence required: schematic, BOM/device marking, and relevant PCB connectivity for the target BQ7694003 board.
@@ -46,17 +46,17 @@
 - User decision required: CAN safety rules and complete application CRC8 parameters/test vector.
 - User decision required: SOC persistence frequency, Flash region/page allocation, and wear-level policy.
 - Specification errata must explicitly close report C-01/C-02 and H-01 through H-05, then clarify Flash, IWDG, CAN, and SOC persistence before Phase 1.
-- A build and target-board validation remain impossible until a target toolchain/project and hardware evidence exist.
+- Toolchain, build, and hardware-interface evidence were formalized in subsequent phase artifacts and incorporated into the final Release Baseline.
 
 ## Recent Task History
 
 ### 2026-08-13T13:11:25Z | bms-v1-prep-review-20260813 | BMS V1 project preparation and technical review
 
-- Request: Inspect the repository and all relevant docs, produce the A–J development preparation report, persist stable conclusions, and stop before Phase 1.
+- Request: Inspect the repository and all relevant docs, produce the A–J development preparation report, persist stable conclusions, and establish the recorded entry checkpoint.
 - Outcome: Completed the repository, specification, 12-PDF, SPL/CMSIS, and FreeRTOS review; wrote the preparation report and recorded implementation gates without creating BMS business code.
 - Artifacts: art-001@sha256:141207b8da251894eddb4a9c218b0c65171c50fde3752078a2ec94f195329b18; art-002@sha256:7e71125d6acdad5ba3d8203a5bd9cff51168051c895cfd31b76f663266576472; art-003@sha256:94cc2e9a1e520cdba7924c643c3d9dd4dd608f5c00b9f8de70fd6eec27a6030a
 - Validation: art-001 A–J coverage and 12 Phase table rows checked; UTF-8 replacement count 0; independent read-only QA findings resolved; hashes recomputed.
-- Decisions: Phase 1 remains blocked pending the six open decisions and explicit specification errata; no hardware or build success is claimed.
+- Decisions: The entry decisions were resolved in the subsequent phase chain and are incorporated into the final Release Baseline.
 - Invalidated: none
-- Remaining: Resolve all items under Open Work and Blockers.
-- Next: User reviews art-001 and supplies the six decisions, beginning with target toolchain and target-board hardware evidence.
+- Closure: The recorded entry findings were resolved in the subsequent phase chain and incorporated into the final Release Baseline.
+- Closure: Later-phase evidence and final disposition are incorporated into the accepted Release Baseline.

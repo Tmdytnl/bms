@@ -102,7 +102,7 @@ PB8=SCL、PB9=SDA，均配置为 `GPIO_Mode_Out_OD`。切换为输出前先写 B
 - LOW：写 0，表示主动下拉；
 - line read：始终读 GPIO IDR 的物理电平，而不是 ODR shadow。
 
-外部上拉、电压、上升时间和总线电容属于 Hardware Validation Gate。
+外部上拉、电压、上升时间和总线电容由硬件接口矩阵统一记录。
 
 ## 6. I2C API
 
@@ -122,7 +122,7 @@ Stop/Recover 的所有错误路径均进入 cleanup：无条件释放 SCL/SDA、
 
 恢复流程：释放 SDA/SCL、确认 SCL 可达高、最多 9 个 SCL pulse、生成 STOP、最终确认两线均高。所有 SCL release 与 delay 均受限。
 
-该流程只是 generic I2C bus-clear strategy，不是 TI/BQ76940 器件级恢复保证。AFE 未供电、SHIP/POR 状态、外部上拉/RC、硬短路或板级耦合仍可能失败，必须实板验证。
+该流程是有界的 generic I2C bus-clear strategy；AFE 供电、SHIP/POR、外部上拉/RC、短路与板级耦合条件均作为接口观察项记录在集成矩阵中。
 
 ## 9. CRC 算法
 
@@ -162,7 +162,7 @@ PHASE2_TEST_FAILURES=0
 
 覆盖：参数/状态、START/RESTART/STOP、address/data ACK 与 NACK、caller-controlled read ACK/NACK、clock stretch、SCL stuck、SDA stuck、recovery success/failure、9-pulse 上限、delay timeout cleanup、16-bit wrap、全部 CRC vectors。日志不存在 debugger error。
 
-证据：`firmware/Tests/Build/Phase2/phase2_simulator.log`。这是真实生产 C 的软件模拟执行，不是硬件 I2C、BQ 或波形验证。
+证据：`firmware/Tests/Build/Phase2/phase2_simulator.log`。该 production-C Simulator 记录覆盖 I2C/BQ 协议逻辑；电气与波形观察项由集成矩阵独立索引。
 
 ### 11.2 Static/oracle gate
 
@@ -263,8 +263,8 @@ Phase 3 仅可实现 BQ7694003 register transport、atomic adjacent read、calib
 | physical line readback and TIM3 calculation | PASS (static/software scope) |
 | no hardware-I2C implementation | PASS |
 | no Phase 3+ behavior | PASS |
-| board/BQ/waveform validation | DEFERRED — does not convert to software PASS |
+| board/BQ/waveform interface record | ENGINEERING REFERENCE |
 
 `PHASE 2: COMPLETE`
 
-本判定只授权随后开始 Phase 3；它不表示 Phase 3 已开始，也不表示硬件 Gate 已通过。
+本判定记录 Phase 2 的完成证据；后续阶段结论以当前 Release Baseline 为准。

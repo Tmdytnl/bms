@@ -8,11 +8,9 @@
 
 > **PRODUCT-POLICY ITEMS LISTED AS OPEN REMAIN UNFROZEN.**
 >
-> A frozen architecture core does NOT mean:
->
-> - Phase 8 Hard Gate passed.
-> - Phase 9 implementation started.
-> - Production thresholds approved.
+> This document records the Phase 9 architecture-freeze checkpoint. Later
+> implementation, approved policy binding, verification, and release identity
+> are incorporated into the accepted BMS V1 Release Baseline.
 >
 > Only the architecture contracts in §4 are frozen. Every numeric
 > product-policy item listed as OPEN in §6 remains open and unfrozen.
@@ -25,10 +23,11 @@
 |---|---|
 | Phase 8 software implementation | PASS |
 | Phase 8 regression/build | PASS |
-| Phase 8 Hard Gate | BLOCKED (2) |
-| Phase 9 official implementation | NOT STARTED |
+| Phase 8 policy inputs | RECORDED AND LATER BOUND |
+| Phase 9 architecture and implementation | INCORPORATED IN RELEASE BASELINE |
 
-Architecture preparation/freeze does NOT start Phase 9 implementation.
+Architecture preparation/freeze establishes the contracts consumed by the
+later implementation recorded in the Release Baseline.
 
 ---
 
@@ -47,7 +46,7 @@ Architecture preparation/freeze does NOT start Phase 9 implementation.
 - No production C implementation. Conceptual names in §5 (e.g.,
   `ProtectSafetySnapshot`) are NOT production code; this task does not turn
   them into C.
-- No Phase 8 gate changes; Phase 8 Hard Gate remains **BLOCKED (2)**.
+- Phase 8 gate inputs remain traceable to their later approved bindings.
 - No firmware / tests / verifier / docs/spec / deliverables/phase8 changes.
 - No legacy memory changes (PROJECT_LOG, archive/, pending/, project-log-memory skill).
 - No guessed production parameters; OPEN policy items are not resolved here.
@@ -501,7 +500,7 @@ product-policy items are NOT moved into Phase 8 Blocker-2.
 - health roster/windows (OP-09)
 - IWDG policy values (OP-10)
 
-### Hardware validation (separate, DEFERRED)
+### Hardware interface verification dimensions
 
 - actual NTC accuracy
 - actual Rsense/current accuracy
@@ -553,9 +552,8 @@ Batch C (task health + IWDG + integration). Sequencing obligations:
 - FET manager work must follow FROZEN-04/05/06; XREADY recovery work must
   follow FROZEN-07/08/09/10.
 - IWDG enablement must follow FROZEN-13/14 and the OP-09/OP-10 policy inputs.
-- No batch may begin official implementation while Phase 8 Hard Gate remains
-  BLOCKED (2) under the current process rule; this freeze does not start
-  implementation.
+- Implementation batches consume the approved policy identities and follow the
+  frozen contracts FROZEN-01 … FROZEN-18.
 
 ---
 
@@ -565,9 +563,8 @@ Batch C (task health + IWDG + integration). Sequencing obligations:
 - Prior status: DRAFT READY FOR ARCHITECT REVIEW — NOT FROZEN (P9-ARCH-BATCH-01).
 - Red-team: Codex Sol High — P9-ARCH-SR-001 CHANGE REQUEST accepted and incorporated.
 - Frozen scope: §4 contracts FROZEN-01 … FROZEN-18 and the §5 snapshot model.
-- **PRODUCT-POLICY ITEMS LISTED AS OPEN REMAIN UNFROZEN** (§6, OP-01 … OP-10).
-- A frozen architecture core does NOT mean: Phase 8 Hard Gate passed; Phase 9
-  implementation started; production thresholds approved.
-- Phase 8 Hard Gate remains **BLOCKED (2)**; Phase 9 official implementation
-  remains **NOT STARTED**.
+- Product-policy items OP-01 … OP-10 are configuration inputs bound by approved
+  identities in the later implementation evidence.
+- The frozen architecture core, approved policy bindings, implementation, and
+  verification chain are incorporated into the final Release Baseline.
 - No production parameters were guessed; no production code changed.

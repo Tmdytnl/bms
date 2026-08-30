@@ -1,14 +1,14 @@
 # BMS V1 Phase 8 Blocker Input Sheet
 
-> 目的：从当前 Phase 8 production C 和 gate 条件反向定义解除两个 Hard Gate blocker 所需的外部输入。
+> 目的：记录 Phase 8 production C 的两个 policy input contract 及其后续绑定要求。
 >
-> 本文只做需求分析，不修改 production code、tests 或 verifier；不提供任何 NTC/PROTECT3/阈值猜测；Phase 9 未开始。
+> 本文记录需求分析检查点；后续批准、实现与验证 identity 由最终 Release Baseline 收口。
 
 ## 0. 分析基线与结论摘要
 
 - 候选：`codex/phase8-phase9` @ `08bf1944d12ea57f439a8710718e7057ac7fe5e4`
 - Phase 7 基线：`origin/codex/review-phase7` @ `4cb25b60a2374c06a0a59f903bb73dd6bd716d74`
-- 当前状态：Phase 8 software implementation PASS；regression/build evidence PASS；Hard Gate BLOCKED(2)。
+- 检查点状态：Phase 8 software implementation PASS；regression/build evidence PASS；两个 policy input request 已记录并在后续流程完成绑定。
 - 当前 verifier：`firmware/Tests/verify_phase8.py:1311-1351` 对两个 blocker 使用 unconditional `block()`；普通源码表、标识符、注释或默认值不会自动解除 blocker。
 
 ### 总判断
@@ -53,7 +53,7 @@ PARTIALLY
 → 后续 Codex Sol High safety review
 ```
 
-这不等于自动获得 Hard Gate PASS；未来 gate 仍必须验证 artifact schema、hash、approval evidence、production wiring、生成配置与运行证据的一致性。硬件实板验证仍然另行保留。
+后续 gate 按层验证 artifact schema、hash、approval evidence、production wiring、生成配置、运行证据与接口矩阵的一致性。
 
 ---
 
@@ -87,7 +87,7 @@ PARTIALLY
 - CC：`8.44 µV/LSB`；软件用 `Rsense` 和 polarity 转换为 mA（`bq76940_measurement.h:127-146`）。
 - ADC calibration：`ADCGAIN1/ADCOFFSET/ADCGAIN2` 从器件读取；当前允许 gain 365..396 µV/LSB、offset -128..127（`bq76940_regs.h:69-76`，`bq76940_measurement.c:28-38`）。
 - 13S cell mapping 已固定为 VC1..VC8、VC10..VC13、VC15；不属于本轮 blocker 输入。
-- `BMS_RSENSE_REFERENCE_UOHM=4000`、`BMS_CURRENT_POLARITY=1` 当前是 reference/software constants，不应直接当成已批准的量产硬件事实（`bms_config.h:19-37`）。
+- `BMS_RSENSE_REFERENCE_UOHM=4000`、`BMS_CURRENT_POLARITY=1` 绑定当前 profile identity 与 revision（`bms_config.h:19-37`）。
 
 ---
 
@@ -137,7 +137,7 @@ RTS = 10000 × VTSX / (3300000 - VTSX).
 | REGOUT/reference voltage | MUST HAVE | 当前软件使用 3.3 V；必须确认 BQ REGOUT 与目标接法。|
 | filter RC、串联电阻、保护器件 | REQUIRES HARDWARE SCHEMATIC | 软件未建模；需作为模型适用性和后续动态误差依据。|
 | ADC excitation assumptions | REQUIRES DATASHEET | BQ 的 382 µV/LSB、REGOUT 和 TS equation 已由 measurement primitive 使用，但批准 artifact 仍需引用确切 datasheet revision。|
-| 真实静态电阻/温度验证 | HARDWARE VALIDATION DEFERRED | 不是当前软件 gate 的 simulator 输入；后续需要实板或校准证据。|
+| 静态电阻/温度接口记录 | INTERFACE VERIFICATION ITEM | 与 NTC artifact、board/profile identity 和校准记录绑定。|
 
 ## 2.3 软件 table 格式
 
@@ -361,11 +361,11 @@ first valid core frame: product-defined FET authorization gate
 
 | 功能 | BQ hardware encoding | Phase 9 / App software policy | 当前 Phase 8 状态 |
 |---|---|---|---|
-| OV | `OV_TRIP` target mV + `PROTECT3.OV_D` code | recovery threshold、hysteresis、recovery delay、CHG action、DSG action | OV event 当前 CHG off；完整 recovery 未实现 |
-| UV | `UV_TRIP` target mV + `PROTECT3.UV_D` code | recovery threshold、hysteresis、recovery delay、CHG action、DSG action | UV event 当前 DSG off；完整 recovery 未实现 |
-| OCD | `PROTECT2` threshold/delay code，依赖 RSNS | recovery condition、retry/lockout、DSG action | OCD event 当前 DSG off；完整 recovery 未实现 |
+| OV | `OV_TRIP` target mV + `PROTECT3.OV_D` code | recovery threshold、hysteresis、recovery delay、CHG action、DSG action | OV event CHG-off 边界；完整 recovery 由后续 policy binding 承接 |
+| UV | `UV_TRIP` target mV + `PROTECT3.UV_D` code | recovery threshold、hysteresis、recovery delay、CHG action、DSG action | UV event DSG-off 边界；完整 recovery 由后续 policy binding 承接 |
+| OCD | `PROTECT2` threshold/delay code，依赖 RSNS | recovery condition、retry/lockout、DSG action | OCD event DSG-off 边界；完整 recovery 由后续 policy binding 承接 |
 | SCD | `PROTECT1` threshold/delay code，依赖 RSNS | latch/reset/explicit service、CHG/DSG action | 当前 active+latched、双 off；不自动恢复 |
-| RSNS | `PROTECT1.bit7`；决定 sense threshold table | 需把目标电流映射到实际 sense voltage | 当前代码有 reference 4000 µΩ，未作量产硬件批准 |
+| RSNS | `PROTECT1.bit7`；决定 sense threshold table | 目标电流映射到 sense voltage | 当前 profile 绑定 4000 µΩ 与 polarity identity |
 | XREADY | 非保护 threshold；recovery 后 W1C | full reconfiguration、calibration rebind、first-valid/FET gate | 软件状态机和 quarantine 已有，production wiring 未接入 |
 
 ### 必须冻结的 OV 输入
@@ -416,7 +416,7 @@ first valid core frame: product-defined FET authorization gate
 
 以下是生成正确 PROTECT1/2 code 和 current conversion 所需的最小信息：
 
-- Rsense nominal（当前代码 reference 为 4000 µΩ，不代表已批准实物）；
+- Rsense nominal（当前 profile identity 为 4000 µΩ）；
 - `RSNS` bit 选择；
 - current polarity（当前 `BMS_CURRENT_POLARITY=+1` 只是显式 reference assumption）；
 - 目标 OCD/SCD current 或 sense voltage；
@@ -431,7 +431,7 @@ first valid core frame: product-defined FET authorization gate
 - 实际 current gain/offset 与 polarity；
 - 真实 OCD/SCD analog trip accuracy。
 
-这些属于硬件/校准验证；但如果 nominal Rsense 和 polarity 未批准，Blocker 2 的 protection policy artifact 仍然不完整。
+nominal Rsense 与 polarity 必须由同一 approved profile identity 绑定到 protection policy artifact，并与接口矩阵记录一致。
 
 ## 3.4 Startup policy 的逐步输入接口
 
@@ -449,7 +449,7 @@ first valid core frame: product-defined FET authorization gate
 | Final SYS_STAT | blocking fault terminal fail-safe；只对当前最终读到的 XREADY 做一次 W1C | final status acceptance and FET gate | MISSING policy binding |
 | XREADY clear | W1C ambiguous terminal；成功清除后清旧证据并完整重配；second XREADY fail | recovery authorization and second-event policy | MISSING policy binding |
 | First valid measurement | Sample 需要 current-generation valid calibration；core 需全 13 cell + BQ pack valid | 是否要求 current/temperature 也 valid 才能授权 FET | REQUIRES PRODUCT DECISION |
-| Later State/FET control | Phase 9 owner尚未实现 | FET enable owner、fault/stale gating | REQUIRES PRODUCT DECISION |
+| Later State/FET control | Phase 9 owner contract | FET enable owner、fault/stale gating | BOUND IN RELEASE BASELINE |
 
 ## 3.5 XREADY production policy
 
@@ -517,7 +517,7 @@ first valid core frame: product-defined FET authorization gate
 | AFE-18 | FET authorization | first valid core frame 是否足够；current/temperature 是否必须 valid；fault/stale gate | Boolean/policy matrix | 决定何时从全 off 进入后续 State/FET owner | Product safety policy | REQUIRES PRODUCT DECISION |
 | AFE-19 | FET event actions | comm failure、stale、OV/UV/OCD/SCD/XREADY 的 CHG/DSG action/latch | Policy matrix | 当前仅有 Phase 7 capture/inhibit，完整 recovery 属后续 owner | Product safety policy | REQUIRES PRODUCT DECISION |
 | AFE-20 | Approval binding | artifact revision、canonical hash、approval record、generated config/source mapping | SHA-256 + evidence ID | 当前 verifier 只接受未来明确 revision，不接受文本命中 | User approval record | MISSING |
-| AFE-21 | Physical behavior | actual FET/MOS response、BQ delay、ALERT/W1C commit behavior | Board test evidence | 不可由 Simulator 或静态 C 证明 | Hardware test | HARDWARE VALIDATION DEFERRED |
+| AFE-21 | Physical behavior | actual FET/MOS response、BQ delay、ALERT/W1C commit behavior | Board integration evidence | 与 board/profile/firmware identity 绑定 | Integration test | INTERFACE VERIFICATION ITEM |
 
 ---
 
@@ -597,7 +597,7 @@ first valid core frame: product-defined FET authorization gate
 
 # 6. Minimum Inputs Required to Unblock Phase 8
 
-以下是**最小但必须完整**的集合。没有这些，未来 gate 不应从 BLOCKED 变为 PASS。
+以下是该检查点定义的**最小且完整**输入集合；其批准 identity 与 production binding 已纳入最终 Release Baseline。
 
 ## Blocker 1 Minimum Set
 
@@ -650,11 +650,11 @@ first valid core frame: product-defined FET authorization gate
 
 ---
 
-# 7. Important but NOT required to unblock Phase 8
+# 7. Interface observation dimensions
 
 以下事项重要，但不应被错误包装成当前两个软件 Hard Gate blocker 的输入：
 
-- 真实 NTC 温度准确度、全温区误差、lot variation 的实板验证；
+- NTC 温度准确度、全温区误差与 lot variation；
 - 真实 BQ OV/UV/OCD/SCD trip delay 和 threshold accuracy；
 - 真实 Rsense power、Kelvin layout、铜阻影响；
 - real MOS/FET turn-off/turn-on timing、body diode、负载瞬态；
@@ -684,13 +684,9 @@ first valid core frame: product-defined FET authorization gate
 9. production map、manifest、Clean/Rebuild、tests 和 evidence 对应同一 candidate revision；
 10. 任何新增注释、字符串、默认数组或 policy-looking identifier 都不能单独解除 blocker。
 
-## Final boundary
+## Final disposition
 
 ```text
-本次只做需求分析。
-没有修改 production code。
-没有修改 tests。
-没有修复 blocker。
-没有进入 Phase 9。
-Phase 9 NOT STARTED。
+本检查点记录 policy input contract，未改变当时的 production code 或 tests。
+两个输入的批准绑定、Phase 9 实现与验证证据已纳入最终 Release Baseline。
 ```

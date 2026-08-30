@@ -1,8 +1,8 @@
 # Phase 8 Future Gate Binding Plan — Artifact Contract v2
 
-Status: future gate plan only. The offline v2 validator is implemented, but the
-production Phase 8 verifier and firmware wiring are unchanged. A preflight
-pass is not a Phase 8 Hard Gate pass and hardware validation remains separate.
+Status: historical gate-binding plan. The offline v2 validator and its input
+contract are retained for traceability; later production bindings and final
+disposition are incorporated into the accepted Release Baseline.
 
 The historical v1 artifact contract is **SUPERSEDED — DO NOT USE FOR FUTURE
 GATE**. The v2 schemas, detached approval record, and gate manifest are the
@@ -132,7 +132,6 @@ mapping evidence as proof of physical NTC accuracy, Rsense tolerance/Kelvin
 routing, current polarity waveforms, OV/UV/OCD/SCD physical trip accuracy,
 ALERT/W1C commit behavior, MOS conduction, or environmental robustness.
 
-Until both approved artifacts, detached records, semantic production bindings,
-and integrated gate evidence exist, Blocker-1 and Blocker-2 remain blocked,
-Phase 8 Hard Gate remains `BLOCKED(2)`, and Phase 9 official implementation
-remains `NOT STARTED`.
+The approved artifacts, detached records, semantic production bindings, and
+integrated gate evidence produced from this plan are traceable through the
+final Release Baseline.

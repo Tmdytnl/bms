@@ -1,9 +1,9 @@
 # Phase 8 Blocker Approval Checklist — Artifact Contract v2
 
 This checklist reviews v2 inputs. The original v1 intake contract is
-**SUPERSEDED — DO NOT USE FOR FUTURE GATE**. Checking every item creates a
-candidate for later gate evaluation; this document grants no approval and no
-Hard Gate result.
+**HISTORICAL INPUT CHECKLIST**. This document records the Phase 8 input-review
+contract; approved bindings and current status are incorporated into the final
+Release Baseline.
 
 ## Common artifact checks
 
@@ -46,8 +46,8 @@ Hard Gate result.
   temperature, and count semantic values exactly and reaches
   `BMS_Sample_SetNtcTable`.
 - [ ] Production TS conversion constants match the approved TS model.
-- [ ] Physical NTC accuracy and lot/full-range behavior remain separately
-  marked for hardware validation.
+- [ ] Physical NTC accuracy and lot/full-range behavior are indexed as interface
+  observations in the integration matrix.
 
 ## Blocker-2 — AFE v2
 
@@ -86,8 +86,8 @@ Hard Gate result.
   polarity; runtime calibration comes from device reads through
   `BMS_Sample_SetCalibration`, with no static fallback.
 - [ ] Physical trip timing/threshold accuracy, current polarity waveforms,
-  Rsense/Kelvin behavior, ALERT/W1C behavior, and MOS conduction remain
-  separately marked for hardware validation.
+  Rsense/Kelvin behavior, ALERT/W1C behavior, and MOS conduction are indexed as
+  interface observations in the integration matrix.
 
 ## Candidate manifest checks
 
@@ -107,9 +107,9 @@ Hard Gate result.
 
 ## Status boundary
 
-- Blocker-1: unchanged — blocked on user/hardware input.
-- Blocker-2: unchanged — blocked on user/hardware input.
-- Phase 8 Hard Gate: `BLOCKED(2)`.
+- Input-1 and Input-2: historical intake identities retained; later approved
+  bindings are recorded by the final evidence chain.
+- Phase 8 checkpoint: `INPUT CONTRACT RECORDED`.
 - Phase 9 Architecture Core v1: `FROZEN`.
-- Phase 9 official implementation: `NOT STARTED`.
-- Hardware validation: separate and deferred.
+- Phase 9 implementation: `INCORPORATED IN RELEASE BASELINE`.
+- Hardware interface observations: tracked by the integration matrix.

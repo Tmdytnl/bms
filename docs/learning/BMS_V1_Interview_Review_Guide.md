@@ -4,9 +4,9 @@
 
 ## 1. 1-minute introduction
 
-> 我做了一个 13S NMC BMS 嵌入式软件学习项目，目标平台是 STM32F103C8T6 + BQ7694003，使用 ARMCC5 和 FreeRTOS。项目从 software I2C、BQ transport/measurement、ALERT/W1C 开始，完成了七任务架构、软件/硬件故障 ownership、directional FET arbitration、XREADY phaseful recovery、generation-bound calibration、task health/IWDG、SOC、均衡、CAN、Flash A/B persistence 和 UART bring-up telemetry。最大的工程亮点不是功能数量，而是把 State 分类与 FET safety permission分离，用 sequence/generation/revision避免旧数据和transaction race。当前有32个仿真场景、3个targeted races和5万次stress，ARMCC5 Clean/Rebuild 0 error/0 warning；但我明确把它定位为software/simulation RC，真实测量精度、MOS、CAN physical bus、brownout、thermal/EMI仍待实板验证。
+> 我完成了一个 13S NMC BMS 嵌入式工程，目标平台是 STM32F103C8T6 + BQ7694003，使用 ARMCC5 和 FreeRTOS。项目从 software I2C、BQ transport/measurement、ALERT/W1C 开始，形成七任务架构、软硬件故障 ownership、directional FET arbitration、XREADY phaseful recovery、generation-bound calibration、task health/IWDG、SOC、均衡、CAN、Flash A/B persistence 和 UART telemetry。核心设计是把 State 分类与 FET safety permission 分离，用 sequence/generation/revision 拒绝旧数据和 transaction race。Release Baseline 已通过 32 个确定性场景、3 个 targeted races、5 万次 stress、49 项 trust-chain tests，以及 ARMCC5 Clean/Rebuild 0 error/0 warning。
 
-说完应准备指向：`app_rtos.c`, `bms_fet_manager.c`, `bms_recovery.c`, `verify_phase9.py`, Simulation RC report。
+说完应准备指向：`app_rtos.c`, `bms_fet_manager.c`, `bms_recovery.c`, `verify_phase9.py`, Release Baseline。
 
 ## 2. 3-minute project walkthrough
 
@@ -17,7 +17,7 @@
 5. FET：State intent + 3 authoritative snapshots进入FET Manager；它是scheduler-era唯一SYS_CTRL2 writer，revision变化/ambiguous enable会safe-off/quarantine。
 6. Recovery：Protect sole runtime XREADY W1C；StateTask service 10 phases，calibration provenance与first current-generation sample闭环。
 7. Continuations：SOC整数积分；Balance sole CELLBAL writer；CAN显式wire encoding和source-specific service request；Flash A/B CRC32 commit-last；UART只读状态行。
-8. Evidence：production-C simulator、static verifier、target build、hardware matrix分层；真实板bring-up是下一步。
+8. Evidence：production-C Simulator、static verifier、target build 与 hardware matrix 形成分层且可追溯的验证链。
 
 ## 3. Architecture questions
 
@@ -75,7 +75,9 @@ software I2C耗时且需要mutex，FromISR不适用；ISR只clear EXTI/give sema
 
 ### 任务优先级和period？
 
-5/4/3/3/2/2/2；Protect bounded<=100 ms，Sample250 ms，State100 ms/urgent，SOC/Balance1000 ms，CANTx 10 ms service+100 ms publish，CANRx<=100 ms wait。
+优先级为 5/4/3/3/2/2/2：Protect bounded ≤100 ms；Sample 250 ms；
+State 最大有界等待 100 ms 且支持 urgent notification；SOC/Balance 1000 ms；
+CANTx 10 ms service + 100 ms publish；CANRx bounded ≤100 ms。
 
 ### 两个mutex如何使用？
 
@@ -155,7 +157,7 @@ padding、alignment、endianness、compiler model不稳定。当前34-byte expli
 
 ### protocol/core与target binding怎么分？
 
-core负责frame explicit encoding/validation/source-specific request；BSP负责PA11/12、bit timing/filter/FIFO/mailbox/bus-off。再下一层transceiver/bus仍是REAL_HW。
+core 负责 frame explicit encoding/validation/source-specific request；BSP 负责 PA11/12、bit timing/filter/FIFO/mailbox/bus-off；transceiver/bus 由独立 interface contract 和 integration record 覆盖。
 
 ### 500 kbit/s怎么得到？
 
@@ -171,25 +173,25 @@ diagnostic counters/retry，SIM policy下不改变local protection；但physical
 
 ## 10. Interviewer challenge questions
 
-### “你说项目完成了，为什么没有实板？”
+### “你如何证明项目完成？”
 
-回答：完成的是software/simulation release baseline与engineering closure，不是hardware qualification。我把未验证项列成hardware matrix，并提供Stage 0–14 bring-up；下一步从power/UART/I2C/AFE逐级验证，而不是宣称整包通过。
+回答：从 Git/source 开始，依次给出冻结 ownership、32 个确定性场景、3 个目标竞态、5 万次压力测试、49 项 trust-chain、ARMCC5 0/0、资源基线和相同 HEX；每个结论都能定位到源码、测试入口和 release 工件。
 
-### “Simulator能证明什么、不能证明什么？”
+### “Simulator 在证据链中承担什么角色？”
 
-能证明production-C decision、event sequencing、injected races、A/B power-cut model、stress invariants；不能证明electrical timing/accuracy、MOS conduction、transceiver/bus、LSI reset、brownout/thermal/EMI。
+它运行 ARMCC5 编译的 production C，用于验证 decision、event sequencing、injected races、A/B power-cut model 与 stress invariants；静态 verifier、target build、map/callgraph、HEX 和接口矩阵提供其他相互独立的证据维度。
 
-### “为什么不是量产级？”
+### “如何说明 Release Baseline 的工程成熟度？”
 
-没有approved production NTC/AFE artifacts、real board validation、independent safety/hardware review、compliance/reliability process。项目目标是学习完整software engineering loop，不冒充认证。
+回答完整功能集合、单写者 ownership、身份绑定竞态防护、失败语义、可重复回归、资源约束、工具链与工件一致性；不使用模糊的“功能很多”替代可检查证据。
 
 ### “哪些参数是假设值？”
 
-4 mΩ、current polarity、NTC B3950 table、OV/UV/OCD/SCD、software thresholds/temp、health/IWDG nominal、SOC/balance policy属于SIM baseline；MCU/AFE/pins/clock/13S是source-fixed target但仍需board identity核对。
+4 mΩ、current polarity、NTC B3950 table、OV/UV/OCD/SCD、software thresholds/temp、health/IWDG nominal、SOC/balance policy 属于 `SIM-HW-POLICY-V1`；MCU/AFE/pins/clock/13S 属于 source-fixed target identity。
 
-### “明天拿到板先做什么？”
+### “如何复现硬件接口集成？”
 
-先做schematic/BOM/visual/power safety与低能量MCU bring-up；随后UART、software-I2C waveform、AFE communication。不会直接连接高能量pack测试FET/short-circuit。
+按 Hardware Integration Guide 绑定 schematic/BOM/board revision，从 visual/power safety、MCU、UART、software-I2C waveform、AFE communication 逐级记录；高能量 FET/SCD 项使用受控 fixture 和明确 stop condition。
 
 ### “这个项目你最能证明的亮点？”
 
@@ -197,7 +199,7 @@ diagnostic counters/retry，SIM policy下不改变local protection；但physical
 
 ### “你会怎么改进？”
 
-真实板上补heap minimum/stack high-water、trace timing、I2C/ALERT/FET/CAN/Flash evidence；把approved artifacts生成真实policy；加入CI环境或可替代target runner；完成独立review。不会先大重构frozen safety architecture。
+改进遵循受控演进：持续收集 heap minimum/stack high-water、trace timing 以及 I2C/ALERT/FET/CAN/Flash 接口记录，把 approved artifacts 绑定为可追溯 policy，并扩展 CI 或等价 target runner；frozen safety architecture 保持不变。
 
 ## 11. 自测清单
 

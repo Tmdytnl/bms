@@ -633,7 +633,7 @@ stdbool.h
 #define BMS_PARAM_VERSION                 1U
 ```
 
-> 上述阈值是“软件工程默认配置”，不是对所有电池包都正确。真实硬件必须按电芯、MOS、Rsense、线束、负载重新定标。
+> 上述阈值属于受控产品 profile；电芯、MOS、Rsense、线束与负载 identity 必须与 profile revision 一致。
 
 ---
 
@@ -652,7 +652,7 @@ typedef enum
 } BMS_State_t;
 ```
 
-V1 暂不实现真实深度休眠状态，避免把 TS1/SHIP/系统唤醒硬件复杂化。
+V1 采用持续监测的运行策略，不进入 TS1/SHIP 深度休眠路径。
 
 V1.1 可增加：
 
@@ -811,7 +811,7 @@ xSemaphoreGive(xDataMutex);
 |---|---:|---|---|
 | ProtectTask | 5 | AFE ALERT Semaphore | SYS_STAT、CC_READY、故障、恢复 |
 | SampleTask | 4 | 250 ms | Cell/BAT/TS 采样 |
-| StateTask | 3 | 100 ms | 状态机、软件保护、监督、IWDG |
+| StateTask | 3 | 最大有界等待 100 ms；urgent notification 可提前唤醒 | 状态机、软件保护、监督、IWDG |
 | SOCTask | 3 | CC Queue + 1s timeout | SOC |
 | BalanceTask | 2 | 1 s | 被动均衡 |
 | CANTxTask | 2 | TX Queue + 周期 | CAN 唯一发送者 |
@@ -1833,7 +1833,8 @@ recover -> STANDBY
 
 # 25. 软件保护
 
-StateTask 每 100ms 对本地 snapshot 做软件保护。
+StateTask 以 100 ms 作为最大有界等待，并可由安全事件的 urgent notification
+提前唤醒；每次基于本地 snapshot 执行软件保护。
 
 ## 25.1 单体 OV
 
@@ -3381,7 +3382,7 @@ if (counter >= threshold_count)
     fault();
 ```
 
-StateTask 100ms：
+StateTask 的 nominal 100 ms 计数窗口：
 
 ```text
 1s = 10 counts
@@ -3682,7 +3683,7 @@ typedef struct
 
 # 63. 建议测试矩阵
 
-本文档不提供虚构的“实测结果”，只定义应执行的验证。
+本矩阵定义验证方法、PASS 条件与 artifact identity。
 
 ## 63.1 CRC
 

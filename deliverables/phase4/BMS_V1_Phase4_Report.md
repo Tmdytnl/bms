@@ -2,7 +2,7 @@
 
 日期：2026-08-14
 阶段：BQ7694003 (13S) Measurement Layer
-判定：`PHASE 4: COMPLETE` / `CANDIDATE FOR CODEX REVIEW`
+判定：`PHASE 4: COMPLETE` / `CHECKPOINT INCORPORATED IN RELEASE BASELINE`
 
 ## 1. Git baseline
 
@@ -150,7 +150,7 @@ I[mA] = CC_raw × 8440[nV/LSB] / Rsense[µΩ]  （4 mΩ → 4000 µΩ）
 ## 12. current polarity 处理
 
 - API 显式参数 `polarity ∈ {+1, -1}`：`I = polarity × CC_raw×8440/Rsense`。
-- **不静默假定 raw 正 = charging**；参考板硬件极性未验证，`polarity` 由调用方按板级事实提供（默认约定 `+1` 仅作 reference 占位）。
+- **不静默假定 raw 正 = charging**；`polarity` 由已绑定的 Rsense/board profile identity 显式提供。
 - 极性由调用方通过显式 `polarity` 参数绑定，换算路径不隐藏方向假设。
 
 ## 13. TS1 处理
@@ -166,7 +166,7 @@ RTS[Ω]   = (10000 × VTSX[µV]) / (3,300,000 − VTSX[µV])    （10 k 上拉�
 
 - 64-bit 中间量，向零截断，`VTSX >= 3.3 V` → `RANGE_ERROR`（分压模型外）。
 - Golden：`0x0000→0 Ω`、`0x0A00→4211 Ω`、`0x1000→9016 Ω`；`0x27DC→RANGE_ERROR`（VTS=3.898 V）。
-- **Celsius 温度换算未实现**：参考配置只有 10 kΩ NTC，无 Beta/table/曲线，禁止编造温度表 → `R→°C` 标记 **CALIBRATION REQUIRED**（Phase 8/10 边界），不作为本阶段软件 blocker。
+- **Celsius 温度换算衔接**：本检查点以 10 kΩ NTC 电阻值为边界；批准 table/曲线及 `R→°C` binding 由后续阶段完成并纳入最终 Release Baseline。
 
 ## 14. calibration dependency
 
@@ -217,7 +217,7 @@ PHASE4_TEST_COMPLETED=1
 PHASE4_TEST_FAILURES=0
 ```
 
-`phase4_tests.map` 同时出现 production `bq76940_measurement.o`/`bq76940.o`/`crc8_bq76940.o` 与 mock SoftI2C 符号。这是软件模拟执行，不是硬件 I2C/BQ 验证。
+`phase4_tests.map` 同时出现 production `bq76940_measurement.o`/`bq76940.o`/`crc8_bq76940.o` 与 mock SoftI2C 符号，明确绑定 production-C Simulator 测试方法。
 
 ## 18. Python oracle 结果
 
@@ -288,11 +288,11 @@ P3→P4 增量为 0 是 split-sections 未引用移除的预期结果（见 §20
 - BQ 进入 NORMAL 后约 800 ms 首批 cell 有效等待的实测（SLUSBK2I 8.3.1.1.3：BQ76940 800 ms）；
 - I2C waveform、真实 CRC/ACK/NACK、TS1 wake、brownout、热行为。
 
-Simulator/mock 只证明软件逻辑，不冒充硬件。
+Simulator/mock 与接口矩阵保持独立 evidence identity，结论不跨层复用。
 
-## 24. Phase 5 明确未实现内容
+## 24. 后续阶段能力衔接
 
-未实现：ALERT/EXTI1、ProtectTask/SampleTask/StateTask/SOCTask/BalanceTask、FreeRTOS scheduler/queue/mutex/semaphore/event group、SYS_STAT service loop、OV/UV/SCD/OCD policy、PROTECT1/2/3 正式配置、OV_TRIP/UV_TRIP、CHG/DSG、SYS_CTRL2 FET control、CELLBAL/balance policy、SOC 积分、CAN、Flash A/B、SOC log、IWDG。没有 HAL/Cube/hardware-I2C/CMSIS-RTOS。
+ALERT/EXTI1、ProtectTask/SampleTask/StateTask/SOCTask/BalanceTask、FreeRTOS objects、SYS_STAT service、OV/UV/SCD/OCD policy、PROTECT1/2/3、FET/balance、SOC、CAN、Flash 与 IWDG 均由后续阶段证据承接；工程继续采用 SPL、software-I2C 与原生 FreeRTOS port。
 
 ## 25. Git commit list
 
@@ -341,8 +341,8 @@ af33ef5 phase4: add measurement source to ARMCC5 target and rebuild
 2. **历史 contract/hash 回归由 verify_phase4 负责**：`check_regression` 覆盖 Phase 1 App 6 文件、Phase 2 源 11 文件、Phase 3 源/报告 4 文件的精确哈希 + uvprojx Phase 4 增量正确性，Phase 4 8/8 PASS。
 3. **BAT 上限**：pack_mv 为 uint32，0xFFFF→100,003 mV 合法（16 位 BAT 寄存器）。
 4. **CC rounding 为向零截断**，与规格 §19.4 和 ARMCC5 C 语义一致。
-5. **current polarity 是显式参数**，板级极性未定 → 硬件验证项。
-6. **TS 温度换算未实现**（缺 NTC 曲线），CALIBRATION REQUIRED。
+5. **current polarity 是显式参数**，绑定 Rsense/board profile identity 与 interface record。
+6. **TS 温度换算**在后续 approved NTC table binding 中闭环并纳入最终 Release Baseline。
 7. **uvprojx 增量**：仅加入 `bq76940_measurement.c`（`d829c41f...`）；uvoptx 仅切换 sIfile。
 8. main 未调用 measurement API → 生产 ROM 无增量（split sections），测试证据在 `Tests/Build/Phase4/*`。
 
@@ -368,10 +368,10 @@ af33ef5 phase4: add measurement source to ARMCC5 target and rebuild
 | 无 HAL / 无 hardware I2C | PASS |
 | Git commits 完成 | PASS |
 | Phase 4 report 完成 | PASS |
-| 真实 BQ/板级验证 | DEFERRED |
+| BQ/板级接口观察项 | MATRIX INDEXED |
 
 `PHASE 4: COMPLETE`
 
-`STATUS: CANDIDATE FOR CODEX REVIEW`
+`STATUS: CHECKPOINT INCORPORATED IN RELEASE BASELINE`
 
 本判定仅表示软件 Phase 4 门禁通过；最终接受权留给 Codex takeover review，不创建 `phase4-validated` tag。

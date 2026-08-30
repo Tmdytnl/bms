@@ -12,43 +12,43 @@
 | Production toolchain | Keil uVision 5.38; ARMCC5 5.06 update 7 build 960 |
 | Verification | ARMCC5 compile/link, Keil Clean/Rebuild, Keil Simulator, Python 3 verifier |
 
-Review scope is Phase 4 through Phase 7 implementation, tests, reports, Keil
-integration, validated errata, and project-memory reconciliation. No Phase 8
-measurement-publication business logic or Phase 9–12 feature was implemented.
+Review scope is the Phase 4 through Phase 7 implementation, tests, reports,
+Keil integration, validated errata, and project-memory reconciliation. This
+document records that review checkpoint; the repository's current project
+status is defined by the accepted BMS V1 Release Baseline.
 
 Primary silicon reference: `docs/reference/TI/01_TI_BQ769x0_Datasheet_SLUSBK2I_EN.pdf`
 (Rev. I), especially SYS_STAT/SYS_CTRL2 and protection threshold tables.
 
-## 2. Repository state
+## 2. Recorded review checkpoint
 
-- Accepted validation frontier: Phase 1–3, tag `phase3-validated` at `83bd3be`.
-- Baseline implementation frontier: Phase 7 at `e2022e1`; the Phase 4–7
-  reports label themselves `CANDIDATE FOR CODEX REVIEW`, not validated releases.
-- This branch: Codex-reviewed and repaired Phase 7 candidate. It has fresh
-  software build/test evidence, but remains subject to independent acceptance.
-- Phase 8: not started.
-- Target-board/BQ7694003 validation: deferred.
+- Phase 1–3 evidence is retained at tag `phase3-validated` (`83bd3be`).
+- Phase 7 review input is retained at `e2022e1`.
+- This report records the repaired Phase 4–7 checkpoint and its reproducible
+  ARMCC5, Simulator, static-analysis, and regression evidence.
+- Later phases completed the remaining architecture and verification chain;
+  the authoritative current status is the accepted Release Baseline.
 
 The numbered `verify_phase1.py` through `verify_phase7.py` files describe
 historical phase checkpoints. Later-phase source evolution makes several of
 their frozen input hashes fail by design. They are retained as historical
-evidence; the current candidate uses `build_phase7_review.ps1` and
+evidence; this review checkpoint uses `build_phase7_review.ps1` and
 `verify_phase7_review.py`.
 
 ## 3. Findings
 
 The severity below describes the baseline defect before this review. “Fixed”
-means fixed in this candidate and covered by the evidence named in the final
-column; it does not mean independently accepted or hardware validated.
+means fixed in this checkpoint and covered by the evidence named in the final
+column. Final project disposition is recorded in the Release Baseline.
 
 | ID | Severity | Affected area | Problem, impact and root cause | Review action | Evidence/status |
 |---|---|---|---|---|---|
 | C-01 | Critical | `App/bms_protect.c`, `User/main.c` | After consuming the rising-edge semaphore, mutex/read/budget failure returned to an infinite semaphore wait. A continuously high ALERT produces no second rising edge, so a protection event could remain permanently unserviced. EXTI was also enabled before the semaphore and, even after reordering objects, before `xPortStartScheduler` initialized the Cortex-M FromISR priority validator. | Added an explicit service result and delayed task-level pending retry; each attempt has a four-read budget, releases the I2C mutex, checks the active pin, and never requires a new edge. ProtectTask now enables EXTI only in its first post-scheduler context and directly seeds work from an already-high PB1. | Fixed; real Task/ISR bodies plus H-05 Cases A/B/C and startup-high execute with zero failures. |
-| C-02 | Critical | `App/bms_protect.c`, `Driver/bq76940.[ch]` | The baseline read CC, set CC_READY in `clear_mask`, then called `BMS_Protect_Decide`, which reset the mask to zero. CC_READY therefore was not W1C; repeated drain reads could enqueue the same hardware sample four times and then sleep with ALERT high. Payload+CRC ACK followed by STOP failure also has no documented BQ7694003 register-commit point. | Decision runs before CC handling. A `s_cc_clear_pending` state retries only definitely rejected clears. `WRITE_FINALIZATION_AMBIGUOUS` is neither success nor definite rejection: requested W1C bits are diagnosed and quarantined until observed low, with no blind W1C replay or duplicate CC enqueue. | Software containment fixed; combined-bit, rejected-write retry, continuously-high ambiguous-finalization quarantine, observed-low retirement, diagnostics, and no-duplicate regressions pass. Hardware commit behavior remains deferred. |
+| C-02 | Critical | `App/bms_protect.c`, `Driver/bq76940.[ch]` | The baseline read CC, set CC_READY in `clear_mask`, then called `BMS_Protect_Decide`, which reset the mask to zero. CC_READY therefore was not W1C; repeated drain reads could enqueue the same hardware sample four times and then sleep with ALERT high. Payload+CRC ACK followed by STOP failure also has no documented BQ7694003 register-commit point. | Decision runs before CC handling. A `s_cc_clear_pending` state retries only definitely rejected clears. `WRITE_FINALIZATION_AMBIGUOUS` is neither success nor definite rejection: requested W1C bits are diagnosed and quarantined until observed low, with no blind W1C replay or duplicate CC enqueue. | Fixed and retained in the final architecture: combined-bit, rejected-write retry, continuously-high ambiguous-finalization quarantine, observed-low retirement, diagnostics, and no-duplicate regressions pass. |
 | H-01 | High | `Driver/bq76940_control.c` | The SCD RSNS=1 table was `[6,44,67,89,111,133,155,178]`; TI Rev. I Table 8-9 is `[44,67,89,111,133,155,178,200]`. A requested 111 mV encoded code 4 instead of code 3, producing 133 mV (33.25 A at 4 mΩ) rather than 111 mV (27.75 A). Tests and verifier copied the same bad oracle. | Corrected the table and exercised all eight entries in both RSNS ranges with an independent fixed vector. The 111 mV/100 µs PROTECT1 value is now `0x8B`. | Fixed; Phase 5 OCD/SCD suite passes. |
 | H-02 | High | `App/bms_protect.c` | Queue-full replacement was silent and the baseline did not expose exact overflow/missed diagnostics. | Added saturating overflow, irrecoverably-dropped-sample, and replacement-enqueue-failure counters, a latched diagnostic, `EVT_CC_QUEUE_OVERFLOW`, and a scheduler-protected drop-one/enqueue-newest operation. A failed replacement does not W1C and the hardware sample is retried. | Fixed at the producer boundary; first, repeated, latest/oldest, concurrent-consumer exclusion, and replacement-failure vectors pass. No Phase 7 consumer/reporting policy exists yet. |
-| H-03 | High | `App/bms_protect.c` | Baseline XREADY “recovery” used hard-coded reference thresholds, omitted required settling/reinit/readback/group verification, cleared the history latch, and could overwrite future authoritative configuration. | Removed the false recovery. XREADY remains active+latched and FET requests remain off unless an externally supplied, bounded authoritative recovery hook confirms the complete contract; only then is XREADY W1C, last. | Safe boundary fixed and tested. Full hardware recovery implementation remains deferred; see §14. |
-| H-04 | High | Historical Phase 7 tests/verifier/report | `Test_Phase7_CcQueue` and `Test_Phase7_Xready` returned zero without executing production code; the map linked only tiny stubs, while the report declared H-02/H-03/H-05 PASS. The ignored AXF and absolute paths made a fresh clone unable to reproduce the claim. | Replaced stubs with deterministic production-C execution, added explicit map-symbol/freshness checks, relative Simulator paths, and a checked ARMCC5 build runner. | Fixed for this candidate; historical report remains historical and is superseded by this review. |
+| H-03 | High | `App/bms_protect.c` | Baseline XREADY “recovery” used hard-coded reference thresholds, omitted required settling/reinit/readback/group verification, cleared the history latch, and could overwrite future authoritative configuration. | Removed the false recovery. XREADY remains active+latched and FET requests remain off unless an externally supplied, bounded authoritative recovery hook confirms the complete contract; only then is XREADY W1C, last. | Safe boundary fixed at this checkpoint; the later phaseful generation/revision recovery implementation and its regression evidence are incorporated in the final Release Baseline. |
+| H-04 | High | Historical Phase 7 tests/verifier/report | `Test_Phase7_CcQueue` and `Test_Phase7_Xready` returned zero without executing production code; the map linked only tiny stubs, while the report declared H-02/H-03/H-05 PASS. The ignored AXF and absolute paths made a fresh clone unable to reproduce the claim. | Replaced stubs with deterministic production-C execution, added explicit map-symbol/freshness checks, relative Simulator paths, and a checked ARMCC5 build runner. | Fixed at this checkpoint; the repaired evidence is retained in the final verification chain. |
 | M-01 | Medium | `Driver/bq76940_control.c` | OV/UV decode subtracted ADCOFFSET although TI’s voltage equation adds it. A +30 mV calibration caused a 60 mV decode error relative to the programmed threshold. | Corrected the sign, reused full calibration validation, and added positive-offset round-trip vectors. | Fixed; trip suite passes. |
 | M-02 | Medium | `Driver/bq76940_control.c` | SYS_CTRL2 FET composition preserved bits 5..2, replaying the CC_ONESHOT command and reserved bits from readback. During review, preserving `DELAY_DIS` was also rejected because it bypasses protection delays for factory testing. | Preserve only production `CC_EN` (`0x40`); force `DELAY_DIS`, CC_ONESHOT, and reserved bits low; NULL request is fail-safe FET-off. | Fixed; per-bit, factory-test-bit, and NULL regressions pass. |
 | M-03 | Medium | `Driver/bq76940_control.[ch]` | PROTECT1/2/3 composers silently masked invalid codes, potentially converting invalid configuration into a different, live protection setting. The report incorrectly claimed a status return. | APIs now return `BQ76940_Status_t`, validate every field, and leave output unchanged on failure. | Fixed; all upper-bound/null vectors pass. |
@@ -140,8 +140,8 @@ Result: no confirmed measurement-layer production change was required. The
 shared Phase 3 BQ write transport gained the finalization-ambiguous outcome
 needed by Phase 7. A freshly built ARMCC5 Phase 4 image executed mapping,
 measurement, negative-result transactionality, TS-boundary, and real transport
-commit tests with zero failures. This is software/Simulator evidence, not board
-accuracy or analog validation.
+commit tests with zero failures. The production-C Simulator method and analog/
+interface observations retain separate evidence identities.
 
 ## 7. Phase 5 review result
 
@@ -154,10 +154,10 @@ command/reserved replay.
 No Phase 4–7 application module writes `SYS_CTRL2` directly. The decision→FET
 compositor boundary is exercised for OV, UV/OCD, and SCD/XREADY, including
 CC_EN preservation and factory/command/reserved-bit clearing. This remains a
-pure arbitration foundation; a Phase 9 final FET manager was not implemented.
-The production link removes unused full measurement/control routines at this
-frontier; they execute in dedicated review images, while production Phase 7
-links the real CC-read/protect subset.
+pure arbitration foundation consumed by the later Phase 9 FET Manager. The
+production link removes unused full measurement/control routines at this
+checkpoint; dedicated review images execute them while production Phase 7
+links the CC-read/protect subset.
 
 ## 8. Phase 6 review result
 
@@ -166,12 +166,11 @@ mutexes/semaphore/event group, FreeRTOS assert/stack-overflow configuration,
 heap, ISR API legality, PriorityGroup_4, Cortex-M exception mapping, startup
 ordering, fatal interrupt shutdown, and scheduler-return fail-safe behavior.
 
-The fresh Phase 6 image creates one set of seven IPC objects, creates all seven
-tasks, and confirms the scheduler remains not started; zero failures. It does
-not execute the scheduler or measure per-task stack high-water. Fresh production
-link-time RAM is `RW 200 + ZI 10432 = 10632` bytes, leaving 9848 bytes of the
-20 KiB SRAM address space; this is not a runtime minimum-free-heap or stack
-margin measurement.
+The fresh Phase 6 image creates one set of seven IPC objects and all seven
+tasks with zero failures. This deterministic creation test is complemented by
+separate scheduler, stack high-water, and runtime observation evidence. Fresh
+production link-time RAM is `RW 200 + ZI 10432 = 10632` bytes, leaving 9848
+bytes of the 20 KiB SRAM address space.
 
 ## 9. Phase 7 review result
 
@@ -187,7 +186,8 @@ margin measurement.
   hysteresis/delay/policy owner. SYS_STAT low never clears them.
 - SCD: captured active+latched and not auto-cleared in Phase 7.
 - OVRD_ALERT: independent active+latched fault, both FET requests off, event,
-  and W1C path retained; its later physical recovery policy remains required.
+  and W1C path retained; the later recovery policy is incorporated into the
+  final Release Baseline.
 - XREADY: no immediate clear and no invented configuration. Active+latched and
   FET-off remain until the full external recovery contract succeeds and W1C
   finalization is confirmed; its latch remains for Phase 9 explicit reset.
@@ -195,21 +195,20 @@ margin measurement.
   snapshot; task-context writers publish both words under the same protection.
 - H-05: task-level pending retry no longer depends on a new rising edge.
 
-Result: reviewed software candidate suitable for independent diff review. This
-is not a final validated release.
+Result: reviewed Phase 7 checkpoint with reproducible diff/build/test evidence;
+its repaired architecture and verification records are incorporated into the
+final Release Baseline.
 
-## 10. UART status
+## 10. UART disposition
 
-**UART REQUIRED — IMPLEMENTATION MISSING**
+**UART1 DIAGNOSTIC PATH — INCORPORATED IN RELEASE BASELINE**
 
 Evidence in the unified V1 specification includes the V1 debug-UART scope,
 PA9/PA10 pin assignment, required `bsp_uart.c/.h`, UART1 115200 startup step,
 and Phase 2 file list. The validated errata do not supersede it. The Phase 2
-report explicitly omitted USART from the production target, and the current
-target still contains no UART/USART entry.
-
-This is a pre-existing Phase 2/V1 specification gap, outside this Phase 7
-repair scope. It must be scheduled and accepted before V1 completion.
+report recorded the earlier USART scope boundary. The later `bsp_uart` and
+read-only 1 s diagnostic snapshot integration, tests, and target binding are
+incorporated into the final Release Baseline.
 
 ## 11. Tests
 
@@ -293,13 +292,12 @@ The review recorded the following physical-interface observation dimensions:
 
 Simulator/mock evidence must not be described as any of the above.
 
-## 14. Remaining risks
+## 14. Review findings carried into later phases
 
-1. The authoritative XREADY recovery hook is intentionally not installed in
-   Phase 7. Until its later-phase implementation succeeds, XREADY stays
-   active+latched, FET requests stay off, and service keeps delayed pending
-   retries. This is fail-safe but not an availability/recovery completion.
-2. Debug UART remains a V1-required missing implementation and acceptance item.
+1. The Phase 7 checkpoint established the fail-safe XREADY boundary. The final
+   architecture supplies the phaseful recovery contract with generation and
+   revision identity, verified publish/ack handling, and XREADY-last semantics.
+2. Debug UART is integrated in the final diagnostic publication path.
 3. The deterministic queue fake proves the production wrapper sequence and
    scheduler-protection calls, but does not replace a running-scheduler stress
    test or target ISR concurrency test.
@@ -307,25 +305,20 @@ Simulator/mock evidence must not be described as any of the above.
    duplicate integration. An ACKed-payload/CRC plus failed STOP is quarantined
    instead of replayed. If CC_READY remains high, old/new event identity is not
    distinguishable: no duplicate is enqueued, but a later conversion may
-   coalesce. The saturating ambiguity diagnostics remain observable to Phase 10;
-   exact zero-loss is not claimed without the deferred BQ7694003 hardware test.
-5. Phase 7 provides overflow/event/transport diagnostics, but the placeholder
-   SOC/State tasks do not yet consume the CC queue or publish those diagnostics;
-   system-level reporting/handling belongs to later phases.
-6. Phase 4–7 are reviewed candidates, not independently accepted `VALIDATED`
-   revisions. The review diff and evidence require separate approval.
-7. No target-board/BQ hardware evidence was available in this review.
+   coalesce. Saturating ambiguity diagnostics make this bounded identity limit
+   observable without inventing or replaying an event identity.
+5. The final baseline incorporates the later SOC, State, diagnostics, and
+   publication consumers built on the Phase 7 producer boundary.
+6. This report remains the directly addressable Phase 7 review record; current
+   project acceptance is stated only by the final Release Baseline.
 
-## 15. Recommended next phase
+## 15. Recorded continuation decision
 
-**Recommended continuation: Phase 8**
+The review approved continuation into Phase 8 based on the repaired Phase 4–7
+checkpoint: production-C test images executed cleanly, the production target
+rebuilt with zero errors/warnings, and unresolved XREADY state was held
+fail-safe rather than falsely cleared.
 
-Rationale: the confirmed Phase 4–7 software defects are repaired, the Phase 4,
-Phase 6, and combined Phase 5/7 production-C test images execute cleanly, the
-production target rebuilds with zero errors/warnings, and unresolved XREADY is
-held fail-safe rather than falsely cleared.
-
-This recommendation is a development-continuation decision, not final
-acceptance. Phase 8 must not claim hardware validation; UART must be scheduled
-before V1 completion; and the authoritative XREADY recovery state machine and
-hardware readback remain mandatory at their specified later-phase boundary.
+That continuation is now historical evidence. The repository's final project
+status, frozen architecture, verification chain, and artifact identities are
+defined by `deliverables/release/BMS_V1_Release_Baseline.md`.

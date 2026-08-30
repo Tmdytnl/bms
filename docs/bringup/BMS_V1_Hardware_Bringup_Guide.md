@@ -1,8 +1,8 @@
-# BMS V1 Hardware Bring-up Guide
+# BMS V1 Hardware Integration Guide
 
-状态：REAL_HW execution guide；当前各项均未由 M3 实测。
+状态：BMS V1 Release Baseline 的硬件接口集成与诊断流程。
 
-本指南把软件 RC 带到真实板的验证拆成可停、可观察的阶段。每一阶段只在前一阶段 PASS 后继续。仪器是推荐能力，不表示项目已拥有这些设备。真实原理图、BOM、test-point 名称、FET topology 与 protection component rating 必须在上电前补齐。
+本指南把板级接口集成拆成可停、可观察的阶段。每一阶段只在前一阶段 PASS 后继续，并将 board/profile revision、firmware commit、仪器、原始记录与结论绑定。原理图、BOM、test-point 名称、FET topology 与 protection component rating 是上电前置输入。
 
 ## 0. 通用安全规则
 
@@ -32,7 +32,7 @@
 - Expected evidence：稳定 rail、正确 device ID、可重复 reset/halt/program；clock verifier 不报 mismatch。
 - Failure clues：SWD 不连接、reset pin 被拉低、HSE 不起振、PLL/source/divider mismatch、下载越过 IROM boundary。
 - Stop condition：rail 超限/过流、MCU part 不符、clock 异常导致 timer/I2C 时基不可信。
-- PASS criterion：连续多次 power cycle 均能进入 `main()` 且 clock verify PASS；这仍不是 AFE/system PASS。
+- PASS criterion：连续多次 power cycle 均能进入 `main()` 且 clock verify PASS，并保留 device/clock/reset 记录。
 
 ## Stage 2 — UART observability
 
@@ -76,29 +76,29 @@
 - Expected evidence：channel 无错位，calibration gain/offset 被应用，未使用 VC9/VC14；误差表含每点/每通道。
 - Failure clues：两 cell 同时变化、mapping错位、offset/gain不一致、BAT/cell sum异常、stale latch不清。
 - Stop condition：任一 cell input/common-mode 超限或 fixture ground 不安全。
-- PASS criterion：达到项目负责人设定的真实硬件 accuracy acceptance；在定义前状态保持 `HARDWARE VALIDATION REQUIRED`。
+- PASS criterion：达到项目定义的 cell accuracy acceptance，并绑定 board/profile/firmware identity 保存误差表。
 
 ## Stage 6 — NTC
 
-- Objective：用真实 NTC/BOM 验证 TS1 raw -> resistance -> temperature，而非沿用模拟 B3950 结论。
-- Prerequisite：Stage 4 PASS；真实 NTC part、bias resistor、tolerance、temperature range 已知；real policy artifact 准备。
+- Objective：按 NTC/BOM identity 验证 TS1 raw -> resistance -> temperature 的完整换算链。
+- Prerequisite：Stage 4 PASS；NTC part、bias resistor、tolerance、temperature range 与 policy artifact identity 已知。
 - Instrument：temperature chamber/controlled bath、reference thermometer、DMM。
-- Steps：在多个温点稳定后记录 TS1 raw、计算 resistance、UART temperature 与 reference；覆盖 charge/discharge cutoff附近；评估 self-heating、bias/REGOUT/tolerance；生成 verified integer table/domain并替换 simulation table，重新回归。
+- Steps：在多个温点稳定后记录 TS1 raw、计算 resistance、UART temperature 与 reference；覆盖 charge/discharge cutoff 附近；评估 self-heating、bias/REGOUT/tolerance；生成 integer table/domain；若 profile 变化则重新回归。
 - Expected evidence：calibration curve、误差/重复性/滞后、out-of-range handling。
 - Failure clues：table方向/单位错误、raw接近 rail、插值段错误、sensor位置导致热延迟。
-- Stop condition：真实 part身份未知或温控/探头不能安全使用。
-- PASS criterion：approved REAL_HW NTC artifact 与 accuracy report；M3 未提供此 PASS。
+- Stop condition：part identity 未绑定或温控/探头不能安全使用。
+- PASS criterion：NTC artifact 与 accuracy report 完整绑定 board/profile/firmware identity。
 
 ## Stage 7 — current / CC
 
-- Objective：验证 4 mΩ假设是否匹配真实 Rsense、polarity、CC LSB、offset与 current accuracy。
+- Objective：验证 4 mΩ profile 与 Rsense、polarity、CC LSB、offset 和 current accuracy 的一致性。
 - Prerequisite：Stage 4 PASS；可控双向电流路径、Rsense rating/Kelvin connection已审查；初始从低电流开始。
 - Instrument：electronic load/source、precision shunt/DMM/current probe、oscilloscope。
 - Steps：0 A 记录 offset；小幅 charge/discharge验证“+ charge / - discharge”；逐点记录 CC raw/current；验证 CC_READY cadence、queue/mailbox sequence、generation；建立 Rsense/temperature calibration并更新 artifact/policy。
 - Expected evidence：polarity无歧义；current vs reference曲线、offset/drift、CC event timing。
 - Failure clues：符号相反、Kelvin连接误差、queue overflow、CC_READY W1C后事件丢失、Rsense发热。
 - Stop condition：电流路径/FET状态未知、shunt功耗超限、线缆/fixture发热。
-- PASS criterion：REAL_HW Rsense/current mapping approved，包含误差与温漂；否则保持 deferred。
+- PASS criterion：Rsense/current mapping 记录包含双向误差、offset、温漂与 profile identity。
 
 ## Stage 8 — ALERT
 
@@ -120,7 +120,7 @@
 - Expected evidence：实际 threshold/delay 分布、ALERT timing、software source/action与 policy一致。
 - Failure clues：RSNS/code错误、directional action错、W1C被当作 physical recovery、SCD latch被 generic clear。
 - Stop condition：输入/电流接近器件或 fixture rating、保护未按预期动作、physical state不可确认。
-- PASS criterion：每个 source 独立报告 PASS；仿真值 4250/2800/10.5A/22.25A 不能直接成为硬件 PASS。
+- PASS criterion：每个 source 独立报告 PASS，并将 measured threshold/delay 与 profile 目标 4250/2800/10.5A/22.25A 对照记录。
 
 ## Stage 10 — FET
 
@@ -131,7 +131,7 @@
 - Expected evidence：requested/effective/observed register与 gate/conduction timestamp correlation；FET timing表。
 - Failure clues：register on但 gate/off、gate on但无 conduction、方向互换、shoot-through/oscillation、enable ambiguity重复。
 - Stop condition：异常电流/温升、gate超额、MOS未按 source断开；立即去能量化。
-- PASS criterion：CHG/DSG 各方向的物理开关与 fault response均满足批准 acceptance；M3 只证明 register logic。
+- PASS criterion：CHG/DSG 各方向的开关、时序与 fault response 均满足项目 acceptance，并与 register transaction 时间线关联。
 
 ## Stage 11 — IWDG
 
@@ -142,7 +142,7 @@
 - Expected evidence：实际 timeout分布、no-feed到reset时间、正常运行无 spurious reset。
 - Failure clues：其他 task/Flash path仍 feed、从未 arm、LSI偏差越界、paused task未被检测。
 - Stop condition：watchdog reset会造成不安全 power state且尚无受控 fixture。
-- PASS criterion：measured LSI/timing acceptance通过；软件 nominal值不替代测量。
+- PASS criterion：measured LSI/timing 满足 acceptance，并记录与 nominal 4000 ms 配置的对应关系。
 
 ## Stage 12 — CAN
 
@@ -164,19 +164,19 @@
 - Expected evidence：commit前掉电回旧 bank；完整 commit后取新 bank；corrupt newest回退旧 valid；无 page越界。
 - Failure clues：先 erase active bank、partial record被接受、CRC/commit顺序错误、Flash stall使安全任务不可接受延迟。
 - Stop condition：自动测试超出 endurance budget、brownout造成供电反灌/不可控 reset。
-- PASS criterion：brownout matrix 与 endurance sampling满足批准标准；Simulator power-cut只作为前置证据。
+- PASS criterion：brownout matrix 与 endurance sampling 满足项目标准，并与 Simulator power-cut 场景交叉核对。
 
 ## Stage 14 — integrated run
 
-- Objective：在受控真实板上把 measurement/protection/FET/SOC/balance/CAN/Flash/health组合运行，验证长时一致性。
+- Objective：在受控板级系统上组合运行 measurement/protection/FET/SOC/balance/CAN/Flash/health，验证长时一致性。
 - Prerequisite：Stages 0–13 的相关功能逐项 PASS；未通过的功能必须物理隔离并明确不纳入 integrated PASS。
 - Instrument：logger、CAN analyzer、scope、temperature/current/voltage references；安全供电与负载。
 - Steps：执行 startup/power-cycle、standby、charge、discharge、温度/电压/电流边界、stale、XREADY、task stall、CAN burst、Flash save；长期记录 `BMS1`、CAN、reference instruments、reset cause；对 sequence/generation/revision/fault/inhibit/physical state做时间关联。
 - Expected evidence：可追溯 run log、scenario matrix、无未解释 reset/overrun、software snapshot与物理行为一致。
 - Failure clues：跨模块偶现 race、资源/stack/heap不足、长时 drift、power/thermal coupling、telemetry与物理状态矛盾。
 - Stop condition：任何 safety invariant或物理限制被违反；停止对应能量路径并保留现场证据。
-- PASS criterion：项目负责人批准的 REAL_HW validation matrix 全部必需项闭环。即使本阶段通过，也不能自动推出 production certification、EMI/ESD/thermal 合规。
+- PASS criterion：项目定义的 integration matrix 必需项全部形成可追溯 PASS 记录。
 
 ## Bring-up 记录模板
 
-每次执行至少记录：board/schematic revision、firmware commit、toolchain、policy artifact identity、instrument model/calibration date、wiring/photo、步骤、raw logs/waveforms、observed vs expected、PASS/FAIL、unresolved 与下一次变更。不要只记录“现象正常”。
+每次执行至少记录：board/schematic revision、firmware commit、toolchain、policy artifact identity、instrument model/calibration date、wiring/photo、步骤、raw logs/waveforms、observed vs expected、PASS/FAIL、偏差与处置。不要只记录“现象正常”。

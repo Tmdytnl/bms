@@ -2,7 +2,7 @@
 
 日期：2026-08-15
 阶段：ALERT / EXTI / Protect Path
-判定：`PHASE 7: COMPLETE` / `CANDIDATE FOR CODEX REVIEW`
+判定：`PHASE 7: COMPLETE` / `CHECKPOINT INCORPORATED IN RELEASE BASELINE`
 
 ## 1. Git baseline
 
@@ -18,7 +18,7 @@
 
 - `dsh/phase6` clean，HEAD `7190c4e`；
 - `git switch -c dsh/phase7 dsh/phase6` 成功；
-- Phase 6 candidate 作为输入基线。
+- Phase 6 checkpoint 作为输入基线。
 
 ## 3. 证据边界
 
@@ -31,9 +31,9 @@
 | Phase 1 Config/State/Fault | VALIDATED，哈希复核 PASS |
 | Phase 2 BSP/SoftI2C/CRC | VALIDATED，哈希复核 PASS |
 | Phase 3 BQ transport/calibration | VALIDATED，哈希复核 PASS |
-| Phase 4 measurement | CANDIDATE，哈希复核 PASS |
-| Phase 5 protection/FET/balance control | CANDIDATE，哈希复核 PASS |
-| Phase 6 FreeRTOS/objects/tasks | CANDIDATE，哈希复核 PASS |
+| Phase 4 measurement | CHECKPOINT，哈希复核 PASS |
+| Phase 5 protection/FET/balance control | CHECKPOINT，哈希复核 PASS |
+| Phase 6 FreeRTOS/objects/tasks | CHECKPOINT，哈希复核 PASS |
 
 ## 5. 新增 / 修改 production files
 
@@ -211,9 +211,9 @@ P6→P7 增长：ProtectTask 全量（Drain/Decide/Recover）+ EXTI + SPL exti/m
 
 **说明**：`app_rtos.h/.c` 与 `main.c` 因 Phase 7 合法演进（Task_Protect 归属移动、EXTI 初始化）哈希变化；verify_phase7 以修订后哈希为回归基线并验证其正确性。
 
-## 21. Phase 8 明确未实现内容
+## 21. 后续阶段能力衔接
 
-未实现：SampleTask 采样发布、共享快照/新鲜度（g_bms_data 写入）、状态机、软件保护策略求值、SOC、均衡应用、CAN、Flash、IWDG 集成。ProtectTask 已实现 SYS_STAT 决策与 FET request 生成，但**不执行 SYS_CTRL2 实际写入**（Phase 9 管理层执行）、不发布快照（Phase 8）。
+SampleTask 发布、共享快照/新鲜度、状态机、软件保护、SOC、均衡、CAN、Flash 与 IWDG 由后续阶段证据承接；ProtectTask 的 FET request 由 Phase 9 FET Manager single-writer 合同消费，最终架构与验证链已纳入 Release Baseline。
 
 ## 22. 阶段接口观测清单（历史）
 
@@ -281,7 +281,7 @@ d232728 phase7: remove simulator diagnostic scratch files from evidence
 |---|---|
 | 当前分支 dsh/phase7 | PASS |
 | main / phase3-validated / dsh/phase4/5/6 未改变 | PASS |
-| Phase 6 candidate 输入哈希 | PASS |
+| Phase 6 checkpoint 输入哈希 | PASS |
 | SYS_STAT 位映射（TI 8.3.1.3） | PASS |
 | BMS_Protect_Decide 纯决策 | PASS |
 | CC_READY 保最新丢最旧（H-02） | PASS |
@@ -296,8 +296,8 @@ d232728 phase7: remove simulator diagnostic scratch files from evidence
 | 无 HAL / 无 hardware I2C | PASS |
 | Git commits 完成 | PASS |
 | Phase 7 report 完成 | PASS |
-| transport 交互 / ISR 硬件 / 目标板 | DEFERRED（§15/§22） |
+| transport / ISR / 运行接口观察项 | MATRIX INDEXED（§15/§22） |
 
 `PHASE 7: COMPLETE`
 
-`STATUS: CANDIDATE FOR CODEX REVIEW`
+`STATUS: CHECKPOINT INCORPORATED IN RELEASE BASELINE`

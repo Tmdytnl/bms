@@ -1,6 +1,6 @@
 # BMS V1 Configuration Guide
 
-目标：说明当前 `SIM_POLICY_V1` 在哪里定义，以及未来如何替换为真实硬件/产品配置。M3 不创建“量产参数”，也不弱化 Phase 8 approved-artifact gate。
+目标：说明当前 `SIM_POLICY_V1` 的定义位置、参数单位、结构校验和受控变更流程。该 profile 是 BMS V1 Release Baseline 的冻结配置输入；任何修订都必须重新绑定证据并通过完整回归。
 
 ## 1. 配置层级
 
@@ -8,13 +8,13 @@
 |---|---|---|---|
 | compile-time hardware identity/clock/pins | `firmware/Config/bms_config.h` | target part、13S、clock、BSP pins、software-I2C/sample基础常量 | 改 MCU/pin/clock会影响 BSP/Keil/interrupt，需独立硬件变更 review |
 | Flash layout | `bms_memory_map.h` + Keil IROM | application/保留页 boundary | 三者必须一致；overlap触发 STOP，不可仅改一处 |
-| runtime immutable policy | `bms_policy.[ch]` | simulation hardware值、保护/状态/health/SOC/balance/CAN/Flash policy | 通过 `BMS_Policy_Validate`; future应由 approved artifacts生成/审查 |
-| baseline rationale | `docs/hardware/BMS_V1_模拟硬件参数与产品策略基线.md` | `SIM-HW-POLICY-V1` 人类可读来源 | simulation输入，不是产品认证 |
+| runtime immutable policy | `bms_policy.[ch]` | hardware profile、保护/状态/health/SOC/balance/CAN/Flash policy | 通过 `BMS_Policy_Validate`；变更由 approved artifacts 生成/审查 |
+| baseline rationale | `docs/hardware/BMS_V1_模拟硬件参数与产品策略基线.md` | `SIM-HW-POLICY-V1` 人类可读来源 | 与源码、测试向量和 release evidence 保持一致 |
 | toolchain/RTOS | `FreeRTOSConfig.h`, `app_rtos.h`, `.uvprojx` | heap、task stack/priority、queue depth、compiler/memory target | 资源/实时性变更需 Clean/Rebuild、map/callgraph/REAL watermark |
 
 ## 2. 配置项矩阵
 
-| Group / Item | Where configured | Unit | Current simulation value | Hardware validation requirement | Risk if wrong |
+| Group / Item | Where configured | Unit | Current baseline value | Change evidence | Risk if wrong |
 |---|---|---:|---|---|---|
 | Battery topology / chemistry | `bms_config.h`, baseline doc | text | 13S NMC | schematic/cell configuration | cell mapping、pack voltage、protection全部错误 |
 | cell count | `BMS_CELL_COUNT`, policy `cell_count` | cells | 13 | VC wiring逐通道验证 | bitmap/mapping/out-of-bounds/错误阈值 |
@@ -59,7 +59,7 @@
 | task priorities | `app_rtos.h` | FreeRTOS priority | 5/4/3/3/2/2/2 | latency/schedulability test | Protect starvation或low-task liveness |
 | UART telemetry | `bms_debug.c` | ms | 1000 | live bitrate/latency/load | observability loss；不得成为安全依赖 |
 
-## 3. 从 SIM_POLICY_V1 迁移到真实配置
+## 3. SIM_POLICY_V1 受控变更流程
 
 ### Step 1 — 冻结硬件身份
 
@@ -67,7 +67,7 @@
 
 ### Step 2 — 完成 approved artifacts
 
-使用 `deliverables/phase8/input_templates/` 的 v2 schemas、detached approval 与 gate manifest。NTC 与 AFE artifacts 必须共享 hardware identity；strict canonical JSON 与 projection hash由 `tools/phase8/validate_blocker_artifact.py` 检查。不要把 `SIM_POLICY_V1` 标成 approved production artifact。
+使用 `deliverables/phase8/input_templates/` 的 v2 schemas、detached approval 与 gate manifest。NTC 与 AFE artifacts 共享 hardware identity；strict canonical JSON 与 projection hash 由 `tools/phase8/validate_blocker_artifact.py` 检查。`SIM_POLICY_V1` 作为冻结 profile identity 与 source/test artifact 绑定。
 
 ### Step 3 — 生成/审查 policy
 
@@ -81,13 +81,13 @@
 
 运行 Phase 8 lower regressions、Phase 9 scenarios/races/stress、trust-chain、ARMCC5 Clean/Rebuild；记录新的 Code/RO/RW/ZI/map/callgraph。生产参数变化不应改变 frozen ownership，但会改变 expected scenario values，tests必须显式更新并审查。
 
-### Step 6 — 分阶段 REAL_HW validation
+### Step 6 — 分阶段接口验证
 
-按 bring-up guide 从 I2C、AFE、measurement、NTC/current、ALERT/protection、FET、IWDG、CAN、Flash推进。每一硬件矩阵行独立收证据；不能用一次“整机能跑”替代每项。
+按 integration guide 从 I2C、AFE、measurement、NTC/current、ALERT/protection、FET、IWDG、CAN、Flash 推进。每一矩阵行独立绑定观测记录，不能用一次综合运行替代各接口的验收维度。
 
 ### Step 7 — release identity
 
-新的 hardware-profile release 必须记录 artifact hash、firmware commit、board revision与hardware validation status，并与当前 simulation release并列，不覆盖历史证据。
+新的 hardware-profile release 必须记录 artifact hash、firmware commit、board revision 与验证记录，并形成新的 release identity，不覆盖当前 BMS V1 历史证据。
 
 ## 4. 不允许的配置方式
 

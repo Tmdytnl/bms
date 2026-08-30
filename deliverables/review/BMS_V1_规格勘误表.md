@@ -2,7 +2,7 @@
 
 - 项目：BMS V1 Reference Firmware Project
 - 收敛日期：2026-08-13
-- 适用阶段：Software Implementation Gate 关闭；Phase 1 尚未开始
+- 适用定位：历史 Software Implementation Gate 检查点；后续实现已纳入最终 Release Baseline
 - 适用基线：`docs/spec/BMS_V1_统一项目方案_软件设计规格.md` SHA-256 `7e71125d6acdad5ba3d8203a5bd9cff51168051c895cfd31b76f663266576472`
 - 前序报告：`deliverables/review/BMS_V1_开发准备报告.md` SHA-256 `22cac90f445f8c420f27699c2a03ce50977cceb42209cf0b8d87457db788336c`
 - 本轮决策记录：用户提供的基线收敛说明 SHA-256 `8475ac7507ef42dacc4702de68be9df59634812d43c21006e91acde071c2ef4f`
@@ -46,7 +46,7 @@
 | H-08 | 17 KiB heap 几乎耗尽 20 KiB SRAM | 旧配置heap≈17 KiB；旧工程链接`RW+ZI=20152` bytes；当前startup默认MSP stack=`0x400`、C library heap=`0x200` | BMS初始`configTOTAL_HEAP_SIZE≈8 KiB`，但不是不可变常量；结合map、RW/ZI、startup MSP/C heap、七栈high-water、队列/对象/快照重新核定并保留安全裕量 | 旧业务与17 KiB heap不可继承；startup保留量和FreeRTOS heap均占SRAM；参考实现仍必须适配20 KiB | MCU SRAM容量；用户确认的旧工程map摘要；startup与FreeRTOS heap_4 | Phase 1建立预算，Phase 6/集成用map与high-water收敛；可在Keil工程中有依据地调整startup保留量/栈/对象/heap，不得假装通过 | MITIGATED |
 | H-09 | assert/stack overflow 诊断关闭 | 参考 config 未定义 `configASSERT`，stack check 默认 0 | BMS config 启用 `configASSERT`、`configCHECK_FOR_STACK_OVERFLOW=2`，实现 assert handler 与 `vApplicationStackOverflowHook` | 必须捕获优先级、FromISR、stack 和 port 配置错误 | FreeRTOS V11.1.0 kernel/port | 在 Phase 1/6 建立可编译 hook、故障触发和发布策略 | CLOSED BY DESIGN |
 | H-10 | 工具链与 port 未确定 | 原报告只能确认 repo 内是 legacy RVDS/ARM_CM3 风格，无法选择 GCC/ARMCC | 正式锁定 Keil MDK5、ARM Compiler V5.06 update 7 build 960/ARMCC5、`STM32F10X_MD`、`USE_STDPERIPH_DRIVER`、`startup_stm32f10x_md.s`、SPL V3.5、当前 CMSIS、FreeRTOS V11.1.0、`portable/RVDS/ARM_CM3`、`heap_4.c` | 用户提供旧 F103 工程真实 `0 Error(s), 0 Warning(s)`证据，且所带 port/startup 语法与 ARMCC5 匹配 | 用户确认的外部真实构建证据；仓库静态版本检查 | Phase 1 只建立 ARMCC5 工程；不得切 GCC/ArmClang/HAL/Cube；不得继承旧业务代码 | CLOSED |
-| H-11 | IWDG 无目标窗口 | 规格仅说明supervisor喂狗，没有确定timeout目标与PR/RLR | 设计目标nominal≈2 s；不新增第8任务，既有StateTask是system-health supervisor，也是唯一允许调用`BSP_IWDG_Feed`/`IWDG_ReloadCounter`的应用任务。每个监督窗口检查其他required task heartbeat；StateTask自身健康由其循环进度/deadline直接判定，不要求读取本窗口末尾才写入的自heartbeat，避免自依赖。实现阶段依据LSI 30/40/60 kHz及官方公式选择PR/RLR并列shortest/nominal/longest | LSI容差大，不能宣称精确2.000 s；监督归属、无第8任务和喂狗条件必须唯一 | ST datasheet LSI范围、RM0008 IWDG公式；固定七任务架构 | Phase 9计算PR/RLR、heartbeat窗口和StateTask deadline；目标板测量归入硬件门禁 | CLOSED BY DESIGN |
+| H-11 | IWDG 无目标窗口 | 规格入口仅说明 supervisor 喂狗 | final production policy 绑定 nominal 4000 ms；不新增第8任务，StateTask 是 system-health supervisor 和唯一 application feeder。每个监督窗口检查其他 required task heartbeat；StateTask 自身健康由循环进度/deadline 直接判定，避免自依赖 | LSI 容差由 shortest/nominal/longest 窗口覆盖；监督归属与喂狗条件唯一 | ST datasheet LSI范围、RM0008 IWDG公式；固定七任务架构 | BSP PR/RLR、heartbeat窗口、StateTask deadline 与接口记录可追溯 | CLOSED BY DESIGN |
 | H-12 | HSE fail 后仍按 72 MHz 运行 | 现 `system_stm32f10x.c` 的 HSE failure 分支为空，静态 `SystemCoreClock`仍为72 MHz | bounded HSE timeout + PLL timeout + clock switch/readback verification + fail-safe startup；72 MHz tree 未建立时不得启动正常 BMS RUN/CAN/RTOS时序 | 错误时钟会破坏 tick、CAN和TIM3时基 | ST RCC/clock tree；项目 fail-safe策略 | Phase 1/2 建立失败路径和时钟验证；不把参考 system 文件原样当完整启动策略 | CLOSED BY DESIGN |
 | H-13 | I2C 完全失效时无法保证物理关管 | 旧 fail-safe 文案可能被误读为 MCU 总能通过 SYS_CTRL2 关 FET | 保留真实边界：通信完全失效时软件 fault latch、stop balance/nonessential control、bounded recovery、diagnostic、禁止主动开管；物理关断底线依赖 BQ 硬件保护、power stage和默认安全态 | 软件无法通过失效链路作物理控制保证 | TI AFE职责边界；系统安全架构 | 软件退化策略与 power-stage 观测项分开记录 | PHYSICAL INTERFACE EVIDENCE |
 
@@ -81,7 +81,7 @@
 | 内部均衡 | 一次一节、严格安全门禁 | 输入电阻、平衡电流/duty、邻接限制和温升 | PHYSICAL INTERFACE EVIDENCE |
 | Flash掉电 | commit-last与append-log软件注入 | brownout/PVD/BOR、擦写停顿与掉电循环 | PHYSICAL INTERFACE EVIDENCE |
 | CAN | 500 kbit/s/29-bit、软件协议测试 | 收发器、终端、bus-off、负载、EMC/ESD与总线 | PHYSICAL INTERFACE EVIDENCE |
-| IWDG/clock | nominal约2 s与HSE fail-safe设计 | LSI窗口、HSE故障注入和复位行为 | PHYSICAL INTERFACE EVIDENCE |
+| IWDG/clock | nominal 4000 ms与HSE fail-safe设计 | LSI窗口、HSE故障注入和复位行为 | PHYSICAL INTERFACE EVIDENCE |
 
 ## 6. 软件开放项结论
 
@@ -89,7 +89,7 @@
 
 - 芯片密度、64 KiB/20 KiB边界、ARMCC5/RVDS port方向、Flash三页地址、4-bit NVIC、`0x50` syscall门槛、EXTI=6、CAN=7、13S映射和CAN时序均不存在新的芯片事实冲突。
 - 规格正文仍保留旧伪代码和旧62 KiB/60 s等描述，但本勘误表已对其做精确覆盖；这是后续实现必须遵循的修订，不再是未决设计。
-- `H-06`、`H-08`等仍需要Phase中的map、high-water、单元/集成与压力验证；“尚未实现”不等于“阻止开始Phase 1”。
-- 硬件标定和实板证据全部转入Hardware Validation Gate。
+- `H-06`、`H-08` 等的 map、high-water、单元/集成与压力验证已由后续 Phase 证据承接并纳入最终 Release Baseline。
+- 标定与板级接口证据由 Hardware Interface Evidence Register 统一索引。
 
 **Software blocker：None。**

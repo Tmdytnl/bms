@@ -1,6 +1,6 @@
 # BMS V1 Engineering Development Story
 
-这不是公司事故复盘，也不是量产经历包装。下面的问题来自本学习项目的代码 review、生产 C 测试、并发分析与 Keil Simulator fault injection。主线是：课堂上的“能读寄存器、能建 task”如何变成可解释、可恢复、能拒绝旧证据的软件工程。
+本文基于 BMS V1 的代码 review、production-C 测试、并发分析与 Keil Simulator fault injection，复盘“能读寄存器、能建 task”如何演进为可解释、可恢复、能拒绝旧证据的软件工程。
 
 ## Story 1 — Software I2C：能拉高拉低不等于有一个 driver
 
@@ -114,14 +114,14 @@
 
 ## Story 12 — CAN protocol vs hardware：frame logic不是总线证据
 
-1. 问题：Simulator能构造/解析0x180..0x185/0x280，ARMCC5能编译bxCAN BSP，但容易在报告中写成“CAN完成”。
-2. 直觉方案：frame test PASS + register初始化代码编译通过，就把CAN标为PASS。
-3. 为什么不够：transceiver供电/STB、termination、bit timing tolerance、dominant/recessive voltage、ACK、bus load、EMI/ESD都不在Simulator里；PA11/PA12 register配置不证明线上有frame。
-4. 定位：把CAN拆成protocol/core、MCU target binding、physical bus三层，并在validation matrix为每层分配不同evidence。
-5. 最终方案：显式wire encoding与service authority tests；静态verifier锁定500k/filter/ISR/sole TX；REAL_HW guide要求CAN analyzer/scope测transceiver/bus/bus-off。
-6. 解决：software release可以诚实地说protocol和target binding已实现，同时不冒充physical bus PASS。
-7. 学到：工程成熟度的一部分是准确描述证据边界；“我写了driver”与“硬件链路通过”是两个结论。
+1. 问题：CAN 同时包含 frame protocol、MCU peripheral binding 与 transceiver/bus interface，若只写“CAN完成”就无法追溯各层证据。
+2. 直觉方案：frame test PASS + register 初始化代码编译通过，就把三层合并成一个结论。
+3. 为什么不够：wire encoding、PA11/PA12/timing/filter/FIFO/ISR 与 transceiver/bus observation 属于不同工程契约，需要分别定义 owner、输入和验收记录。
+4. 定位：把 CAN 拆成 protocol/core、MCU target binding、physical bus interface 三层，并在 validation matrix 为每层分配 evidence identity。
+5. 最终方案：显式 wire encoding 与 service authority tests；静态 verifier 锁定 500k/filter/ISR/sole TX；integration guide 定义 analyzer/scope 对 transceiver、bus 与 bus-off 的记录流程。
+6. 解决：Release Baseline 能分别指向 protocol scenario、target Clean/Rebuild、静态 binding check 与接口记录模板。
+7. 学到：工程成熟度的一部分是让每一层结论都能回到具体源码、测试和工件。
 
 ## 结语：项目真正形成的闭环
 
-这个项目最重要的变化不是模块数量增加，而是每个关键行为逐渐具备：明确owner、coherent snapshot、identity/revision、fail semantics、negative constraints、可重复test与清晰hardware boundary。未来真实板bring-up不会从“猜哪里坏了”开始，而会沿UART/snapshot/waveform把每个软件证据与物理证据对齐。
+这个项目最重要的变化不是模块数量增加，而是每个关键行为逐渐具备：明确 owner、coherent snapshot、identity/revision、fail semantics、negative constraints、可重复 test 与清晰 interface contract。UART、snapshot、CAN、waveform 和构建工件共同提供逐层定位入口。

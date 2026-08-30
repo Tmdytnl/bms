@@ -85,4 +85,4 @@
 - identity 是 timestamp、sequence、generation 还是 revision，是否足以拒绝 stale evidence？
 - transaction 中途 source 改变时，enable/readback/clear 是否会被拒绝？
 - transport failure、finalization ambiguity 与 readback mismatch 分别是什么 failure semantics？
-- Simulator evidence 与 REAL_HW evidence 是否在文档中分开？
+- 测试方法、输入 profile、构建工件与结论是否保持可追溯且没有互相替代？

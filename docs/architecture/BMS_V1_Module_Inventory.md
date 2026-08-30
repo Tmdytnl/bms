@@ -1,22 +1,22 @@
 # BMS V1 模块清单
 
-文档状态：Engineering Closure M3；依据当前 `codex/phase8-phase9` 源码整理。
+文档状态：BMS V1 Release Baseline；依据 `dsh/project-finalization` 冻结架构整理。
 
-证据边界：本表描述软件职责、调用上下文和验证入口，不代表真实硬件验证。`docs/reference/` 与 `docs/FreeRTOS/` 是上游参考输入；生产集成入口是 `firmware/Project/Keil/BMS_V1.uvprojx`。
+本表描述模块职责、调用上下文、安全相关性和验证入口。`docs/reference/` 与 `docs/FreeRTOS/` 是上游参考输入；生产集成入口是 `firmware/Project/Keil/BMS_V1.uvprojx`。
 
 ## 模块总表
 
 | Module | Layer | Main files | Responsibility | Owner/Writer | Main readers | Task/ISR context | Safety relevance | Validation |
 |---|---|---|---|---|---|---|---|---|
 | Clock BSP | BSP | `firmware/Driver/bsp_clock.[ch]` | 校验 HSE/PLL、72 MHz SYSCLK、APB 分频 | pre-scheduler `main()` | startup | pre-scheduler | 时钟不符进入 `BMS_SafeIdle()` | Phase 2 regression；ARMCC5 build |
-| GPIO/Timer BSP | BSP | `bsp_gpio.[ch]`, `bsp_timer.[ch]` | PB8/PB9 开漏 I2C、PA8 wake、TIM3 1 MHz 延时基准 | pre-scheduler initialization | software I2C、AFE startup | pre-scheduler；同步调用 | I2C 时序与 AFE 唤醒基础 | Phase 2 tests；真实波形 deferred |
+| GPIO/Timer BSP | BSP | `bsp_gpio.[ch]`, `bsp_timer.[ch]` | PB8/PB9 开漏 I2C、PA8 wake、TIM3 1 MHz 延时基准 | pre-scheduler initialization | software I2C、AFE startup | pre-scheduler；同步调用 | I2C 时序与 AFE 唤醒基础 | Phase 2 tests；pin/timing contract checks |
 | Software I2C | Driver | `soft_i2c.[ch]` | START/STOP/repeated START、ACK/NACK、clock stretch timeout、9-clock bus recovery | 调用者在 `xI2CMutex` 下独占；startup 例外为单线程 | BQ transport | startup、Protect/Sample/State/Balance task | 所有 AFE 访问的电气传输边界 | `test_phase2_soft_i2c.c`; Phase 2/3/4/7/8 regressions |
 | CRC8 | Driver | `crc8_bq76940.[ch]` | BQ7694003 I2C CRC8 编解码 | pure function | BQ transport | 任意非 ISR 同步调用 | 传输完整性；CRC mismatch 与 NACK 分离 | `test_phase2_crc.c`; Phase 2/3 |
 | BQ transport | AFE driver | `bq76940.[ch]`, `bq76940_regs.h` | byte/block read/write、CRC、final STOP ambiguity、calibration decode | I2C 调用者；不拥有业务策略 | startup、measurement、Protect、FET、Recovery、Balance | startup 与 task；不得从 ISR 调用 | 将 `WRITE_FINALIZATION_AMBIGUOUS` 与确定成功/失败分离 | `test_phase3_transport.c`, `test_phase3_decode.c` |
 | AFE measurement | AFE driver | `bq76940_measurement.[ch]` | 13S VC 映射、cell/BAT/CC/TS1 读取与整数换算 | pure conversion + bounded BQ access | Sample、Protect | Sample/Protect task | 13S 映射、符号、电流单位和 calibration 有效性 | Phase 4 tests；Phase 8 sample tests |
 | AFE control | AFE driver | `bq76940_control.[ch]` | OV/UV/OCD/SCD 编码、SYS_CTRL2 compositor、FET observe、CELLBAL mapping | pure functions；不直接拥有寄存器 | startup、FET Manager、Balance | startup/task | 防止分散拼寄存器 byte；保留 `CC_EN` | Phase 5 tests；Phase 7/9 regressions |
 | AFE startup | Application/service | `bms_afe_startup.[ch]` | pre-scheduler wake、safe-off、全寄存器计划、readback、settle、calibration、startup XREADY W1C | `main()`；pre-scheduler 的 SYS_CTRL2/CELLBAL/XREADY 例外 writer | Sample/Recovery 初始化链 | pre-scheduler | 启动未证实时 fail-safe，不启动 scheduler | `test_phase8_afe_startup.c`; split Phase 8 AFE image |
-| NTC conversion | Application service | `bms_ntc.[ch]`, `bms_policy.c` table | 单调表校验与分段整数插值；不外推 | pure function；table owner=`SIM_POLICY_V1` | Sample | Sample task | 温度有效性输入；真实曲线未验证 | `test_phase8_data.c`; policy verifier |
+| NTC conversion | Application service | `bms_ntc.[ch]`, `bms_policy.c` table | 单调表校验与分段整数插值；不外推 | pure function；table owner=`SIM_POLICY_V1` | Sample | Sample task | 温度有效性输入；profile/domain 绑定 | `test_phase8_data.c`; policy verifier |
 | Measurement publication | Shared-data service | `bms_data.[ch]` | 原子发布 cell/pack/current/temp，派生 age/stale，维护 `sample_sequence`/`afe_generation`，聚合诊断 | measurement fields=Sample；state/fault=State diagnostic；SOC=SOC | State、SOC、Balance、CAN、Debug、Recovery | task context；`xDataMutex` | coherent snapshot；`BMS_Data` 不作为 FET authority | Phase 8 data/sample；Phase 9 stale-publish tests |
 | Sample | Task/application | `bms_sample.[ch]` | 250 ms 采样、CC mailbox、TS1 每 8 周期、calibration provenance、整帧 compare-before-publish | `Task_Sample` sole measurement writer | State/SOC/Balance/CAN/Debug | priority 4 periodic task | sample identity、generation guard、stale observability | split Phase 8 sample image；provenance guard |
 | Fault model | Application model | `bms_fault.[ch]`, `bms_safety.h` | 稳定 fault ID、active/latched bitmap、directional/technical inhibit reason encoding | source owner 修改自己的 private snapshot | Protect、State、FET、CAN | pure/task | fault ID/order 与 action 分离；禁止 generic clear-all | Phase 1 model；Phase 9 verifier |
@@ -29,18 +29,18 @@
 | SOC | Task/application | `bms_soc.[ch]` | integer OCV init、CC queue 积分、efficiency、generation change/queue-gap、full/empty correction | `Task_SOC` sole SOC writer | BMS_Data diagnostic、Persistence、CAN、Debug | priority 3；1000 ms | 不直接拥有 FET/fault；invalid/queue gap 可观测 | continuation SOC tests；50k stress |
 | Balance | Task/application | `bms_balance.[ch]` | eligibility、hysteresis、rotation、最多 2 cell、禁止相邻、CELLBAL write/readback/fail-off | `Task_Balance` sole scheduler-era CELLBAL writer；startup all-zero 例外 | Recovery、CAN、Debug | priority 2；1000 ms | 任何 safety/recovery/stale 条件下 all-off request | continuation balance tests；stress；writer verifier |
 | CAN protocol/core | Application/protocol | `bms_can.[ch]` | `0x180..0x185` 显式编码、`0x280` service request 解码、queue diagnostics | CANTx builds/owns HW TX path；CANRx owns protocol processing | external diagnostic consumer；Protect request API | CANTx/CANRx task；RX ISR only copies/enqueues | CAN 无直接 FET/CELLBAL/fault/IWDG authority | continuation CAN tests；Phase 9 verifier |
-| bxCAN binding | BSP | `bsp_can.[ch]`, SPL `stm32f10x_can.c` | PA11/PA12、36 MHz PCLK1、500 kbit/s、87.5% sample point、exact filter、bus-off recovery | CANTx sole transmit caller；RX FIFO0 ISR drain | CAN core | priority 7 ISR + tasks | physical transceiver/bus evidence未建立 | target ARMCC5 build；static binding check；REAL_HW deferred |
+| bxCAN binding | BSP | `bsp_can.[ch]`, SPL `stm32f10x_can.c` | PA11/PA12、36 MHz PCLK1、500 kbit/s、87.5% sample point、exact filter、bus-off recovery | CANTx sole transmit caller；RX FIFO0 ISR drain | CAN core | priority 7 ISR + tasks | transceiver/bus interface contract | target ARMCC5 build；static binding check；protocol scenarios |
 | Flash persistence | Service/BSP | `bms_persistence.[ch]`, `bsp_flash.[ch]`, `bms_memory_map.h` | 34-byte v2 record、CRC32、A/B newest-valid、inactive erase、body verify、commit-last、boot restore | Task_SOC sole runtime save caller；startup read-only restore | SOC、Debug | startup read；SOC task write | page-restricted writes；不先 erase newest bank | continuation codec/power-cut tests；50k stress；map boundary |
-| Debug UART/telemetry | BSP/application | `bsp_uart.[ch]`, `bms_debug.[ch]` | USART1 PA9/PA10 115200 8N1；1 s compact read-only snapshot；每个 10 ms service 最多 drain 8 B | CANTx task sole telemetry caller；无 command parser | bring-up operator | CANTx task，非 ISR | 只观察，不清 fault、不启 FET、不改 policy | ARMCC5 0/0；Phase 9 static observability check；REAL_HW waveform deferred |
-| FreeRTOS integration | RTOS/application | `app_rtos.[ch]`, `app_rtos_hooks.c`, `firmware/Config/FreeRTOSConfig.h`, selected `docs/FreeRTOS/**` | 7 tasks、3 queues、2 mutexes、1 binary semaphore、1 event group、notification、fatal hooks、heap_4 | `main()` creates；task-specific contexts own behavior | all application modules | scheduler/ISR | bounded waits、priority ceiling、stack/malloc/assert failure stop | Phase 6 image；production map/callgraph；target watermark deferred |
-| Simulator/verifiers | Verification | `firmware/Tests/**`, `tools/phase8/**` | production-C ARMCC5 images、Keil Simulator、trust-chain/adversarial tests、static architecture checks | test-only | release process | host/Simulator | 证明软件行为，不证明电气/物理行为 | 32 scenarios + 3 races + 50k stress + 49 trust tests |
+| Debug UART/telemetry | BSP/application | `bsp_uart.[ch]`, `bms_debug.[ch]` | USART1 PA9/PA10 115200 8N1；1 s compact read-only snapshot；每个 10 ms service 最多 drain 8 B | CANTx task sole telemetry caller；无 command parser | diagnostic operator | CANTx task，非 ISR | 只观察，不清 fault、不启 FET、不改 policy | ARMCC5 0/0；Phase 9 static observability check；bounded partial-write behavior |
+| FreeRTOS integration | RTOS/application | `app_rtos.[ch]`, `app_rtos_hooks.c`, `firmware/Config/FreeRTOSConfig.h`, selected `docs/FreeRTOS/**` | 7 tasks、3 queues、2 mutexes、1 binary semaphore、1 event group、notification、fatal hooks、heap_4 | `main()` creates；task-specific contexts own behavior | all application modules | scheduler/ISR | bounded waits、priority ceiling、stack/malloc/assert failure stop | Phase 6 image；production map/callgraph；health/stress scenarios |
+| Simulator/verifiers | Verification | `firmware/Tests/**`, `tools/phase8/**` | production-C ARMCC5 images、Keil Simulator、trust-chain/adversarial tests、static architecture checks | test-only | release process | host/Simulator | production-C 行为、负面约束与证据链 | 32 scenarios + 3 races + 50k stress + 49 trust tests |
 
 ## 未发现的集成问题
 
 - 当前 `firmware/App`、`firmware/Driver`、`firmware/Config`、`firmware/User` 下的 production `.c` 均进入 Keil target；M3 新增 `bms_debug.c` 同步加入工程与 verifier。
 - `firmware/Protocol/`、`firmware/Service/` 当前为空目录；协议与 persistence service 实际落在 `firmware/App/`，不是 orphan source。
 - `BMS_Protect_SetXreadyRecoveryHook()` 是为冻结的 lower-phase regression 保留的兼容 seam；production 未安装该 hook，当前 coordinator 走 generation/revision authorization path。
-- 历史 milestone 报告保留；当前 release status 以 `deliverables/simulation/BMS_V1_Simulation_RC_Report.md` 和 M3 release baseline 为准。
+- 阶段 milestone 报告保留；当前 release status 以 `deliverables/release/BMS_V1_Release_Baseline.md` 为准。
 
 ## 维护规则
 

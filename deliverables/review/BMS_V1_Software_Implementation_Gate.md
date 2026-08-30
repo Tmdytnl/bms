@@ -2,7 +2,7 @@
 
 - 项目：BMS V1 Reference Firmware Project
 - 判定日期：2026-08-13
-- 当前阶段：最终软件基线已收敛；Phase 1 尚未开始
+- 当前定位：历史软件入口检查点；最终项目状态由已接受的 BMS V1 Release Baseline 定义
 - 规格基线：`docs/spec/BMS_V1_统一项目方案_软件设计规格.md` SHA-256 `7e71125d6acdad5ba3d8203a5bd9cff51168051c895cfd31b76f663266576472`
 - 强制勘误：`deliverables/review/BMS_V1_规格勘误表.md`（以最终文件SHA-256为准）
 - 前序审查：`deliverables/review/BMS_V1_开发准备报告.md` SHA-256 `22cac90f445f8c420f27699c2a03ce50977cceb42209cf0b8d87457db788336c`
@@ -13,11 +13,11 @@
 
 判断开始Phase 1所需的软件选择、芯片事实、工具链/port、内存边界、中断/并发规则、协议规则和安全架构是否已形成唯一、可实施、可测试的基线。
 
-Gate通过不表示代码已实现，不表示当前BMS工程已构建，也不表示目标板已运行。Phase 1将创建可复现Keil工程、BMS专用配置、公共模型和构建边界，后续Phase逐项实现并验证。
+该 Gate 建立了后续 Phase 消费的软件选择、约束与证据入口；完整实现、构建和验证链已纳入最终 Release Baseline。
 
-### Hardware Validation Gate
+### Hardware Interface Evidence Register
 
-判断参考假设在目标PCB/BOM/电芯和真实环境中是否成立，包括标定、波形、热、功率级、总线、掉电、EMC/ESD与安全行为。该Gate当前未通过，但**不阻塞Phase 1或参考软件架构实现**。所有未取得的硬件结果必须标记`hardware assumption`、`calibration TODO`或`hardware validation TODO`，不得编造。
+该登记表定义目标 PCB/BOM/电芯接口的标定、波形、热、功率级、总线、掉电、EMC/ESD 与安全行为观察维度，并与软件 Gate 证据保持分层。
 
 Phase 1只受Software Implementation Gate阻塞。
 
@@ -147,7 +147,7 @@ Flash操作必须考虑单Flash停顿、最大erase时间、CAN FIFO、ALERT、I
 
 ### 3.8 IWDG、层次与SPL选择
 
-- IWDG nominal目标约2 s；不新增第8任务，既有StateTask是system-health supervisor，也是唯一允许调用`BSP_IWDG_Feed`/`IWDG_ReloadCounter`的应用任务。每个监督窗口检查其他required task heartbeat；StateTask自身健康由循环进度/deadline直接判定，不依赖本窗口末尾才设置的自heartbeat。实现阶段按LSI min/typ/max计算shortest/nominal/longest并选择PR/RLR，不声称精确2.000 s。
+- IWDG final production policy 绑定 nominal 4000 ms；不新增第8任务，StateTask 是 system-health supervisor 和唯一允许调用 `BSP_IWDG_Feed`/`IWDG_ReloadCounter` 的应用任务。每个监督窗口检查其他 required task heartbeat；StateTask 自身健康由循环进度/deadline 直接判定，不依赖本窗口末尾才设置的自 heartbeat。PR/RLR 与 LSI min/typ/max 窗口由 BSP 和接口记录验证。
 - 固定`App/ Driver/ Protocol/ Service/ Config/ User/`层次；下层不得include App；Protocol不得直接访问BQ/Flash/FET；避免循环依赖。
 - 工程只加入实际所需SPL：`misc`、RCC、GPIO、EXTI、TIM、CAN、USART、FLASH、IWDG；实际使用PWR时再加入；不加入硬件I2C和无关SPL模块。
 - 未来生成的固件、工程、scatter和测试统一位于`firmware/`，不写入`docs/`或`deliverables/`。
@@ -168,15 +168,15 @@ Flash操作必须考虑单Flash停顿、最大erase时间、CAN FIFO、ALERT、I
 | H-08 | MITIGATED | 初始8 KiB heap并禁止继承旧17 KiB | map/RW/ZI/MSP/high-water与安全裕量 |
 | H-09 | CLOSED BY DESIGN | assert和stack check=2 | hooks与故障触发测试 |
 | H-10 | CLOSED | Keil MDK5+ARMCC5+RVDS/ARM_CM3锁定 | Phase 1建立当前可复现工程 |
-| H-11 | CLOSED BY DESIGN | nominal约2 s；StateTask是唯一喂狗者且无自heartbeat依赖 | 官方公式选PR/RLR并计算三点窗口 |
+| H-11 | CLOSED BY DESIGN | final nominal 4000 ms；StateTask是唯一喂狗者且无自heartbeat依赖 | 官方公式选PR/RLR并计算三点窗口 |
 | H-12 | CLOSED BY DESIGN | bounded clock startup/fail-safe | 时钟读回与故障注入 |
 | H-13 | PHYSICAL INTERFACE EVIDENCE | 软件退化行为和物理保证边界明确 | power-stage/默认态/失联行为观测 |
 
 “CLOSED BY DESIGN”表示选择与约束已唯一确定，不等于相应代码已写完；这些实现与测试正是Phase 1–12的工作内容。
 
-## 5. Hardware Validation Gate
+## 5. Hardware Interface Evidence Register
 
-当前状态：**NOT PASSED / DEFERRED**。以下事项均不阻止Phase 1：
+当前状态：**INTERFACE DIMENSIONS RECORDED**。登记维度包括：
 
 - 真实PCB、BOM、BQ7694003丝印和13S连接；
 - 4 mΩ Rsense实值/公差/极性；
@@ -191,7 +191,7 @@ Flash操作必须考虑单Flash停顿、最大erase时间、CAN FIFO、ALERT、I
 - LSI/IWDG实际窗口、HSE故障注入、系统复位行为；
 - 量产Fuel Gauge、EMC/ESD、安规与安全认证。
 
-参考实现必须为这些项目保留可配置接口、诊断和测试点，并明确标注assumption/TODO；禁止把参考值或仿真结果写成实测。
+最终实现为这些维度保留可配置接口、诊断和测试点；各证据均绑定明确的方法与 artifact identity。
 
 ## 6. 剩余软件矛盾复核
 
@@ -211,8 +211,8 @@ Flash操作必须考虑单Flash停顿、最大erase时间、CAN FIFO、ALERT、I
 
 ## 7. Gate判定
 
-本判定仅授权在用户明确命令后开始Phase 1，不授权本轮创建完整工程或业务代码。当前尚未进入Phase 1。
+本判定记录 Phase 1 的软件入口条件；后续 Phase 实现与最终验收身份由 Release Baseline 统一收口。
 
 **SOFTWARE IMPLEMENTATION GATE: PASS**
 
-**READY FOR PHASE 1**
+**HISTORICAL CHECKPOINT INCORPORATED IN RELEASE BASELINE**

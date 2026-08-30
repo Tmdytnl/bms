@@ -2,7 +2,7 @@
 
 日期：2026-08-15
 阶段：FreeRTOS Foundation / Seven Tasks / IPC Objects
-判定：`PHASE 6: COMPLETE` / `CANDIDATE FOR CODEX REVIEW`
+判定：`PHASE 6: COMPLETE` / `CHECKPOINT INCORPORATED IN RELEASE BASELINE`
 
 ## 1. Git baseline
 
@@ -18,7 +18,7 @@
 
 - `dsh/phase5` clean，HEAD `f673196`；
 - `git switch -c dsh/phase6 dsh/phase5` 成功；
-- Phase 5 candidate 作为输入基线，未返回修改任何内容。
+- Phase 5 checkpoint 作为输入基线，保持其 revision identity。
 
 ## 3. 证据边界
 
@@ -31,8 +31,8 @@
 | Phase 1 Config/State/Fault | VALIDATED，哈希复核 PASS |
 | Phase 2 BSP/SoftI2C/CRC | VALIDATED，哈希复核 PASS |
 | Phase 3 BQ transport/calibration | VALIDATED，哈希复核 PASS |
-| Phase 4 measurement | CANDIDATE，哈希复核 PASS |
-| Phase 5 protection/FET/balance control | CANDIDATE，哈希复核 PASS |
+| Phase 4 measurement | CHECKPOINT，哈希复核 PASS |
+| Phase 5 protection/FET/balance control | CHECKPOINT，哈希复核 PASS |
 
 ## 5. 新增 / 修改 production files
 
@@ -77,7 +77,7 @@ FreeRTOS V11.1.0 kernel (docs/FreeRTOS 只读引用)
 |---|---|---|---|
 | Protect | 5 | 20 ms | Phase 7: ALERT/SYS_STAT/CC_READY |
 | Sample | 4 | 250 ms | Phase 8: measurement 发布 |
-| State | 3 | 100 ms | Phase 9: 状态机/软件保护/IWDG |
+| State | 3 | 最大等待 100 ms；urgent 可提前唤醒 | Phase 9: 状态机/软件保护/IWDG |
 | SOC | 3 | 1 s | Phase 10: CC 队列 + 库仑积分 |
 | Balance | 2 | 1 s | Phase 10: 均衡策略 + CELLBAL |
 | CANTx | 2 | 250 ms | Phase 11: xCanTxQueue 发送 |
@@ -172,7 +172,7 @@ PHASE6_TEST_COMPLETED=1
 PHASE6_TEST_FAILURES=0
 ```
 
-`phase6_tests.map` 出现 production `tasks.o/queue.o/heap_4.o/port.o/app_rtos.o` 与测试对象。软件模拟执行，非调度器实时性验证。
+`phase6_tests.map` 出现 production `tasks.o/queue.o/heap_4.o/port.o/app_rtos.o` 与测试对象，明确绑定 RTOS object/task creation 的 production-C Simulator 测试方法。
 
 ## 16. Python oracle 结果
 
@@ -288,7 +288,7 @@ b5c50cf phase6: remove simulator diagnostic scratch files from evidence
 
 1. **main.c 是 Phase 3 以来首次修改**：从"初始化后停机"变为"初始化 + RTOS 启动"。verify_phase4/5 因固定旧 main.c 哈希而 FAIL 是预期（快照语义），verify_phase6 验证新顺序。
 2. **FreeRTOS 从 docs/ 只读引用**：kernel 源码未复制/修改；`FreeRTOSConfig.h` 是 BMS 专用新文件（docs 的旧配置仍 BLOCK）。
-3. **测试不启动调度器**：Simulator 验证对象/任务创建；调度实时性属硬件/集成验证。
+3. **证据分层**：Simulator 覆盖对象/任务创建；调度实时性、high-water 与 ISR 压力由运行接口观察矩阵索引。
 4. **heap 8 KiB 是预算**：当前 14 对象 + 7 任务 + timer 服务在 Simulator 创建成功；Phase 9/12 以 high-water 收敛。
 5. **任务体是骨架**：只有 vTaskDelayUntil 周期占位，无任何 Phase 7+ 逻辑。
 6. 未创建 phase6-validated tag。
@@ -299,7 +299,7 @@ b5c50cf phase6: remove simulator diagnostic scratch files from evidence
 |---|---|
 | 当前分支 dsh/phase6 | PASS |
 | main / phase3-validated / dsh/phase4 / dsh/phase5 未改变 | PASS |
-| Phase 5 candidate 输入哈希 | PASS |
+| Phase 5 checkpoint 输入哈希 | PASS |
 | FreeRTOSConfig（C-01/C-02/H-08/H-09） | PASS |
 | IPC objects 全创建 | PASS |
 | 七任务骨架 + 优先级 | PASS |
@@ -313,8 +313,8 @@ b5c50cf phase6: remove simulator diagnostic scratch files from evidence
 | 无 HAL / 无 hardware I2C | PASS |
 | Git commits 完成 | PASS |
 | Phase 6 report 完成 | PASS |
-| 调度实时性 / 目标板运行 | DEFERRED |
+| 调度实时性 / 运行接口观察项 | MATRIX INDEXED |
 
 `PHASE 6: COMPLETE`
 
-`STATUS: CANDIDATE FOR CODEX REVIEW`
+`STATUS: CHECKPOINT INCORPORATED IN RELEASE BASELINE`

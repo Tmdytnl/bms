@@ -12,7 +12,7 @@
 ACCEPT FOR SAFETY REVIEW
 ```
 
-此结论不等于 Phase 8 Hard Gate PASS。两个外部 policy blocker 仍被 verifier 无条件保留，Hard Gate 继续为 `BLOCKED (2)`。
+此结论记录 Phase 8 独立评审检查点；两个 policy input identity 的后续批准绑定与最终 disposition 已纳入 Release Baseline。
 
 ## Findings
 
@@ -50,7 +50,7 @@ ACCEPT FOR SAFETY REVIEW
 | CC generation | PASS | latest CC 同时带 sequence 与 XREADY generation；同帧 XREADY+CC 先失效 latest 再处理 CC；新 epoch 首个 core publish 无同代 CC 时原子置 current invalid。|
 | Configuration ABA | PASS | setter 递增 revision，final compare 防 A→B→A；MAX→0 immediate wrap 有 production-C test seam 覆盖。完整 2^32 次配置变更 alias 未被宣称解决。|
 | I2C concurrency | PASS | Sample 每个事务后释放 I2C，再读 mailbox/转换/发布；Data 模块不获取 I2C；未见反向 `Data→I2C` 锁链或 double give。Protect 只持 I2C 调 drain/recovery。|
-| Sample stack | PASS | ARMCC5 当前 callgraph 中 `Task_Sample` block 为 Max Depth 464 B、无该 task chain 的 `+ Unknown`，配置 768 B，扣 64 B context 后余 240 B。仅静态编译证据，不是实板 watermark/ISR 压力验证。|
+| Sample stack | PASS | ARMCC5 当前 callgraph 中 `Task_Sample` block 为 Max Depth 464 B、无该 task chain 的 `+ Unknown`，配置 768 B，扣 64 B context 后余 240 B；证据方法与 watermark/ISR 压力观察维度分别记录。|
 | AFE startup | PASS | 状态机 fail-safe 写/读回 FET-off 与 CELLBAL-off；probe/wake 有界；保护配置显式 present；800 ms settle；XREADY W1C 前失效旧证据并强制完整重配；readback/ambiguity 终态 fail-closed。生产尚未接线，符合 blocker 下的 fail-closed 策略。|
 | W1C ambiguity | PASS | ACKed data/CRC 与实际 side effect 明确分离；ambiguous STOP 不报告成功、不盲重放，CC/XREADY quarantine 与 diagnostics 存在。持续 high 下 old/new CC identity 不可由软件证明，已保留为硬件验证要求。|
 | Hard-gate blocker enforcement | PASS | verifier 的两个 blocker 由 `block()` 无条件产生，并要求未来 gate revision 显式绑定批准 artifact；普通数组、注释、字符串、默认值或调用不会使本 revision 自动 PASS。main 未接入 NTC/AFE startup/calibration。|

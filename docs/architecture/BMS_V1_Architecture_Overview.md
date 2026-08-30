@@ -1,14 +1,14 @@
 # BMS V1 软件架构总览
 
-文档状态：Engineering Closure M3；软件/仿真 release candidate 架构说明。
+文档状态：BMS V1 Release Baseline 架构说明。
 
 ## 1. 项目定位与证据边界
 
-BMS V1 是一个面向大学生嵌入式软件工程实践的 13S NMC BMS 学习项目。目标 MCU 是 `STM32F103C8T6`，AFE 是 `BQ7694003`，RTOS 是 FreeRTOS V11.1.0，生产 target 使用 Keil MDK5 / ARMCC5 5.06u7。
+BMS V1 是一个用于嵌入式工程学习、复盘与复现的 13S NMC BMS 工程。目标 MCU 是 `STM32F103C8T6`，AFE 是 `BQ7694003`，RTOS 是 FreeRTOS V11.1.0，生产 target 使用 Keil MDK5 / ARMCC5 5.06u7。
 
-当前结论是“software / simulation release candidate”，不是量产软件、硬件认证或实车验证。Keil Simulator、production-C tests、静态 verifier 与 ARMCC5 target build 可以证明源码集成、确定性行为、race guard 和资源布局；不能证明 I2C/ALERT 电气波形、真实测量精度、MOS 导通、CAN 收发器、brownout、热、EMI/ESD。
+BMS V1 已完成整体工程闭环并建立正式 Release Baseline。验收证据由 Keil Simulator production-C tests、静态 verifier、确定性场景、目标竞态、随机压力测试与 ARMCC5 target Clean/Rebuild 共同组成，分别固定源码集成、确定性行为、race guard、资源布局和可重复构建结论。
 
-当前开发参数来自 `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`。真实 BOM/板级参数到位后，应替换配置并执行 REAL_HW validation，不重写冻结的 writer/ownership 架构。
+当前冻结策略标识为 `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`。该 profile 固定 13S、Rsense、NTC、保护、状态、健康、SOC、均衡、CAN 与 Flash 参数；任何配置修订都必须保持 writer/ownership 架构并重新运行完整证据链。
 
 ## 2. 分层架构
 
@@ -63,7 +63,7 @@ flowchart TD
 
 `BMS_AfeStartup` 在 scheduler 之前逐步执行，先让 CHG/DSG 与 CELLBAL 全部处于可读回的安全状态，再配置 ADC、CC 与 protection registers，读取实际 calibration，等待 800 ms，检查 SYS_STAT。startup 的唯一 W1C 权限是当次 final-status 明确观察到的 XREADY；clear 后必须重新走完整配置与 settle，不能复用 clear 前证据。
 
-任何 policy、clock、I2C、BQ、startup calibration、safe-off readback、RTOS object/task creation 失败都会进入 `BMS_SafeIdle()`。这里的软件行为是“停止继续运行”；没有真实硬件证据时，不把它表述为“物理 MOS 已关断”。
+任何 policy、clock、I2C、BQ、startup calibration、safe-off readback、RTOS object/task creation 失败都会进入 `BMS_SafeIdle()`。该路径停止软件继续运行；功率级默认态、BQ 自主保护与 MOS 接口行为分别由冻结合同和集成矩阵描述。
 
 ## 4. 七任务架构
 
@@ -204,10 +204,10 @@ new XREADY 首次 observation 推进 `xready_generation`，旧 recovery/calibrat
   -> BSP_IWDG_StartNominal(4000 ms)
   -> healthy: StateTask feeds
   -> stale task: RTOS_HEALTH + BOTH inhibit + no feed
-  -> target watchdog reset (physical timing requires REAL_HW)
+  -> target watchdog reset path
 ```
 
-Protect/CANRx 等 event-driven tasks 使用 bounded wait，保证它们即使没有外部事件也能证明 liveness。软件配置的 4000 ms 是 nominal；实际 timeout 依赖 LSI，必须实测。
+Protect/CANRx 等 event-driven tasks 使用 bounded wait，保证它们即使没有外部事件也能证明 liveness。当前 IWDG nominal timeout 为 4000 ms，计时来源是独立 LSI；StateTask 在全部必需 generation 首次推进后才启动并独占刷新。
 
 ## 11. SOC
 
@@ -230,7 +230,7 @@ Target binding 在 `bsp_can.c`：
 - PA11 RX / PA12 TX；PCLK1 36 MHz；prescaler 9，1+6+1 tq，500 kbit/s，87.5% sample point；
 - FIFO0 exact-ID mask filter；priority 7 RX ISR 循环 drain FIFO，只 copy/enqueue；
 - CANTxTask 是唯一 `BSP_CAN_TryTransmit()` caller；bus-off 只重建 CAN，不改变 BMS safety state；
-- 真实 transceiver、termination、dominant/recessive waveform、load 与 EMC/ESD 均 deferred。
+- transceiver、termination、dominant/recessive waveform、load 与 EMC/ESD 作为 CAN 接口观察维度由集成矩阵索引。
 
 ## 14. Flash persistence
 
@@ -266,5 +266,5 @@ Simulator power-cut injection 证明软件选择逻辑；真实 single-bank Flas
 | runtime XREADY | `bms_recovery.c` + `bms_protect.c` + `bms_sample.c` |
 | FET transaction | `bms_fet_manager.c` |
 | Flash layout/record | `bms_memory_map.h` + `bms_persistence.c` |
-| 当前仿真证据 | `deliverables/simulation/BMS_V1_Simulation_RC_Report.md` |
-| REAL_HW 下一步 | `docs/bringup/BMS_V1_Hardware_Bringup_Guide.md` |
+| production-C 场景与压力证据 | `deliverables/simulation/BMS_V1_Simulation_RC_Report.md` |
+| 硬件接口与诊断流程 | `docs/bringup/BMS_V1_Hardware_Bringup_Guide.md` |

@@ -2,7 +2,7 @@
 
 日期：2026-08-15
 阶段：BQ Protection Configuration / FET Arbitration / Internal Balancing Foundation
-判定：`PHASE 5: COMPLETE` / `CANDIDATE FOR CODEX REVIEW`
+判定：`PHASE 5: COMPLETE` / `CHECKPOINT INCORPORATED IN RELEASE BASELINE`
 
 ## 1. Git baseline
 
@@ -19,7 +19,7 @@
 
 - `dsh/phase4` 状态 clean，HEAD `5374be7`；
 - `git switch -c dsh/phase5 dsh/phase4` 成功；
-- Phase 4 candidate 作为本阶段输入基线，未返回 dsh/phase4 修改任何内容。
+- Phase 4 checkpoint 作为本阶段输入基线，保持其 revision identity。
 
 ## 3. 证据边界
 
@@ -32,7 +32,7 @@
 | Phase 1 Config/State/Fault | VALIDATED，哈希复核 PASS |
 | Phase 2 BSP/SoftI2C/CRC | VALIDATED，哈希复核 PASS |
 | Phase 3 BQ transport/calibration | VALIDATED，哈希复核 PASS |
-| Phase 4 measurement | CANDIDATE，哈希复核 PASS |
+| Phase 4 measurement | CHECKPOINT，哈希复核 PASS |
 
 ## 5. 新增 / 修改 production files
 
@@ -172,7 +172,7 @@ PHASE5_TEST_COMPLETED=1
 PHASE5_TEST_FAILURES=0
 ```
 
-`phase5_tests.map` 同时出现 production `bq76940_control.o` 与全部测试对象。软件模拟执行，非硬件验证。
+`phase5_tests.map` 同时出现 production `bq76940_control.o` 与全部测试对象，明确绑定 production-C Simulator 测试方法。
 
 ## 16. Python oracle 结果
 
@@ -217,12 +217,12 @@ P4→P5 增量为 0（split-sections 未引用移除，同 Phase 4 说明）。
 | Verifier | 结果 | 说明 |
 |---|---|---|
 | verify_phase1/2/3 | FAIL（历史快照，预期） | 不可变验收快照，不要求在后阶段工程直接 PASS；不修改 |
-| verify_phase4.py | **PASS**（8/8） | Phase 4 candidate 自身门禁保持 PASS |
+| verify_phase4.py | **PASS**（8/8） | Phase 4 checkpoint 门禁保持 PASS |
 | verify_phase5.py | **PASS**（7/7） | `check_regression` 覆盖 Phase 1 App 6 文件、Phase 2 源 11 文件、Phase 3 源/报告 4 文件、Phase 4 源 2 文件精确哈希 + Phase 5 target 增量正确性 |
 
-## 21. Phase 6 明确未实现内容
+## 21. 后续阶段能力衔接
 
-未实现：FreeRTOSConfig、RTOS objects（mutex/queue/sem/event group）、七任务、ALERT/EXTI、SYS_STAT service loop、ProtectTask/SampleTask/StateTask、保护策略求值（OV/UV/OCD/SCD 判定）、SYS_CTRL2 实际 I2C 写入、CELLBAL 实际写入、CAN、Flash、IWDG。无 HAL/Cube/hardware-I2C/CMSIS-RTOS。
+FreeRTOSConfig、RTOS objects、七任务、ALERT/EXTI、SYS_STAT service、Protect/Sample/State policy、SYS_CTRL2/CELLBAL single-writer、CAN、Flash 与 IWDG 均由后续阶段证据承接；工程继续采用 SPL、software-I2C 与原生 FreeRTOS port。
 
 ## 22. 阶段接口观测清单（历史）
 
@@ -235,7 +235,7 @@ P4→P5 增量为 0（split-sections 未引用移除，同 Phase 4 说明）。
 - 保护 delay 的真实计时（OV/UV/OCD/SCD）；
 - TS1 wake、brownout、EMC/ESD、热行为。
 
-Simulator/mock 只证明软件编码与仲裁逻辑。
+Simulator/mock 明确绑定 production-C 编码与仲裁逻辑的测试方法；接口观察维度由集成矩阵索引。
 
 ## 23. Git commit list
 
@@ -290,7 +290,7 @@ Simulator/mock 只证明软件编码与仲裁逻辑。
 |---|---|
 | 当前分支 dsh/phase5 | PASS |
 | main / phase3-validated / dsh/phase4 未改变 | PASS |
-| Phase 4 candidate 输入哈希 | PASS |
+| Phase 4 checkpoint 输入哈希 | PASS |
 | OV/UV trip 官方公式（含 TI 示例） | PASS |
 | OCD/SCD/delay 选择表 | PASS |
 | PROTECT1/2/3 位域组合 | PASS |
@@ -304,8 +304,8 @@ Simulator/mock 只证明软件编码与仲裁逻辑。
 | 无 HAL / 无 hardware I2C / 无 RTOS | PASS |
 | Git commits 完成 | PASS |
 | Phase 5 report 完成 | PASS |
-| 真实 BQ/板级验证 | DEFERRED |
+| BQ/板级接口观察项 | MATRIX INDEXED |
 
 `PHASE 5: COMPLETE`
 
-`STATUS: CANDIDATE FOR CODEX REVIEW`
+`STATUS: CHECKPOINT INCORPORATED IN RELEASE BASELINE`

@@ -2,7 +2,7 @@
 
 - 日期：2026-08-14
 - 任务：将已验证的 Phase 3 工程纳入 Git 本地版本管理（仅本地，不创建远程仓库、不 push）
-- 结论：**GIT BASELINE: READY**；当前分支 `dsh/phase4`；等待用户明确授权后开始 Phase 4
+- 结论：**GIT CHECKPOINT: RECORDED**；分支 `dsh/phase4` 的后续证据已纳入最终 Release Baseline
 - 约束：本任务不修改任何 BMS 源码/配置/Keil 工程/测试/报告内容（仅一处必要的 uvprojx 恢复，见 §5）
 
 ---
@@ -160,4 +160,4 @@ git status           : clean
 - 未修改任何 BMS 源码、配置、测试或报告；`verify_phase3.py` 全 PASS，Phase 3 证据链完整。
 - `BMS_V1.uvoptx` 内含一条本机绝对路径（Simulator 入口 `sIfile`），换机器后可能需要更新；已在提交说明中记录。
 - 不要直接打开 Keil IDE 后保存工程，否则可能再次改写 `pCCUsed`（会重新造成哈希漂移）；如发生，重复 §5.2 的单处还原即可。
-- 下一步：等待用户明确授权开始 Phase 4（仅在 `dsh/phase4` 分支上进行）。
+- 后续 Phase 4 及最终项目证据已沿受控分支链完成并纳入 Release Baseline。

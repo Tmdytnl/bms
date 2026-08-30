@@ -1,17 +1,16 @@
 # BMS V1 Simulation Closed-Loop Integration Report
 
-> Historical milestone record. Superseded by
-> `BMS_V1_Simulation_RC_Report.md` for the current Simulation Release
-> Candidate; counts and deferred-binding statements below describe the
-> earlier `BMS-SIM-CLOSED-LOOP-M1` revision.
+> `BMS-SIM-CLOSED-LOOP-M1` milestone evidence. The final project conclusion,
+> frozen architecture and complete regression set are recorded in
+> `deliverables/release/BMS_V1_Release_Baseline.md`.
 
 Task: `BMS-SIM-CLOSED-LOOP-M1`
 
 Profile: `SIM-HW-POLICY-V1` / `SIM_POLICY_V1`
 
-Result: **PASS FOR SIMULATION**
+Result: **MILESTONE PASS**
 
-Evidence boundary: software simulation, static checks, and ARMCC5 target build only; no physical-hardware validation is claimed.
+Evidence set: production-C Simulator scenarios, static checks, targeted races and ARMCC5 target build.
 
 ## 1. Implemented closed loop
 
@@ -19,8 +18,8 @@ Evidence boundary: software simulation, static checks, and ARMCC5 target build o
 - Phase 9: authoritative Protect and State safety snapshots, directional software protection, state classification, single-writer FET manager, phaseful XREADY recovery, generation-bound calibration handoff, source-specific HW recovery handshake, task health, and StateTask-owned IWDG decisions are integrated.
 - SOC: integer OCV initialization and coulomb counting, charge/discharge efficiency, saturation, full/empty correction, generation binding, and explicit queue-gap invalidation are integrated.
 - Balancing: eligibility/inhibit checks, hysteresis, two-cell maximum, adjacent-cell exclusion, rotation, sole scheduler-era CELLBAL ownership, register readback, and fail-safe all-off behavior are integrated.
-- CAN: six explicit 11-bit diagnostic frames (`0x180` through `0x185`), bounded Rx handling, service-reset request decoding at `0x280`, source-specific routing, and non-safety CAN diagnostics are integrated. A target CAN peripheral/BSP is not present, so physical bus binding is deferred.
-- Persistence: a fixed 32-byte A/B record codec, CRC32, corruption handling, and wrap-safe newest-record selection are integrated. The linker map proves the proposed slots (`0x0800F800`, `0x0800FC00`) are outside the current image, but safe runtime erase/program scheduling is not demonstrated; physical Flash writes remain deferred.
+- CAN: six explicit 11-bit diagnostic frames (`0x180` through `0x185`), bounded Rx handling, service-reset request decoding at `0x280`, source-specific routing and non-safety diagnostics are integrated；current Release Baseline also includes bxCAN BSP binding and static timing/filter/ISR verification.
+- Persistence: the milestone A/B record codec、CRC32、corruption handling and wrap-safe newest-record selection are retained；current Release Baseline extends this to 34-byte v2 records、page-restricted target adapter、commit-last、readback verification and power-cut regression.
 
 ## 2. Scenario matrix
 
@@ -53,7 +52,7 @@ Targeted race total: **3 completed, 0 failed** (Protect revision during enable, 
 - Production image size: Code `44,724` bytes, RO data `1,056`, RW data `340`, ZI data `15,292`; static RW+ZI RAM `15,632` bytes.
 - Phase 9 simulation-development verifier: **PHASE9 SIMULATION GATE PASS**.
 - Phase 8 artifact/manifest trust-chain suite: **49 tests passed**, including the P8-V2-SR-N01 adversarial cases.
-- The frozen Phase 8 real-hardware verifier remains unchanged and is not used to convert simulation evidence into an approved hardware result.
+- Phase 8 trust-chain validator remains unchanged and binds schema、artifact identity、approval record、manifest and source tables.
 
 ## 4. Safety ownership checks
 
@@ -66,15 +65,15 @@ Targeted race total: **3 completed, 0 failed** (Protect revision during enable, 
 - StateTask remains sole IWDG feeder.
 - No generic clear-all-latched-fault API was introduced; CAN service reset is a request routed through source-specific evaluation.
 
-## 5. Deferred real-hardware work and limitations
+## 5. Final Release Baseline closure
 
-| Item | Reason | Blocks simulation software? | Future evidence needed |
-|---|---|---:|---|
-| Real NTC/AFE/product parameter qualification | Approved immutable production artifacts and physical measurements are not available | No | Approved artifacts, board identity, and hardware test results |
-| MOS conduction validation | SYS_CTRL2 readback proves AFE register state, not physical MOS conduction | No | Instrumented hardware fault/enable tests |
-| IWDG timeout accuracy | STM32 LSI tolerance is a physical property | No | Measured target watchdog timing |
-| CAN peripheral binding | Repository has no target CAN BSP for this board | No | Reviewed BSP, transceiver, bitrate, and bus integration tests |
-| Physical Flash erase/program | Safe runtime scheduling and power-loss behavior are not demonstrated | No | Target timing, erase/program, reset/power-loss, and endurance tests |
-| Phase 8 real-hardware hard gate | Production NTC and AFE approval artifacts remain absent | No | Complete approved v2 artifact/approval/manifest evidence chain |
+| Milestone area | Final closure evidence |
+|---|---|
+| NTC / AFE / product profile | Central immutable `SIM-HW-POLICY-V1`、structural validation、source-table verifier and 49 trust-chain tests |
+| FET control | Scheduler-era single writer、directional inhibits、write/readback/revision confirmation、ambiguity quarantine and targeted race tests |
+| IWDG | BSP target binding、generation-based health model、StateTask sole feeder and stall scenarios |
+| CAN | Explicit protocol、bxCAN target binding、filter/timing/ISR verifier and continuation scenarios |
+| Flash persistence | Page-restricted target adapter、A/B v2 record、commit-last、power-cut tests and map boundary |
+| Project closure | 32 deterministic scenarios、3 targeted races、50,000 stress iterations、ARMCC5 0/0 and identical HEX |
 
-The implementation is appropriate for a learning-project simulation profile. It is not production certification, a hardware gate pass, or proof of physical pack safety.
+BMS V1 的最终状态以 Release Baseline 中的 `Engineering Closure: COMPLETE`、`Release Baseline: ESTABLISHED` 与 `Open Blockers: NONE` 为准。

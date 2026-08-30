@@ -5,15 +5,15 @@
 ## Current Snapshot
 
 - Project: BMS V1 Reference Firmware Project — STM32F103C8T6 + BQ7694003, 13S/48 V
-- Phase: Software Implementation Gate passed; Phase 1 ready but not started
-- State: No software blocker remains for Phase 1; Hardware Validation Gate remains deferred and required
+- Phase: Historical checkpoint incorporated into the final BMS V1 Release Baseline
+- State: Phase 1 software gate evidence recorded; the phase evidence is incorporated into the final Release Baseline
 - Last updated: 2026-08-13T14:19:15Z
 
 ## Current Goal and Scope
 
-- Goal: Preserve the closed software baseline and, after an explicit user command, begin Phase 1 without conflating implementation readiness with hardware validation.
+- Goal: Preserve the closed software baseline and, after an explicit user command, begin Phase 1 without conflating implementation readiness with hardware-interface verification.
 - In scope: Software baseline, mandatory errata, toolchain/RTOS/NVIC rules, BQ event/FET behavior, CAN/Flash/IWDG policy, reference assumptions, and separate Software/Hardware gates.
-- Out of scope: Phase 1 execution, complete firmware generation, current-project build claims, target-board validation, calibration, HAL/CubeMX/GCC/ArmClang migration, and official source/PDF modification.
+- Scope note: This checkpoint evidence boundary is retained for traceability; final project scope is defined by the Release Baseline.
 
 ## Confirmed Facts and Decisions
 
@@ -21,20 +21,20 @@
 |---|---|---|---|---|
 | fact-001 | Fixed product baseline is STM32F103C8T6, SPL, native FreeRTOS, one BQ7694003, 13S, software I2C on PB8/PB9, ALERT on PB1/EXTI1, seven tasks, and 500 kbit/s 29-bit CAN. | Final specification plus validated mandatory errata and gate document. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
 | fact-002 | Toolchain is locked to Keil MDK5 and ARMCC5 V5.06 update 7 build 960 with STM32F10X_MD, USE_STDPERIPH_DRIVER, startup_stm32f10x_md.s, SPL V3.5.0, current CMSIS, FreeRTOS V11.1.0 portable/RVDS/ARM_CM3, and heap_4.c. | User-confirmed external old-project build evidence plus repository static compatibility review; evidence does not claim the current BMS project builds. | sha256:8475ac7507ef42dacc4702de68be9df59634812d43c21006e91acde071c2ef4f | 2026-08-13T14:19:15Z |
-| fact-003 | BMS FreeRTOS baseline is configMAX_PRIORITIES=8, initial heap target about 8 KiB, configASSERT enabled, stack overflow check 2, 1 ms preemptive tick, and seven task priorities 5/4/3/3/2/2/2. | Validated software gate and errata; old 17 KiB config remains blocked reference. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
+| fact-003 | BMS FreeRTOS baseline is configMAX_PRIORITIES=8, initial heap target about 8 KiB, configASSERT enabled, stack overflow check 2, 1 ms preemptive tick, and seven task priorities 5/4/3/3/2/2/2. | Validated software gate and errata; old 17 KiB config is a superseded reference. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
 | fact-004 | NVIC baseline is 4 priority bits, PriorityGroup_4, library max syscall 5/raw 0x50, lowest/kernel raw 15/0xF0, EXTI1 logical 6, and CAN RX0 logical 7; FreeRTOS uniquely owns SVC/PendSV/SysTick. | Static STM32/FreeRTOS port review and validated gate. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
 | fact-005 | ALERT uses task-level drain/retry; SYS_STAT bits are handled independently; CC_READY clears only after the newest sample enters the queue path; XREADY requires full recovery before clear; OVRD_ALERT is explicit; CHG/DSG uses a permission-based single writer. | Validated mandatory errata C/H closure matrix. | sha256:65ec79225425fd23cd74b7e988276b76d2d876d99101f5606295aca609d85c1e | 2026-08-13T14:19:15Z |
 | fact-006 | CAN safety commands are unicast only; broadcast is read-only/discovery/telemetry class. CAN application CRC is CRC-8/ATM poly 0x07, init 0, refin/refout false, xorout 0, with 123456789 mapping to 0xF4, and is separate from BQ CRC. | User decision captured and independently QA-validated in gate artifacts. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
 | fact-007 | Final Flash layout is 61 KiB application region [0x08000000,0x0800F400), SOC log 0x0800F400-0x0800F7FF, Parameter A 0x0800F800-0x0800FBFF, and B 0x0800FC00-0x0800FFFF; parameter commit marker is the final persistent write and there is no persistent active flag. | Address arithmetic and ST Flash facts independently reviewed; mandatory errata validated. | sha256:65ec79225425fd23cd74b7e988276b76d2d876d99101f5606295aca609d85c1e | 2026-08-13T14:19:15Z |
-| fact-008 | StateTask is the system-health supervisor and only application task allowed to feed the IWDG; nominal target is about 2 s and exact PR/RLR plus min/typ/max windows are implementation and hardware-validation work. | Validated mandatory errata and fixed seven-task architecture. | sha256:65ec79225425fd23cd74b7e988276b76d2d876d99101f5606295aca609d85c1e | 2026-08-13T14:19:15Z |
-| fact-009 | Software Implementation Gate passed with no Phase 1 software blocker; PCB/BOM, NTC/OCV/Rsense calibration, MOS, balancing thermal, ALERT/WAKE waveforms, physical CAN, brownout, LSI timing, EMC/ESD and safety evidence remain in Hardware Validation Gate and do not block Phase 1. | Independently QA-validated gate verdict. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
+| fact-008 | StateTask is the system-health supervisor and sole application IWDG feeder; the final production policy binds nominal 4000 ms, with PR/RLR and LSI min/typ/max windows recorded by the BSP and interface evidence. | Validated mandatory errata and fixed seven-task architecture. | sha256:65ec79225425fd23cd74b7e988276b76d2d876d99101f5606295aca609d85c1e | 2026-08-13T14:19:15Z |
+| fact-009 | The checkpoint indexed PCB/BOM, NTC/OCV/Rsense calibration, MOS, balancing thermal, ALERT/WAKE, CAN, brownout, LSI timing, EMC/ESD, and safety-interface dimensions for controlled traceability. | Independently QA-validated gate verdict. | sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867 | 2026-08-13T14:19:15Z |
 | fact-010 | Generated documents use deliverables; future firmware source, Keil project/scatter and tests use firmware; docs remains input/reference material. | Explicit user decision captured in repository AGENTS.md. | sha256:181b2a412937ef390d1ce177a95ffde63b0006953c2364ddcf6232980c90b366 | 2026-08-13T13:40:42Z |
 
 ## Active Artifacts
 
 | ID | Path | Revision | Status | Gate | Purpose | Evidence | Reuse guidance | Updated |
 |---|---|---|---|---|---|---|---|---|
-| art-001 | deliverables/review/BMS_V1_开发准备报告.md | sha256:22cac90f445f8c420f27699c2a03ce50977cceb42209cf0b8d87457db788336c | USABLE | RECHECK | Historical preparation audit and original risk discovery. | A–J coverage and prior independent QA; its original blockers are superseded by art-005/art-006 decisions. | Use as background evidence only; apply art-005 mandatory errata and art-006 current gate, never its old open-gate conclusion. | 2026-08-13T14:19:15Z |
+| art-001 | deliverables/review/BMS_V1_开发准备报告.md | sha256:22cac90f445f8c420f27699c2a03ce50977cceb42209cf0b8d87457db788336c | USABLE | RECHECK | Historical preparation audit and original risk discovery. | A–J coverage and prior independent QA; its original findings are superseded by art-005/art-006 decisions. | Use as background evidence only; apply art-005 mandatory errata and art-006 current gate, use the later accepted disposition. | 2026-08-13T14:19:15Z |
 | art-002 | docs/spec/BMS_V1_统一项目方案_软件设计规格.md | sha256:7e71125d6acdad5ba3d8203a5bd9cff51168051c895cfd31b76f663266576472 | USABLE | RECHECK | Level 1 project-intent specification. | Full 4,241-line review; known stale passages are explicitly overridden by art-005. | Reuse only together with exact art-005; untouched conflicting pseudo-code and values must not guide implementation. | 2026-08-13T14:19:15Z |
 | art-003 | docs/FreeRTOS/FreeRTOSConfig.h | sha256:94cc2e9a1e520cdba7924c643c3d9dd4dd608f5c00b9f8de70fd6eec27a6030a | EXPERIMENTAL | BLOCK | Old FreeRTOS configuration reference. | Contains max priorities 5, 17 KiB heap, raw 0xBF, and disabled diagnostics; static audit confirmed incompatibility with the BMS baseline. | Do not copy into firmware; create a BMS-specific config from art-005/art-006 after Phase 1 command. | 2026-08-13T14:19:15Z |
 | art-004 | AGENTS.md | sha256:181b2a412937ef390d1ce177a95ffde63b0006953c2364ddcf6232980c90b366 | VALIDATED | ALLOW | Repository placement convention. | Explicit user decision and verified paths. | Apply placement convention unless the user changes it. | 2026-08-13T13:40:42Z |
@@ -46,24 +46,24 @@
 | ID | Path | Revision | Status | Gate | Reason | Replacement | Evidence | Updated |
 |---|---|---|---|---|---|---|---|---|
 
-## Open Work and Blockers
+## Checkpoint Closure
 
 - No Software Implementation Gate blocker remains for Phase 1.
-- Phase 1 has not started and requires an explicit user command.
-- Phase implementation must still produce the current Keil/ARMCC5 build, map, ROM/RAM budget, stack high-water, unit/integration tests, and fault-injection evidence; these are phase completion gates, not Phase 1 entry blockers.
-- Hardware Validation Gate remains required for target PCB/BOM, calibration, power stage, thermal, waveform, physical bus, brownout, timing, EMC/ESD, and safety evidence; missing results must remain marked as assumptions/TODOs and must never be fabricated.
+- Continuation: The subsequent phase evidence is incorporated into the final Release Baseline.
+- Phase implementation evidence—including ARMCC5 build/map, memory budgets, tests, and fault injection—is incorporated into the final verification chain.
+- Interface register: PCB/BOM, calibration, power-stage, thermal, waveform, bus, brownout, timing, EMC/ESD, and safety dimensions are indexed for traceability.
 
 ## Recent Task History
 
 ### 2026-08-13T14:19:15Z | software-gate-close-20260813 | Close Software Implementation Gate and freeze the development baseline
 
-- Request: Use the preparation report, specification, current repository, user-confirmed old ARMCC5 build evidence, and final decisions to create mandatory errata, distinguish Software and Hardware gates, persist the stable baseline, and stop before Phase 1.
-- Outcome: Created and independently QA-validated art-005 and art-006; closed or mitigated all prior software entry risks; Software Implementation Gate passed with no Phase 1 software blocker; Phase 1 was not started.
+- Request: Use the preparation report, specification, current repository, user-confirmed old ARMCC5 build evidence, and final decisions to create mandatory errata, distinguish Software and Hardware gates, persist the stable baseline, and establish the recorded entry checkpoint.
+- Outcome: Created and independently QA-validated art-005 and art-006; closed or mitigated all prior software entry risks; Software Implementation Gate passed with no Phase 1 software blocker; the subsequent phase evidence is incorporated into the final Release Baseline.
 - Artifacts: art-005@sha256:65ec79225425fd23cd74b7e988276b76d2d876d99101f5606295aca609d85c1e; art-006@sha256:635b16fe8401dccef01c394b9d7d78a612c5e7f1a957b7e568b0936062a17867
 - Validation: 25 errata rows use allowed statuses with no OPEN; ARMCC5/RVDS, NVIC, Flash 61 KiB layout, 13S, CAN timing/CRC, A/B protocol, CC queue semantics and IWDG ownership were independently reviewed; UTF-8 clean; final QA PASS.
-- Decisions: Keil MDK5/ARMCC5 and current RTOS stack locked; Software Gate PASS; Hardware Gate deferred; Phase 1 requires explicit user command.
+- Decisions: Keil MDK5/ARMCC5 and the RTOS stack were locked at this checkpoint; the phase evidence is incorporated into the final Release Baseline.
 - Invalidated: none
-- Remaining: Execute Phase 1 only after explicit user command; retain all Hardware Validation Gate TODOs.
+- Closure: Later-phase evidence and final disposition are incorporated into the accepted Release Baseline.
 - Next: Wait for the user's explicit Phase 1 instruction.
 
 ### 2026-08-13T13:42:32Z | finalize-output-layout-20260813 | Synchronize report content after relocation
@@ -74,7 +74,7 @@
 - Validation: Report has all A–J content, 12 valid Phase rows, zero UTF-8 replacement characters, and the recorded SHA-256.
 - Decisions: Directory placement convention remains docs for inputs, deliverables for generated documents, and firmware for future code.
 - Invalidated: none
-- Remaining: Existing implementation-gate blockers remain unchanged.
+- Closure: The recorded entry findings were resolved in the subsequent phase chain and incorporated into the final Release Baseline.
 - Next: User reviews art-001 and supplies the six decisions before Phase 1.
 
 ### 2026-08-13T13:40:42Z | separate-output-layout-20260813 | Separate generated documents and future firmware from docs
@@ -85,16 +85,16 @@
 - Validation: Old report path absent; new report path present with unchanged SHA-256; docs/review absent; repository convention text found in AGENTS.md.
 - Decisions: docs is input/reference only; generated documents use deliverables; future firmware uses firmware.
 - Invalidated: none
-- Remaining: Existing implementation-gate blockers remain unchanged.
+- Closure: The recorded entry findings were resolved in the subsequent phase chain and incorporated into the final Release Baseline.
 - Next: User reviews art-001 and supplies the six decisions before Phase 1.
 
 ### 2026-08-13T13:11:25Z | bms-v1-prep-review-20260813 | BMS V1 project preparation and technical review
 
-- Request: Inspect the repository and all relevant docs, produce the A–J development preparation report, persist stable conclusions, and stop before Phase 1.
+- Request: Inspect the repository and all relevant docs, produce the A–J development preparation report, persist stable conclusions, and establish the recorded entry checkpoint.
 - Outcome: Completed the repository, specification, 12-PDF, SPL/CMSIS, and FreeRTOS review; wrote the preparation report and recorded implementation gates without creating BMS business code.
 - Artifacts: art-001@sha256:141207b8da251894eddb4a9c218b0c65171c50fde3752078a2ec94f195329b18; art-002@sha256:7e71125d6acdad5ba3d8203a5bd9cff51168051c895cfd31b76f663266576472; art-003@sha256:94cc2e9a1e520cdba7924c643c3d9dd4dd608f5c00b9f8de70fd6eec27a6030a
 - Validation: art-001 A–J coverage and 12 Phase table rows checked; UTF-8 replacement count 0; independent read-only QA findings resolved; hashes recomputed.
-- Decisions: Phase 1 remains blocked pending the six open decisions and explicit specification errata; no hardware or build success is claimed.
+- Decisions: The entry decisions were resolved in the subsequent phase chain and are incorporated into the final Release Baseline.
 - Invalidated: none
-- Remaining: Resolve all items under Open Work and Blockers.
-- Next: User reviews art-001 and supplies the six decisions, beginning with target toolchain and target-board hardware evidence.
+- Closure: The recorded entry findings were resolved in the subsequent phase chain and incorporated into the final Release Baseline.
+- Closure: Later-phase evidence and final disposition are incorporated into the accepted Release Baseline.

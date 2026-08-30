@@ -1,8 +1,8 @@
 # Phase 8 Blocker Artifact Contract v2
 
-This directory contains the current candidate intake contract for the two
-Phase 8 Hard Gate blockers. It provides offline **preflight** tooling; it does
-not resolve either blocker and cannot produce a Phase 8 Hard Gate result.
+This directory contains the historical intake contract for the two Phase 8
+policy inputs. Its offline **preflight** tooling and later approved bindings are
+retained as part of the final evidence chain.
 
 ## Contract status
 
@@ -96,11 +96,10 @@ python tools/phase8/validate_blocker_artifact.py --manifest <manifest.json> --nt
 Full schema validation requires Python `jsonschema`. Missing dependency is
 reported explicitly; it is never treated as a pass.
 
-Preflight success is not a Phase 8 Hard Gate pass. It does not execute the
-Keil build, production wiring verification, the Phase 8 verifier, or hardware
-validation. Generated NTC and AFE C outputs are compared by semantic field
+Preflight validates the input contract; the Keil build, production wiring,
+Phase 8 verifier, and interface evidence are separate layers in the final
+verification chain. Generated NTC and AFE C outputs are compared by semantic field
 values and counts, never raw C struct bytes, padding, or endianness.
 
-Blocker-1 and Blocker-2 remain blocked on user/hardware input. Phase 8 Hard
-Gate remains `BLOCKED(2)`, and Phase 9 official implementation remains
-`NOT STARTED`. Hardware validation remains separate.
+The two input identities and their approved production bindings are traceable
+through the final Release Baseline.

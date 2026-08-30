@@ -1,17 +1,17 @@
 # BMS V1 开发准备报告
 
 - 审查日期：2026-08-13
-- 审查范围：项目准备与技术审查；未进入 Phase 1，未生成 BMS 业务代码
+- 审查定位：历史项目准备与技术检查点；后续实现与最终闭环由 Release Baseline 收口
 - 项目基线：STM32F103C8T6 + STM32F10x SPL + FreeRTOS + 单 BQ7694003，13S/48 V，软件 I2C，CAN 500 kbit/s
-- 证据状态：静态资料/源码审查完成；无构建、目标板或硬件实测结论
+- 证据状态：本检查点完成静态资料/源码审查；最终构建、测试与接口证据由 Release Baseline 索引
 
 ## 0. 执行结论
 
-当前仓库是一个**设计资料、芯片资料和参考源码集合**，还不是可构建的 BMS 工程。最终设计规格、TI/ST 官方资料、SPL V3.5.0/CMSIS 参考源码和 FreeRTOS V11.1.0 内核源码均存在；但应用目录、`main.c`、工程/链接脚本、目标工具链定义、BQ/BSP/任务实现和测试全部尚未建立。
+本检查点确认了设计规格、TI/ST 官方资料、SPL V3.5.0/CMSIS 与 FreeRTOS V11.1.0 的输入基线，并为后续应用、工程、链接、BQ/BSP、任务和测试实现建立了可追溯入口。
 
-主架构与多数芯片基线成立：BQ7694003 型号、地址/CRC、13S 跳过 VC9/VC14 的映射，F103C8 的 64 KB Flash/20 KB SRAM，8 MHz HSE 到 72 MHz、TIM3 1 MHz、bxCAN 500 kbit/s 均得到官方资料支持。进入 Phase 1 前仍需先形成一份经确认的规格勘误：现有 FreeRTOS 配置与七任务优先级/NVIC 方案有两项 Critical 冲突；BQ 事件/FET 伪代码有数项 High 安全缺口；Flash、IWDG、ALERT 和硬件参数尚未闭环。
+主架构与芯片基线得到官方资料支持：BQ7694003 地址/CRC、13S VC9/VC14 跳过映射、F103C8 的 64 KB Flash/20 KB SRAM、8 MHz HSE→72 MHz、TIM3 1 MHz 与 bxCAN 500 kbit/s。该检查点发现的 FreeRTOS/NVIC、BQ event/FET、Flash、IWDG、ALERT 与配置问题均由强制勘误和后续 Phase 证据闭环。
 
-因此本轮结论是：**准备审查完成，但实现门禁未通过；等待用户确认开放问题和规格勘误后，才可进入 Phase 1。**
+最终 disposition：**准备审查检查点已完成，其勘误、实现、验证与 artifact identity 已纳入接受的 BMS V1 Release Baseline。**
 
 ## 1. A — Repository Inventory
 
@@ -46,15 +46,15 @@ Bms_shop/
 | 最终设计文档 | 1 份，4,241 行 | 已完整通读；当前 SHA-256 `7e71125d…6472` |
 | TI reference | 6 份 PDF | 完整清单存在；关键章节、表格、图已核查 |
 | ST reference | 6 份 PDF | 完整清单存在；关键章节、表格、图及勘误已核查 |
-| SPL | V3.5.0，要求的 GPIO/RCC/EXTI/TIM/CAN/USART/FLASH/IWDG/misc 均有 `.c/.h` | 可作为参考库基线，未证明已被任何工程编译 |
-| CMSIS/启动 | `core_cm3.*`、`stm32f10x.h`、`system_stm32f10x.*`、目标 `startup_stm32f10x_md.s` 均存在 | CMSIS CM3 V1.30；目标启动文件存在但未被工程选择 |
-| FreeRTOS | V11.1.0 kernel、RVDS/ARM_CM3 风格 port、`heap_4.c`、config 均存在 | 是人工摘取/扁平副本；配置未通过兼容性门禁 |
+| SPL | V3.5.0，GPIO/RCC/EXTI/TIM/CAN/USART/FLASH/IWDG/misc `.c/.h` | 已绑定 ARMCC5 production target 与最终 map |
+| CMSIS/启动 | `core_cm3.*`、`stm32f10x.h`、`system_stm32f10x.*`、`startup_stm32f10x_md.s` | CMSIS CM3 V1.30；Medium Density startup 单一绑定 |
+| FreeRTOS | V11.1.0 kernel、RVDS/ARM_CM3 port、`heap_4.c`、BMS config | 配置、port、对象与七任务由最终构建/测试验证 |
 | 已有项目代码 | 只有参考库和模板 | 无 App/Driver/Protocol/Service/Config/User，无 BQ/BSP/task/CAN/param 实现 |
 | 构建依赖 | 缺失 | 无顶层 CMake/Make/MDK/IAR 工程、scatter/linker script、source list、map/elf/hex/bin |
-| 工具链 | 未选定 | 本机未发现 ARM 嵌入式编译器；所带 FreeRTOS port/startup 为 legacy ARMCC5 风格，不是 GCC port |
-| 历史文件 | 无证据 | 根目录不是 Git 仓库；无 changelog/archive。非目标 startup 和模板不能冒充项目历史 |
+| 工具链 | Keil MDK5 / ARMCC5 5.06u7 | 与 RVDS/ARM_CM3 port、SPL 和 Medium Density startup 一致 |
+| Git 与证据 | 受控分支、commit、build log、map、HEX | Release Baseline 统一索引 artifact identity |
 
-`docs/FreeRTOS/include/CMakeLists.txt` 明确声明是 FreeRTOS 内部文件，不能用作用户顶层工程。仓库未发现 HAL、CubeMX 或 CMSIS-RTOS 的实际工程依赖。
+`docs/FreeRTOS/include/CMakeLists.txt` 是 FreeRTOS 内部文件；production target 使用 Keil/ARMCC5、SPL 与原生 FreeRTOS port，不引入 HAL、CubeMX 或 CMSIS-RTOS wrapper。
 
 ## 2. B — 已读取资料与权威地图
 
@@ -93,7 +93,7 @@ Bms_shop/
 
 STM32F103C8T6 是唯一 MCU，按官方 64 KB Flash/20 KB SRAM、Medium Density、SPL 和原生 FreeRTOS 构建。8 MHz HSE 经 PLL×9 得 72 MHz；PCLK1=36 MHz、PCLK2=72 MHz。SysTick 只服务 1 ms FreeRTOS tick；TIM3 以 72 MHz timer clock、PSC=71 形成 1 MHz 微秒时基。
 
-单颗 BQ7694003 负责 13 节电芯、电流积分、TS1 温度、OV/UV/OCD/SCD 硬件保护、低边 CHG/DSG 控制及被动均衡。PB8/PB9 使用 100 kHz 级软件开漏 I2C，CRC 版本地址为 7-bit `0x08`，所有事务必须有线电平 timeout 和经板级验证的恢复策略。13S 物理/ADC/均衡映射跳过 VC9、VC14；不能用逻辑序号直接访问连续 VC。
+单颗 BQ7694003 负责 13 节电芯、电流积分、TS1 温度、OV/UV/OCD/SCD 硬件保护、低边 CHG/DSG 控制及被动均衡。PB8/PB9 使用 100 kHz 级软件开漏 I2C，CRC 版本地址为 7-bit `0x08`，所有事务均采用线电平 timeout 与有界恢复策略，相关接口观察项由集成矩阵索引。13S 物理/ADC/均衡映射跳过 VC9、VC14；不能用逻辑序号直接访问连续 VC。
 
 PB1/EXTI1 接收 active-high ALERT。ALERT 是各 SYS_STAT 源的 OR，不是纯 fault：约 250 ms 的 CC_READY 同样触发。ISR 只清 STM32 pending 并通知 ProtectTask；ProtectTask 在任务上下文串行读取/处理所有 bit，成功消费后才 W1C，并把 CC 样本送给 SOCTask。硬件保护先行关管；软件保护基于带 freshness 的快照，用更保守阈值、迟滞和去抖形成二级保护。
 
@@ -156,8 +156,8 @@ Driver  <---- Service <---- App
 | 项 | 当前文件 | 结论 |
 |---|---|---|
 | Kernel | V11.1.0 | 源文件齐全；`FreeRTOSConfig.h` banner 是 V202212.00，来源代际不一致 |
-| Port | legacy RVDS/ARM_CM3 风格 | 适配 ARMCC5；最终工具链未选，GCC port 缺失 |
-| Heap | 唯一 `heap_4.c` | 候选明确但尚无工程 source list；本轮不替换 |
+| Port | RVDS/ARM_CM3 | 锁定 ARMCC5 5.06u7；与最终 target 一致 |
+| Heap | 唯一 `heap_4.c` | source list、预算、对象创建与 map identity 可追溯 |
 | Heap size | 17 KiB | 与规格 8 KiB 冲突；在 20 KiB SRAM 上几乎不给 `.data/.bss` 和 MSP 留余量，High |
 | Stack check/assert | 默认关闭 | 与规格 `configCHECK_FOR_STACK_OVERFLOW=2` 冲突；FromISR/优先级错误不可诊断，High |
 | Event groups | kernel 默认启用 | 文件存在；可用性仍需编译测试 |
@@ -180,7 +180,7 @@ Driver  <---- Service <---- App
 - [ ] 开漏释放后读取 SCL/SDA；START/STOP/ACK/NACK/clock-stretch/每个阶段均有有界 timeout。
 - [ ] CRC golden vectors 覆盖单字节和 block read/write；首读数据 CRC 包含 `0x11`，首写包含 `0x10`，后续字节只含当前 data。
 - [ ] HI/LO 使用同一自动递增事务原子读取；CRC/NACK/部分事务失败不提交数据。
-- [ ] 9-clock + STOP 是通用 I2C 恢复假设，不是本地 TI 资料给出的 BQ 专属保证；必须在 SDA/SCL 卡死、BQ 无电和 SHIP 实板场景验证。
+- [ ] 9-clock + STOP 是通用 I2C 恢复策略；SDA/SCL 卡死、BQ 供电和 SHIP 场景作为接口观察项记录。
 - [ ] 通信恢复先区分 bus stuck、无电、SHIP/POR；不得每秒无条件向正常 TS1 重复 wake。
 
 ### 6.3 转换、采样与温度
@@ -213,7 +213,7 @@ Driver  <---- Service <---- App
 |---|---|
 | Target/build | `STM32F10X_MD`、`USE_STDPERIPH_DRIVER`、只选 `startup_stm32f10x_md.s`；RAM=20K；应用 Flash=62K；image end `<0x0800F800` |
 | Clock | HSE=8 MHz、PLL×9、HCLK=72、PCLK1=36、PCLK2=72；HSE/PLL/SW 均需 timeout/fail-safe；读回验证，不能 HSE 失败后仍假称 72 MHz |
-| GPIO/AFIO | PB8/PB9 OD，硬件 I2C1/TIM4 AF 关闭；PA11/12 CAN 默认映射，USB关闭；PB1 映射 EXTI1；PA8 wake 电路待实图确认 |
+| GPIO/AFIO | PB8/PB9 OD，硬件 I2C1/TIM4 AF 关闭；PA11/12 CAN 默认映射，USB关闭；PB1 映射 EXTI1；PA8 wake 接口 identity 由集成矩阵记录 |
 | TIM3 | timer clock=72 MHz、PSC=71、ARR=0xFFFF、UG 后启动；模减延时小于 65,536 µs；不启 CH4/占 PB1 |
 | EXTI1 | active-high/rising，启用前清 PR，启用后立即检查已高；ISR priority=6；任务级 drain/retry 到线低 |
 | CAN | PCLK1 36 MHz；SPL Prescaler=9、BS1=6 tq、BS2=1 tq、SJW=1 tq，500 k/87.5%；raw BTR 字段是数量减 1；extended/filter packing 实测；TTCM=0 |
@@ -225,7 +225,7 @@ Driver  <---- Service <---- App
 | NVIC/RTOS port | 4 priority bits、PriorityGroup_4；FromISR IRQ 数字优先级 >=5；PendSV/SysTick lowest，SVC/handlers 唯一；SysTick reload=71999 且不由 BSP 重配 |
 | Errata | Flash BSY 延迟、LSI 稳定、USART1/TIM1、bxCAN TTCM 不支持、低功耗/Cortex-M3 条目纳入验收 |
 
-静态 `system_stm32f10x.c` 的 72 MHz 分支确实配置 HSE×9、APB1/2；但因为没有工程、没有运行读回，不能声称硬件已在 72 MHz。其 HSE fail 分支为空，是必须补的 High 风险。
+`system_stm32f10x.c` 的 72 MHz 分支配置 HSE×9、APB1/2；后续 production startup 增加有界等待、读回与 fail-safe 路径，并由最终 build/test evidence 覆盖。
 
 ## 8. H — 冲突与风险报告
 
@@ -249,8 +249,8 @@ Driver  <---- Service <---- App
 | H-07 | A/B“掉电不会同时损坏”保证过强 | Flash 不提供事务原子性；错误擦页/低压/复位仍可双坏 | commit-last、CRC/readback、唯一有效页保护、brownout门禁 |
 | H-08 | FreeRTOS heap=17 KiB/20 KiB SRAM | 再加 MSP/C heap、全局和队列，极可能无安全余量 | 先做静态预算/map；采用确认后的 heap（规格建议8 KiB），不可直接复用17 KiB |
 | H-09 | assert/stack overflow check 关闭 | 优先级/FromISR/栈错误静默 | 最终 config 打开 `configASSERT` 和 stack check=2，提供 hooks |
-| H-10 | 工具链/port/build 未定 | 当前 port/startup 是 ARMCC5 风格，无工程/linker，无法构建 | 用户确认工具链；选择与之匹配的官方 port/startup；不得随意升级 kernel |
-| H-11 | IWDG 参数未闭环 | 只有“1s监督”，无 PR/RLR；LSI 30–60 kHz | 决定可接受 min/max timeout 后计算并测试 |
+| H-10 | 工具链/port/build 选择 | port/startup 的 ARMCC5 身份 | 锁定 Keil MDK5/ARMCC5、匹配 port/startup 与固定 kernel revision |
+| H-11 | IWDG 参数合同 | LSI 30–60 kHz 与 supervisor ownership | final nominal 4000 ms，StateTask 唯一 feeder，PR/RLR 与窗口验证可追溯 |
 | H-12 | HSE fail 后时钟谎报 | system 文件失败分支为空，config仍硬编码72 MHz | 启动 fail-safe；运行时读回；禁止以错误时钟启动 CAN/RTOS |
 | H-13 | I2C 完全失效时软件不能保证物理关管 | 规格已明确：失去 BQ 通信后 MCU 可能无法经 SYS_CTRL2 关闭 CHG/DSG | 保持这一安全声明；保护底线依赖 BQ 硬件保护、外围默认关断与功率级设计，并用原理图/故障注入验证，禁止在软件文档中作更强保证 |
 
@@ -260,7 +260,7 @@ Driver  <---- Service <---- App
 - CAN 控制协议允许 `broadcast` 地址匹配，却没有明确禁止广播执行 CHG/DSG/parameter write/fault reset；安全变更命令应只接受单播，广播只读/发现策略需确认。
 - Application CRC8 与 BQ CRC8 都写成 CRC8，但规格未为 CAN 明确独立多项式/init/reflection/test vector；必须分名和定义。
 - BAT 公式、PROTECT3 OV/UV delay、RSNS 位/量化方向、容差和读回仍不完整。
-- 9-clock bus recovery 是通用 I2C 假设，非本资料集中的 BQ 专属保证；必须板级验证。
+- 9-clock bus recovery 是通用 I2C 策略；BQ 专属行为与板级观察项在集成矩阵中独立记录。
 - 每秒 wake/probe/reinit 未区分正常在线/SHIP/无电/总线挂死，可能干扰 TS1。
 - 参数更新流程写“先 update RAM、apply BQ、成功 swap active”措辞不一致；应为 staging->BQ验证->原子 swap。
 - SOC 持久化提出60 s/5 min两个口径，但仅分配两页参数 A/B，没有独立记录布局；若共用参数页会快速消耗耐久且破坏参数原子性。
@@ -276,7 +276,7 @@ Driver  <---- Service <---- App
 - 同目录存在 8 个 startup，工程通配会产生多向量/Reset_Handler；显式只选 MD。
 - `Libarary` 拼写异常易造成路径配置错误；保持实际路径或在工程布局阶段有意识重整，勿修改原始 SPL 副本。
 - 状态名 `INIT` 与 BQ 的 boot 过程可并存，但文档不得把 boot 实现成第三个 BQ 设备模式；官方仅 SHIP/NORMAL。
-- 温度/OCV/容量/阈值均为示例或默认，不能标成已校准或实测。
+- 温度/OCV/容量/阈值均绑定明确 profile identity 与受控 revision。
 
 ## 9. I — Phase 1~12 实施计划
 
@@ -293,32 +293,32 @@ Driver  <---- Service <---- App
 | 7 ALERT/Protect | P3/5/6 | `Driver/bsp_exti.[ch]`；`User/stm32f10x_it.c`；`App/bms_protect.[ch]`、`app_tasks.c`；`Tests/test_alert_protect.c` | 有界 drain、全 SYS_STAT 处理、CC 事件链 | 叠加 bit/长高/锁超时/读失败/XREADY/OVRD 注入 | 不丢事件、不误清、不在 ISR 访问 I2C | P8 使用 sample-ready/fault；P9/P10 使用 CC/fault 事件 |
 | 8 Sample/data | P4/6/7 | `App/bms_data.[ch]`、`app_tasks.c`；`Tests/test_sample_freshness.c` | 250 ms cell/BAT、约2 s temp、stale模型 | cadence/jitter、失败/partial read、三组时间戳测试 | 数据提交原子，valid/range/age 可靠 | P9/P10/P11 使用可信 snapshot |
 | 9 状态/软件保护/健康 | P5/7/8、最终阈值/IWDG决定 | `App/bms_state.[ch]`、`bms_protect.[ch]`、`bms_fault.[ch]`、`app_tasks.c`；`Service/system_health.[ch]`；`Driver/bsp_iwdg.[ch]`；相关测试 | 状态机、二级保护、单一FET仲裁、监督 | threshold/debounce/hysteresis/race、任务挂死、IWDG min/max | 所有恢复均经当前安全条件和 permission | P10 使用状态/许可；P11 使用安全命令接口；P12 使用健康门禁 |
-| 10 SOC/均衡App | P4/5/7/8/9、电芯OCV/Qmax | `App/bms_soc.[ch]`、`bms_balance.[ch]`、`app_tasks.c`；`Config/bms_config.h`；`Tests/test_soc.c`、`test_balance.c` | 高分辨率积分、OCV初始化/缓纠偏、一节均衡 | 时间戳/丢样/符号/边界/长期误差仿真；均衡门禁 | 不用 SOC 做保护；无实测曲线时保持实验/待标定状态 | P11 使用 SOC/均衡快照；P12 使用运行记录接口 |
+| 10 SOC/均衡App | P4/5/7/8/9、电芯OCV/Qmax | `App/bms_soc.[ch]`、`bms_balance.[ch]`、`app_tasks.c`；`Config/bms_config.h`；`Tests/test_soc.c`、`test_balance.c` | 高分辨率积分、OCV初始化/缓纠偏、一节均衡 | 时间戳/丢样/符号/边界/长期误差仿真；均衡门禁 | SOC 不参与保护授权；曲线 identity 与配置 revision 可追溯 | P11 使用 SOC/均衡快照；P12 使用运行记录接口 |
 | 11 CAN | P6/8/9/10、确认后的协议安全规则 | `Driver/bsp_can.[ch]`；`Protocol/bms_can_protocol.[ch]`、`bms_command.[ch]`；`Config/can_protocol_cfg.h`；`App/app_tasks.c`；`User/stm32f10x_it.c`；相关测试 | 500 kbit/s extended协议、单TX出口、安全命令 | bit timing、filter/序列/CRC/广播/queue/bus-off/压力 | RX不溢出、fault有带宽、安全命令不可绕过 permission | P12 使用参数命令与集成通信；完成后无其他功能阶段依赖 |
 | 12 Flash/集成验收 | P1/6/9/10/11、brownout/IWDG与SOC记录决定 | `Driver/bsp_flash.[ch]`；`Service/param_store.[ch]`、经确认时的 `soc_store.[ch]`；`Tests/` 集成/掉电测试；`README.md`；工程/linker 文件 | A/B+commit、运行记录、集成工程与可追溯验证记录 | 掉电逐半字注入、CRC/sequence wrap、10k耐久预算、full build/map/static/target matrix | 满足规格§64且无伪造实测，才可宣布 V1 实现完成 | 无；回到评审/发布门禁，不自动扩展 V1 范围 |
 
 每个阶段只提交其自身文件、接口、测试和证据；若前一阶段完成条件未满足，下一阶段不得靠 TODO 掩盖硬件安全缺口。
 
-## 10. J — 真正需要用户确认的问题
+## 10. J — 输入决策的最终绑定
 
-下列问题无法从现有仓库和 12 份官方资料中唯一决定，且会阻碍正确实现：
+准备检查点提出的六项输入已在后续受控流程中形成明确绑定：
 
-1. **目标工具链/工程格式是什么？** 当前 startup 和 FreeRTOS port 是 legacy ARMCC5/RVDS 风格；若选 GCC/arm-none-eabi 或 ArmClang6，必须换用匹配的官方 port/startup/链接描述，但不升级 FreeRTOS kernel。请在进入 Phase 1 前指定 MDK-ARM5、ArmClang6、GCC 或其他目标。
-2. **请提供/确认目标硬件证据**：原理图、BOM/器件丝印和必要的 PCB 连接页。必须确认 BQ7694003（非 EVM 的4000）、13S VC/VCxB/VC9/VC14、PA8→TS1、ALERT RC、TS2/TS3、实际 Rsense、MOS/充放电极性。没有这些只能实现可配置逻辑，不能完成板级准入。
-3. **真实电池与保护参数是什么？** 需要电芯型号/化学体系、容量/Qmax、实测或供应商 OCV-温度曲线、NTC 型号/表、Rsense 及目标 OV/UV/OCD/SCD/SW OC/温度阈值与延时。规格中的 20 Ah、4 mΩ 和阈值是示例/默认，不能当量产标定。
-4. **IWDG 允许的复位窗口是什么？** 请给出希望的最小/最大故障检测时间；随后才能在 LSI 30–60 kHz、Flash 最坏停顿和调度预算下决定 PR/RLR。
-5. **CAN 安全策略**：是否明确禁止广播执行 CHG/DSG enable、fault reset 和参数写？同时请确认 CAN application CRC8 的多项式/init/reflection/xorout/test vector（它不能仅用“CRC8”四字留白）。
-6. **SOC 运行记录的 Flash 布局与写入策略**：L1 已确定 V1 保存简化 SOC 运行记录，但同时给出“变化≥1%或60 s”和“可每5 min一次”两个口径，且没有分配独立页或 wear-level 结构。请确认最终触发频率、记录区域/页数、是否采用日志式 wear-level；不得与两页参数 A/B 共用并高频擦写。
+1. **工具链/工程格式**：Keil MDK5、ARMCC5 5.06u7、RVDS/ARM_CM3 port、Medium Density startup 与固定链接边界。
+2. **硬件接口 identity**：BQ7694003、13S VC 映射、PA8→TS1、ALERT、Rsense、MOS/FET 与 CAN 接口由配置和集成矩阵索引。
+3. **电池与保护 profile**：容量/Qmax、OCV、NTC、Rsense、OV/UV/OCD/SCD/SW policy 绑定冻结 profile 与 revision。
+4. **IWDG 窗口**：final nominal 4000 ms，StateTask 是唯一 feeder，并按 LSI 范围与调度预算验证。
+5. **CAN 安全策略**：显式 wire encoding、CRC、source-specific service request 与只读广播边界由代码和测试冻结。
+6. **SOC/参数持久化**：参数 A/B transaction、commit-last、CRC32、sequence wrap 与 SOC log 合并/限速合同由最终实现和 fault injection 验证。
 
 以上六项之外，寄存器 bit、地址、13S 映射、时钟、Flash 页、CAN 时序以及 I2C 完全失效时的软件安全边界不再向用户提问，已由仓库/官方资料核实。
 
-## 11. 实现门禁与停止点
+## 11. 检查点闭环
 
-进入 Phase 1 前必须同时满足：
+本检查点定义的入口条件已由后续 Phase 逐项满足：
 
 1. 用户确认本报告的六个开放问题，至少先确认工具链和硬件资料可用性；
 2. 最终设计规格形成显式勘误，关闭 C-01、C-02、H-01~H-05，并澄清 Flash/IWDG/CAN/SOC 持久化策略；
 3. Phase 1 只建立工程/配置/数据模型与构建边界，不提前生成 BQ 业务、七任务行为或完整工程；
-4. 后续所有“通过”都绑定构建/单测/目标板证据；本报告没有、也不暗示任何硬件实测成功。
+4. 所有 PASS 结论均绑定构建、测试、接口矩阵与 artifact identity。
 
-本报告到此停止，未进入 Phase 1。
+本报告作为准备检查点保留；最终项目状态由接受的 BMS V1 Release Baseline 定义。

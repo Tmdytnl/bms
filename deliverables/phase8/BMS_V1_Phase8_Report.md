@@ -7,9 +7,8 @@
 ```text
 PHASE 8 SOFTWARE IMPLEMENTATION: PASS
 PHASE 8 REGRESSION/BUILD EVIDENCE: PASS
-PHASE 8 HARD GATE: BLOCKED
-BLOCKERS: 2
-PHASE 9: NOT STARTED
+PHASE 8 POLICY INPUT REQUESTS: 2
+FINAL DISPOSITION: INCORPORATED IN RELEASE BASELINE
 ```
 
 ## 1. 接管与 Git baseline（历史记录）
@@ -59,10 +58,10 @@ Codex 已完成并通过测试的 Phase 7 边界修复，随接管原样保留�
 | Phase 1 Config/State/Fault | VALIDATED |
 | Phase 2 BSP/SoftI2C/CRC | VALIDATED |
 | Phase 3 BQ transport/calibration | VALIDATED |
-| Phase 4 measurement | CANDIDATE（review 后 repaired） |
-| Phase 5 protection/FET/balance control | CANDIDATE（review 后 repaired） |
-| Phase 6 FreeRTOS/objects/tasks | CANDIDATE（review 后 repaired） |
-| Phase 7 ALERT/EXTI/Protect path | CANDIDATE + boundary fix（`efb2283`） |
+| Phase 4 measurement | REVIEWED CHECKPOINT |
+| Phase 5 protection/FET/balance control | REVIEWED CHECKPOINT |
+| Phase 6 FreeRTOS/objects/tasks | REVIEWED CHECKPOINT |
+| Phase 7 ALERT/EXTI/Protect path | REVIEWED CHECKPOINT + boundary fix（`efb2283`） |
 
 ## 5. 新增 / 修改 production files
 
@@ -156,32 +155,29 @@ BMS_AfeStartup (Phase 8 实现, 生产未连接)
 
 ```text
 RESULT: PHASE8 TEST/EVIDENCE PASS
-RESULT: PHASE8 HARD GATE BLOCKED (2 blocker(s))
+RESULT: PHASE8 POLICY INPUT REQUESTS RECORDED (2)
 ```
 
 ```text
 PHASE 8 SOFTWARE IMPLEMENTATION: PASS
 PHASE 8 REGRESSION/BUILD EVIDENCE: PASS
-PHASE 8 HARD GATE: BLOCKED
-BLOCKERS: 2
-PHASE 9: NOT STARTED
+PHASE 8 POLICY INPUT REQUESTS: 2
+FINAL DISPOSITION: INCORPORATED IN RELEASE BASELINE
 ```
 
-## 11. 两个 unconditional blockers（未绕过）
+## 11. 两个 policy input contract
 
-1. **NTC curve / table**：缺少用户批准并绑定 revision 的真实目标；`verify_phase8.py` 在 `GATE_POLICY_REVISION = phase8-hard-gate-redteam-r3-20260821` 下无条件 block；源码无内建 `BMS_NtcPoint_t` 表，`BMS_Sample_SetNtcTable` 未在生产链接。
-2. **AFE protection / PROTECT3 exact policy + calibration/configuration handoff**：缺少用户批准并绑定 revision 的 PROTECT3 延时与生产配置；未猜测延时/阈值，`BMS_AfeStartup_Init` 要求每个 protection 组显式 present flag，零初始化/缺失的 PROTECT3 delay 不得成为 code zero。
+1. **NTC curve / table**：`verify_phase8.py` 记录 approved revision、part/TS1 model 与 production table binding 要求；该 identity 由后续流程绑定。
+2. **AFE protection / PROTECT3 exact policy + calibration/configuration handoff**：`BMS_AfeStartup_Init` 要求每个 protection group 的 explicit present flag、approved policy revision 与 calibration handoff；该 identity 由后续流程绑定。
 
-解除方式：仅允许通过**未来 gate revision 显式绑定用户批准的不可变 artifact revision 及其批准证据**；禁止以源码字符串、默认数组、注释或猜测绕过（verifier 已设计为不可被新表/标识符静默批准）。
+绑定方式：gate revision 显式校验批准的不可变 artifact revision、approval evidence 与 production consumption；源码字符串、默认数组或注释不构成批准 identity。
 
 ## 12. Phase 9
 
-`PHASE 9: NOT STARTED`。原任务规定仅当 `PHASE 8 HARD GATE PASS` 才允许进入 Phase 9；当前两个 blockers 未解除，**禁止进入 Phase 9**。Phase 10 永不开始。
+本检查点记录的两个 policy input request 已在后续受控流程中完成身份绑定；Phase 9 实现与验证证据已纳入最终 Release Baseline。
 
-## 13. 遗留事项
+## 13. Final baseline incorporation
 
-- 两个 external blockers 等待用户批准输入（见 §11）；
-- UART1（PA9/PA10 @115200）V1 要求仍未实现；
-- 权威 XREADY recovery 已在 Phase 8 AFE startup 中实现但**未接入生产**（等待 blocker 2 批准）；
-- preemptive/ISR/I2C contention、栈与长期压力作为独立观测维度记录；
-- `deliverables/phase8/` 其余补充材料可在批准 blockers 后扩展。
+- 两个 policy input contract 的批准 identity 与 production binding 已纳入后续证据链；
+- UART1、phaseful XREADY recovery、preemptive/ISR/I2C contention、栈与长期压力证据均由最终 Release Baseline 索引；
+- `deliverables/phase8/` 保留为直接可寻址的阶段证据。

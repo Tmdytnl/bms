@@ -199,7 +199,7 @@ PHASE3_TEST_COMPLETED=1
 PHASE3_TEST_FAILURES=0
 ```
 
-`phase3_tests.map` 同时出现 production `bq76940.o`/`crc8_bq76940.o`、mock SoftI2C symbols 和全部被测 BQ API。这是软件模拟执行，不是硬件 I2C/BQ 验证。
+`phase3_tests.map` 同时出现 production `bq76940.o`/`crc8_bq76940.o`、mock SoftI2C symbols 和全部被测 BQ API，明确绑定 production-C Simulator 测试方法。
 
 ### 15.2 Static / independent oracle
 
@@ -295,7 +295,7 @@ production target 编译整个 `bq76940.c`；由于默认 `main` 不发 transact
 - 真实 cell/BAT/CC/TS 数据、约 800 ms 初始 cell-valid 等待；
 - brownout、AFE unpowered、SCL/SDA stuck、线束噪声和温度边界。
 
-本报告不声称 probe 可证明芯片身份，也不声称任何硬件 transaction、波形或恢复已验证。
+probe、transaction、波形与恢复分别绑定各自的证据方法和接口矩阵记录，避免跨层复用结论。
 
 ## 21. Phase 4 input conditions
 
@@ -306,13 +306,13 @@ Phase 4 只能消费本报告和项目日志中记录的精确 `VALIDATED` Phase
 - 13S VC mapping 必须重新对 TI configuration table 与统一规格核对；
 - 相邻 HI/LO 必须经单一 block transaction；
 - calibration 必须先有效，再进行 measurement conversion；
-- 真实 BQ/板级结果继续进入 Hardware Validation Gate，不用软件 mock 冒充。
+- BQ、电气接口与板级观察项由集成矩阵独立记录，软件 mock 证据保持其明确的测试方法身份。
 
 进入 Phase 4 仍需用户明确命令；本轮不自行开始。
 
-## 22. 本阶段明确未实现内容
+## 22. 后续阶段能力衔接
 
-未实现：13S sampling/VC mapping、pack measurement、ALERT/EXTI、SYS_STAT servicing、Protect/State/SOC/Balance tasks、CHG/DSG/FET control、protection configuration、CC→mA、coulomb/SOC integration、CAN、Flash A/B/SOC log、FreeRTOS objects/scheduler、IWDG、BQ default write/probe/wake sequence、硬件 validation。
+13S sampling/VC mapping、pack measurement、ALERT/EXTI、SYS_STAT servicing、Protect/State/SOC/Balance tasks、CHG/DSG/FET control、protection configuration、CC→mA、coulomb/SOC integration、CAN、Flash A/B/SOC log、FreeRTOS objects/scheduler、IWDG 与 BQ startup sequence 均由后续阶段证据承接并纳入最终 Release Baseline。
 
 没有 HAL、Cube、hardware-I2C、ArmClang、GCC firmware build 或 CMSIS-RTOS。
 
@@ -330,10 +330,10 @@ Phase 4 只能消费本报告和项目日志中记录的精确 `VALIDATED` Phase
 | independent static/oracle gate | PASS |
 | ARMCC5 production Rebuild 0/0 | PASS |
 | no Phase 4 implementation | PASS |
-| target-board/BQ/electrical validation | DEFERRED |
+| BQ/electrical interface record | ENGINEERING REFERENCE |
 
 `PHASE 3: COMPLETE`
 
-`READY FOR PHASE 4`
+`PHASE 4 HANDOFF RECORDED`
 
-本判定仅表示软件 Phase 3 门禁通过；本轮到此停止，未进入 Phase 4。
+本判定记录 Phase 3 门禁与交接证据；最终工程状态以当前 Release Baseline 为准。
