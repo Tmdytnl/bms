@@ -108,7 +108,4 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms);
 /* 同 generation 的任务上下文诊断快照；ISR 不得调用。 */
 BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void);
 
-/* measurement owner 自己持有的正式 FreeRTOS 任务入口。 */
-void Task_Sample(void *argument);
-
 #endif /* BMS_SAMPLE_H：头文件防重复包含 */

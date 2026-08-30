@@ -1,4 +1,5 @@
 #include "bms_recovery.h"
+#include "bms_runtime_port.h"
 
 /*
  * Recovery Coordinator 只协调分阶段证据，不接管 Protect W1C、FET SYS_CTRL2、
@@ -9,7 +10,6 @@
 
 #include <stddef.h>
 
-#include "apl_rtos.h"
 #include "bms_afe_startup.h"
 #include "bms_balance.h"
 #include "bms_data.h"
@@ -122,18 +122,16 @@ static BQ76940_Status_t BMS_Recovery_OneRead(uint8_t address,
 {
     BQ76940_Status_t status;
 
-    if ((s_recovery.device == NULL) || (value == NULL) ||
-        (xI2CMutex == NULL))
+    if ((s_recovery.device == NULL) || (value == NULL))
     {
         return BQ76940_STATUS_NOT_INITIALIZED;
     }
-    if (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_RECOVERY_I2C_TIMEOUT_MS)) != pdTRUE)
+    if (!BMS_Runtime_BusLock(BMS_RECOVERY_I2C_TIMEOUT_MS))
     {
         return BQ76940_STATUS_I2C_TIMEOUT;
     }
     status = BQ76940_ReadByte(s_recovery.device, address, value);
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     return status;
 }
 
@@ -142,17 +140,16 @@ static BQ76940_Status_t BMS_Recovery_OneWrite(uint8_t address,
 {
     BQ76940_Status_t status;
 
-    if ((s_recovery.device == NULL) || (xI2CMutex == NULL))
+    if (s_recovery.device == NULL)
     {
         return BQ76940_STATUS_NOT_INITIALIZED;
     }
-    if (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_RECOVERY_I2C_TIMEOUT_MS)) != pdTRUE)
+    if (!BMS_Runtime_BusLock(BMS_RECOVERY_I2C_TIMEOUT_MS))
     {
         return BQ76940_STATUS_I2C_TIMEOUT;
     }
     status = BQ76940_WriteByte(s_recovery.device, address, value);
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     return status;
 }
 
@@ -356,7 +353,7 @@ void BMS_Recovery_Init(BQ76940_t *device,
 #endif
 }
 
-void BMS_Recovery_Service(uint32_t now_ms)
+bool BMS_Recovery_Service(uint32_t now_ms)
 {
     BMS_BalanceSnapshot_t balance;
     BMS_FetManagerSnapshot_t fet;
@@ -378,7 +375,7 @@ void BMS_Recovery_Service(uint32_t now_ms)
         !BMS_Protect_GetXreadyState(&xready))
     {
         BMS_Recovery_Fail(BQ76940_STATUS_NOT_INITIALIZED);
-        return;
+        return false;
     }
     if ((xready.xready_generation !=
          s_recovery.snapshot.xready_generation) ||
@@ -386,11 +383,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
          (s_recovery.snapshot.phase == BMS_RECOVERY_PHASE_COMPLETE)))
     {
         BMS_Recovery_ResetEvidence(xready.xready_generation);
-        return;
+        return false;
     }
     if (!BMS_Recovery_GenerationStillCurrent())
     {
-        return;
+        return false;
     }
 
     switch (s_recovery.snapshot.phase)
@@ -424,8 +421,8 @@ void BMS_Recovery_Service(uint32_t now_ms)
                     s_recovery.snapshot.xready_generation,
                     s_recovery.snapshot.recovery_revision))
             {
-                App_Rtos_RequestProtectService();
                 BMS_Recovery_SetPhase(BMS_RECOVERY_PHASE_WAIT_CLEAR_ACK);
+                return true;
             }
             break;
         case BMS_RECOVERY_PHASE_WAIT_CLEAR_ACK:
@@ -577,15 +574,16 @@ void BMS_Recovery_Service(uint32_t now_ms)
         default:
             break;
     }
+    return false;
 }
 
 BMS_RecoverySnapshot_t BMS_Recovery_GetSnapshot(void)
 {
     BMS_RecoverySnapshot_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_recovery.snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 

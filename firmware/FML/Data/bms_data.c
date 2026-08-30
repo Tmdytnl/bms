@@ -1,8 +1,7 @@
 #include "bms_data.h"
+#include "bms_runtime_port.h"
 
 #include <limits.h>
-
-#include "apl_rtos.h"
 
 BMS_DataSnapshot_t g_bms_data;
 
@@ -163,8 +162,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
             (BMS_PackVoltageMv_t)frame->cell_voltage_mv[cell_index];
     }
 
-    if ((xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    if (!BMS_Runtime_DataLock())
     {
         return false;
     }
@@ -236,7 +234,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
     g_bms_data.afe_generation = frame->afe_generation;
     ++g_bms_data.sample_sequence;
 
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
     return true;
 }
 
@@ -328,14 +326,13 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
      * 在共享锁内做 O(cell_count) 的派生工作。读者得到的数值、质量元数据、
      * sample_sequence 与 afe_generation 因而来自同一次原子观察。
      */
-    if ((snapshot == NULL) || (xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    if ((snapshot == NULL) || !BMS_Runtime_DataLock())
     {
         return false;
     }
     BMS_Data_LatchStale(now_ms);
     *snapshot = g_bms_data;
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
 
     for (cell_index = 0U;
          cell_index < (uint32_t)BMS_CELL_COUNT;
@@ -367,8 +364,7 @@ bool BMS_Data_GetFreshnessSnapshot(
     BMS_DataFreshnessSnapshot_t *snapshot,
     BMS_TimestampMs_t now_ms)
 {
-    if ((snapshot == NULL) || (xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    if ((snapshot == NULL) || !BMS_Runtime_DataLock())
     {
         return false;
     }
@@ -379,7 +375,7 @@ bool BMS_Data_GetFreshnessSnapshot(
     snapshot->temperature_metadata = g_bms_data.temperature_metadata;
     snapshot->sample_sequence = g_bms_data.sample_sequence;
     snapshot->afe_generation = g_bms_data.afe_generation;
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
 
     BMS_Data_DeriveMetadataAge(&snapshot->pack_metadata, now_ms);
     BMS_Data_DeriveMetadataAge(&snapshot->current_metadata, now_ms);
@@ -389,14 +385,13 @@ bool BMS_Data_GetFreshnessSnapshot(
 
 bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
 {
-    if ((identity == NULL) || (xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+    if ((identity == NULL) || !BMS_Runtime_DataLock())
     {
         return false;
     }
     identity->sample_sequence = g_bms_data.sample_sequence;
     identity->afe_generation = g_bms_data.afe_generation;
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
     return true;
 }
 
@@ -404,14 +399,13 @@ bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
                                      const BMS_FaultSummary_t *faults)
 {
     if ((faults == NULL) || ((uint32_t)state >= (uint32_t)BMS_STATE_COUNT) ||
-        (xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+        !BMS_Runtime_DataLock())
     {
         return false;
     }
     g_bms_data.state = state;
     g_bms_data.faults = *faults;
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
     return true;
 }
 
@@ -421,8 +415,7 @@ bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
                                    bool valid)
 {
     if ((valid && (soc_permille > BMS_SOC_PERMILLE_MAX)) ||
-        (xDataMutex == NULL) ||
-        (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
+        !BMS_Runtime_DataLock())
     {
         return false;
     }
@@ -433,7 +426,7 @@ bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
                              now_ms,
                              valid,
                              valid);
-    (void)xSemaphoreGive(xDataMutex);
+    BMS_Runtime_DataUnlock();
     return true;
 }
 

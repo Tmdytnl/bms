@@ -1,7 +1,6 @@
 #include "bsp_exti.h"
 
-#include "bms_build_assert.h"
-#include "bms_config.h"
+#include "bsp_board_config.h"
 
 #include "misc.h"          /* SPL 的 NVIC_StructInit / NVIC_Init */
 #include "stm32f10x.h"
@@ -10,9 +9,7 @@
 #include "stm32f10x_rcc.h"
 
 /* PB1/EXTI1；project pin map 中 port id 1 表示 GPIOB。 */
-BMS_BUILD_ASSERT(BMS_AFE_ALERT_PORT_ID == BMS_GPIO_PORT_B_ID,
-                 alert_pin_is_on_port_b);
-BMS_BUILD_ASSERT(BMS_AFE_ALERT_PIN == 1U,
+BSP_BUILD_ASSERT(BSP_BOARD_ALERT_PIN == 1U,
                  alert_pin_is_pb1);
 
 static bool s_exti_initialized;
@@ -75,4 +72,14 @@ bool BSP_ALERT_PinActive(void)
 {
     /* 直接 PB1 level readback。 */
     return (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) != Bit_RESET);
+}
+
+bool BSP_ALERT_EXTI_IsPending(void)
+{
+    return EXTI_GetITStatus(EXTI_Line1) != RESET;
+}
+
+void BSP_ALERT_EXTI_ClearPending(void)
+{
+    EXTI_ClearITPendingBit(EXTI_Line1);
 }

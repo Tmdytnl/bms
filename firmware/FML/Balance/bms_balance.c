@@ -1,4 +1,5 @@
 #include "bms_balance.h"
+#include "bms_runtime_port.h"
 
 /*
  * 独立 BalanceTask 是调度器启动后 CELLBAL sole writer。Evaluate 只产生 bitmap；
@@ -10,7 +11,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "apl_rtos.h"
 #include "bq76940_control.h"
 #include "bq76940_regs.h"
 
@@ -23,11 +23,11 @@ static const BMS_Policy_t *s_policy;
 
 static void BMS_Balance_Publish(BMS_BalanceSnapshot_t *snapshot)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot->publication_revision =
         (uint32_t)(s_snapshot.publication_revision + 1UL);
     s_snapshot = *snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static bool BMS_Balance_TimeElapsed(uint32_t now_ms,
@@ -208,7 +208,7 @@ static BQ76940_Status_t BMS_Balance_WriteAndVerifyLocked(
     uint8_t actual3;
 
     /*
-     * 调用者持有 xI2CMutex。三个 CELLBAL 寄存器共同表达一个逻辑 bitmap，必须
+     * 调用者持有 bus transaction guard。三个 CELLBAL 寄存器共同表达一个逻辑 bitmap，必须
      * 全部写完再全部回读；只确认其中一个字节会把部分更新误报成成功。
      */
     status = BQ76940_WriteByte(s_device, BQ76940_REG_CELLBAL1, bal1);
@@ -290,7 +290,6 @@ void BMS_Balance_RunOnce(uint32_t now_ms)
      * transaction 中途变化时，旧选择不会被提交；失败路径尽力写入并验证 all-off。
      */
     if ((s_policy == NULL) || (s_device == NULL) ||
-        (xI2CMutex == NULL) ||
         !BMS_Data_GetSnapshot(&measurement, now_ms))
     {
         return;
@@ -310,8 +309,7 @@ void BMS_Balance_RunOnce(uint32_t now_ms)
             desired, s_policy->balance.max_parallel_cells,
             s_policy->balance.adjacent_cells_permitted,
             &bal1, &bal2, &bal3) ||
-        (xSemaphoreTake(xI2CMutex,
-                        pdMS_TO_TICKS(BMS_BALANCE_I2C_TIMEOUT_MS)) != pdTRUE))
+        !BMS_Runtime_BusLock(BMS_BALANCE_I2C_TIMEOUT_MS))
     {
         next.last_transport_status = BQ76940_STATUS_I2C_TIMEOUT;
         next.register_state_confirmed = false;
@@ -363,7 +361,7 @@ void BMS_Balance_RunOnce(uint32_t now_ms)
         next.register_state_confirmed = true;
         next.confirmed_all_off = (confirmed == 0U);
     }
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     next.requested_bitmap = desired;
     next.confirmed_bitmap = confirmed;
     next.confirmed_afe_generation = protect_after.xready_generation;
@@ -375,8 +373,8 @@ BMS_BalanceSnapshot_t BMS_Balance_GetSnapshot(void)
 {
     BMS_BalanceSnapshot_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }

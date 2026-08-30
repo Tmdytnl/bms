@@ -382,13 +382,83 @@
       </TargetOption>
       <Groups>
         <Group>
-          <GroupName>FML</GroupName>
+          <GroupName>APL</GroupName>
           <Files>
             <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\User\main.c</FilePath>
             </File>
+            <File>
+              <FileName>apl_system.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_system.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_fml_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_fml_port.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_cc_transport.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_cc_transport.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_debug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_debug.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_irq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\apl_irq.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_protect.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_protect.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_sample.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_sample.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_state.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_state.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_soc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_soc.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_balance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_balance.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_can_tx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_can_tx.c</FilePath>
+            </File>
+            <File>
+              <FileName>apl_task_can_rx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\APL\Task\apl_task_can_rx.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>FML</GroupName>
+          <Files>
             <File>
               <FileName>bms_data.c</FileName>
               <FileType>1</FileType>

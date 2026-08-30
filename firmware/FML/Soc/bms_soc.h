@@ -6,6 +6,9 @@
 
 #include "bms_data.h"
 #include "bms_policy.h"
+#include "bms_protect.h"
+
+#define BMS_SOC_MAX_CC_SAMPLES_PER_RUN           (8U)
 
 typedef struct
 {
@@ -69,7 +72,10 @@ BMS_SocSnapshot_t BMS_Soc_GetEngineSnapshot(
 void BMS_Soc_Init(const BMS_Policy_t *policy);
 bool BMS_Soc_Restore(uint16_t soc_permille,
                      uint32_t remaining_capacity_mah);
-void BMS_Soc_RunOnce(uint32_t now_ms);
+void BMS_Soc_RunOnce(uint32_t now_ms,
+                     const BMS_CcSample_t *samples,
+                     uint8_t sample_count,
+                     bool queue_gap);
 BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void);
 
 #endif /* BMS_SOC_H：头文件防重复包含 */

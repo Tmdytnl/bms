@@ -1,8 +1,9 @@
 #include "bms_can.h"
+#include "bms_runtime_port.h"
 
 /*
- * CAN ownership 分为三层：Task_CANTx 构造周期 frame 并推进 hardware mailbox；
- * RX ISR 只 drain FIFO0 到 queue；Task_CANRx 执行协议 decode。显式 encode/decode
+ * CAN ownership 分为三层：APL CAN Tx task 构造周期 frame；
+ * APL RX ISR 只 drain FIFO0 到 queue；APL CAN Rx task 执行协议 decode。显式 encode/decode
  * 隔离 C struct layout，所有 service request 仍回到 Protect owner 完成授权。
  */
 
@@ -10,30 +11,17 @@
 #include <stddef.h>
 #include <string.h>
 
-#if !defined(TEST_PHASE9_IMAGE)
-#include "bsp_can.h"
-#endif
-
 static const BMS_Policy_t *s_policy;
 static BMS_CanDiagnostics_t s_diagnostics;
-#if !defined(TEST_PHASE9_IMAGE)
-static uint32_t s_target_last_init_attempt_ms;
-static bool s_target_init_attempted;
-static bool s_target_rx_enabled;
-#endif
-
-#if !defined(TEST_PHASE9_IMAGE)
-#define BMS_CAN_TARGET_RETRY_MS                  (1000UL)
-#endif
 
 static void BMS_Can_Increment(uint32_t *value)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (*value < UINT32_MAX)
     {
         ++(*value);
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Can_PutU16(uint8_t *destination, uint16_t value)
@@ -75,7 +63,7 @@ static void BMS_Can_InitFrame(BMS_CanFrame_t *frame, uint16_t id)
     frame->ext_id = id;
     frame->dlc = 8U;
     (void)memset(frame->data, 0, sizeof(frame->data));
-    frame->received_tick = 0U;
+    frame->received_ms = 0UL;
 }
 
 uint8_t BMS_Can_BuildTxFrames(
@@ -236,142 +224,23 @@ void BMS_Can_Init(const BMS_Policy_t *policy)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
     (void)memset(&s_diagnostics, 0, sizeof(s_diagnostics));
-#if !defined(TEST_PHASE9_IMAGE)
-    s_target_last_init_attempt_ms = 0UL;
-    s_target_init_attempted = false;
-    s_target_rx_enabled = false;
-#endif
 }
 
-bool BMS_Can_BindTarget(const BMS_Policy_t *policy)
-{
-#if defined(TEST_PHASE9_IMAGE)
-    (void)policy;
-    return false;
-#else
-    s_target_init_attempted = true;
-    s_target_last_init_attempt_ms = 0UL;
-    s_target_rx_enabled = false;
-    if ((policy == NULL) || !BMS_Policy_Validate(policy) ||
-        !policy->can.standard_11_bit_ids ||
-        !BSP_CAN_Init500K(policy->can.service_rx_id))
-    {
-        BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
-        return false;
-    }
-    return true;
-#endif
-}
-
-bool BMS_Can_EnableTargetRx(void)
-{
-#if defined(TEST_PHASE9_IMAGE)
-    return false;
-#else
-    if (!BSP_CAN_EnableRxInterrupt())
-    {
-        BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
-        return false;
-    }
-    s_target_rx_enabled = true;
-    return true;
-#endif
-}
-
-void BMS_Can_TxHardwareService(uint32_t now_ms)
-{
-#if defined(TEST_PHASE9_IMAGE)
-    (void)now_ms;
-#else
-    BMS_CanFrame_t queued;
-    BSP_CanFrame_t target;
-    BSP_CanTxResult_t result;
-
-    /*
-     * 10 ms service 负责初始化重试、bus-off 恢复与 mailbox 排空；100 ms encoder
-     * 只负责把帧放入软件队列。硬件 mailbox 暂满时把当前帧放回队首并退出，
-     * 让后续周期继续，而不是在低优先级 CANTxTask 中忙等。
-     */
-    if (!BSP_CAN_IsInitialized())
-    {
-        if (s_target_init_attempted &&
-            ((uint32_t)(now_ms - s_target_last_init_attempt_ms) <
-             BMS_CAN_TARGET_RETRY_MS))
-        {
-            return;
-        }
-        s_target_init_attempted = true;
-        s_target_last_init_attempt_ms = now_ms;
-        s_target_rx_enabled = false;
-        if ((s_policy == NULL) ||
-            !BSP_CAN_Init500K(s_policy->can.service_rx_id))
-        {
-            BMS_Can_Increment(&s_diagnostics.target_init_failure_count);
-            return;
-        }
-    }
-    if (!s_target_rx_enabled && !BMS_Can_EnableTargetRx())
-    {
-        return;
-    }
-
-    if (BSP_CAN_IsBusOff())
-    {
-        if (BSP_CAN_Recover())
-        {
-            BMS_Can_Increment(
-                &s_diagnostics.target_bus_off_recovery_count);
-        }
-        else
-        {
-            s_target_rx_enabled = false;
-            return;
-        }
-    }
-    while ((xCanTxQueue != NULL) &&
-           (xQueueReceive(xCanTxQueue, &queued, 0U) == pdPASS))
-    {
-        target.id = queued.ext_id;
-        target.extended = s_policy != NULL &&
-            !s_policy->can.standard_11_bit_ids;
-        target.dlc = queued.dlc;
-        (void)memcpy(target.data, queued.data, sizeof(target.data));
-        result = BSP_CAN_TryTransmit(&target);
-        if (result == BSP_CAN_TX_ACCEPTED)
-        {
-            BMS_Can_Increment(&s_diagnostics.target_tx_count);
-        }
-        else if (result == BSP_CAN_TX_NO_MAILBOX)
-        {
-            if (xQueueSendToFront(xCanTxQueue, &queued, 0U) != pdPASS)
-            {
-                BMS_Can_Increment(&s_diagnostics.target_tx_drop_count);
-            }
-            break;
-        }
-        else
-        {
-            BMS_Can_Increment(&s_diagnostics.target_tx_drop_count);
-        }
-    }
-#endif
-}
-
-void BMS_Can_TxRunOnce(uint32_t now_ms)
+uint8_t BMS_Can_BuildPeriodicFrames(
+    uint32_t now_ms,
+    BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT])
 {
     BMS_DataSnapshot_t measurement;
     BMS_StateSafetySnapshot_t state;
     BMS_ProtectSafetySnapshot_t protect;
     BMS_RecoverySnapshot_t recovery;
     BMS_FetManagerSnapshot_t fet;
-    BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT];
     uint8_t count;
-    uint8_t index;
 
-    if ((s_policy == NULL) ||
+    if ((frames == NULL) || (s_policy == NULL) ||
         !BMS_Data_GetSnapshot(&measurement, now_ms))
     {
-        return;
+        return 0U;
     }
     state = BMS_State_GetSafetySnapshot();
     protect = BMS_Protect_GetSafetySnapshot();
@@ -380,22 +249,10 @@ void BMS_Can_TxRunOnce(uint32_t now_ms)
     count = BMS_Can_BuildTxFrames(
         &measurement, &state, &protect, &recovery, &fet, frames);
     BMS_Can_Increment(&s_diagnostics.tx_cycle_count);
-    for (index = 0U; index < count; ++index)
-    {
-        if ((xCanTxQueue != NULL) &&
-            (xQueueSend(xCanTxQueue, &frames[index], 0U) == pdPASS))
-        {
-            BMS_Can_Increment(&s_diagnostics.tx_enqueued_count);
-        }
-        else
-        {
-            /* CAN mailbox 拥塞只更新诊断计数，不得反向修改 safety ownership。 */
-            BMS_Can_Increment(&s_diagnostics.tx_drop_count);
-        }
-    }
+    return count;
 }
 
-void BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
+bool BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
                        uint32_t received_ms,
                        uint32_t now_ms)
 {
@@ -406,7 +263,7 @@ void BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
     if ((s_policy == NULL) || !BMS_Data_GetIdentity(&identity))
     {
         BMS_Can_Increment(&s_diagnostics.rx_invalid_count);
-        return;
+        return false;
     }
     state = BMS_State_GetSafetySnapshot();
     if (!BMS_Can_DecodeServiceReset(
@@ -414,16 +271,73 @@ void BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
             state.publication_revision, &request))
     {
         BMS_Can_Increment(&s_diagnostics.rx_invalid_count);
-        return;
+        return false;
     }
     BMS_Can_Increment(&s_diagnostics.rx_valid_count);
     if (BMS_Protect_SubmitServiceResetRequest(&request))
     {
         BMS_Can_Increment(&s_diagnostics.service_request_count);
+        return true;
     }
     else
     {
         BMS_Can_Increment(&s_diagnostics.service_reject_count);
+        return false;
+    }
+}
+
+void BMS_Can_RecordDiagnostic(BMS_CanDiagnosticEvent_t event)
+{
+    BMS_Can_RecordDiagnosticCount(event, 1UL);
+}
+
+void BMS_Can_RecordDiagnosticCount(BMS_CanDiagnosticEvent_t event,
+                                   uint32_t count)
+{
+    uint32_t *counter;
+
+    counter = NULL;
+    switch (event)
+    {
+        case BMS_CAN_DIAG_TX_ENQUEUED:
+            counter = &s_diagnostics.tx_enqueued_count;
+            break;
+        case BMS_CAN_DIAG_TX_QUEUE_DROP:
+            counter = &s_diagnostics.tx_drop_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_INIT_FAILURE:
+            counter = &s_diagnostics.target_init_failure_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_TX:
+            counter = &s_diagnostics.target_tx_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_TX_DROP:
+            counter = &s_diagnostics.target_tx_drop_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_RX_FIFO_OVERRUN:
+            counter = &s_diagnostics.target_rx_fifo_overrun_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_RX_QUEUE_DROP:
+            counter = &s_diagnostics.target_rx_queue_drop_count;
+            break;
+        case BMS_CAN_DIAG_TARGET_BUS_OFF_RECOVERY:
+            counter = &s_diagnostics.target_bus_off_recovery_count;
+            break;
+        default:
+            break;
+    }
+    if (counter != NULL)
+    {
+        BMS_Runtime_CriticalEnter();
+        if ((UINT32_MAX - *counter) < count)
+        {
+            *counter = UINT32_MAX;
+        }
+        else
+        {
+            *counter += count;
+        }
+        BMS_Runtime_CriticalExit();
     }
 }
 
@@ -431,48 +345,8 @@ BMS_CanDiagnostics_t BMS_Can_GetDiagnostics(void)
 {
     BMS_CanDiagnostics_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_diagnostics;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
-
-#if !defined(TEST_PHASE9_IMAGE)
-void USB_LP_CAN1_RX0_IRQHandler(void)
-{
-    BaseType_t higher_priority_task_woken;
-    BSP_CanFrame_t target;
-    BMS_CanFrame_t frame;
-
-    /* ISR 只排空 FIFO0、捕获 tick 并按值入队；协议解码和 service ownership 在 Task。 */
-    higher_priority_task_woken = pdFALSE;
-    if (BSP_CAN_IsRxFifoOverrun())
-    {
-        BSP_CAN_ClearRxFifoOverrun();
-        if (s_diagnostics.target_rx_fifo_overrun_count < UINT32_MAX)
-        {
-            ++s_diagnostics.target_rx_fifo_overrun_count;
-        }
-    }
-    while (BSP_CAN_ReceivePending())
-    {
-        if (BSP_CAN_Receive(&target))
-        {
-            frame.ext_id = target.id;
-            frame.dlc = target.dlc;
-            (void)memcpy(frame.data, target.data, sizeof(frame.data));
-            frame.received_tick = xTaskGetTickCountFromISR();
-            if ((xCanRxQueue == NULL) ||
-                (xQueueSendFromISR(xCanRxQueue, &frame,
-                                   &higher_priority_task_woken) != pdPASS))
-            {
-                if (s_diagnostics.target_rx_queue_drop_count < UINT32_MAX)
-                {
-                    ++s_diagnostics.target_rx_queue_drop_count;
-                }
-            }
-        }
-    }
-    portYIELD_FROM_ISR(higher_priority_task_woken);
-}
-#endif

@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "apl_rtos.h"
 #include "bms_data.h"
 #include "bms_fet_manager.h"
 #include "bms_policy.h"
@@ -16,6 +15,26 @@
 #define BMS_CAN_TX_FRAME_COUNT                    (6U)
 #define BMS_CAN_SERVICE_MAGIC                     (0xA5U)
 #define BMS_CAN_SERVICE_RESET_COMMAND             (0x01U)
+
+typedef struct
+{
+    uint32_t ext_id;                  /* 历史字段名；当前策略仅允许 11-bit ID。 */
+    uint8_t dlc;
+    uint8_t data[8];
+    uint32_t received_ms;             /* APL ISR handoff 已换算的毫秒时刻。 */
+} BMS_CanFrame_t;
+
+typedef enum
+{
+    BMS_CAN_DIAG_TX_ENQUEUED = 0,
+    BMS_CAN_DIAG_TX_QUEUE_DROP,
+    BMS_CAN_DIAG_TARGET_INIT_FAILURE,
+    BMS_CAN_DIAG_TARGET_TX,
+    BMS_CAN_DIAG_TARGET_TX_DROP,
+    BMS_CAN_DIAG_TARGET_RX_FIFO_OVERRUN,
+    BMS_CAN_DIAG_TARGET_RX_QUEUE_DROP,
+    BMS_CAN_DIAG_TARGET_BUS_OFF_RECOVERY
+} BMS_CanDiagnosticEvent_t;
 
 typedef struct
 {
@@ -65,16 +84,15 @@ bool BMS_Can_DecodeServiceReset(
     BMS_ServiceResetRequest_t *request);
 
 void BMS_Can_Init(const BMS_Policy_t *policy);
-bool BMS_Can_BindTarget(const BMS_Policy_t *policy);
-bool BMS_Can_EnableTargetRx(void);
-void BMS_Can_TxHardwareService(uint32_t now_ms);
-void BMS_Can_TxRunOnce(uint32_t now_ms);
-void BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
+uint8_t BMS_Can_BuildPeriodicFrames(
+    uint32_t now_ms,
+    BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT]);
+bool BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
                        uint32_t received_ms,
                        uint32_t now_ms);
+void BMS_Can_RecordDiagnostic(BMS_CanDiagnosticEvent_t event);
+void BMS_Can_RecordDiagnosticCount(BMS_CanDiagnosticEvent_t event,
+                                   uint32_t count);
 BMS_CanDiagnostics_t BMS_Can_GetDiagnostics(void);
-
-/* bxCAN FIFO0 ISR 只把硬件 frame 放入 xCanRxQueue；decode/request 留在 CANRxTask。 */
-void USB_LP_CAN1_RX0_IRQHandler(void);
 
 #endif /* BMS_CAN_H：头文件防重复包含 */

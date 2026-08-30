@@ -1,13 +1,12 @@
 #include "bms_protect.h"
+#include "bms_runtime_port.h"
 
 #include <stddef.h>
 
-#include "bsp_exti.h"
 #include "bms_data.h"
 #include "bms_health.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
-#include "stm32f10x_exti.h"
 
 /* ------------------------------------------------------------------ */
 /* ProtectTask 私有状态；其他模块只能通过一致快照或 identity request 访问。 */
@@ -15,6 +14,9 @@
 static BMS_FaultSummary_t s_fault;
 static BMS_ProtectDiagnostics_t s_diagnostics;
 static BMS_ProtectLatestCc_t s_latest_cc;
+static BMS_CcSample_t s_pending_cc;
+static bool s_pending_cc_valid;
+static uint32_t s_cc_transport_sequence;
 static BMS_ProtectXreadyState_t s_xready_state;
 static bool s_xready_recovery_pending;
 static bool s_cc_clear_pending;
@@ -48,10 +50,10 @@ static void BMS_Protect_AdvanceRevision(void)
         (uint32_t)(s_publication_revision + 1UL);
 }
 
-static void BMS_Protect_RecordNewSourceEvents(uint8_t stat)
+static void BMS_Protect_RecordNewSourceEvents(uint8_t stat,
+                                              uint32_t now_ms)
 {
     uint8_t new_events;
-    uint32_t now_ms;
     bool changed;
 
     /*
@@ -92,8 +94,6 @@ static void BMS_Protect_RecordNewSourceEvents(uint8_t stat)
         }
         if (s_policy != NULL)
         {
-            now_ms = (uint32_t)(xTaskGetTickCount() *
-                                portTICK_PERIOD_MS);
             if (!s_ocd_window_active ||
                 ((uint32_t)(now_ms - s_ocd_window_started_ms) >
                  s_policy->ocd_escalation.event_window_ms))
@@ -141,10 +141,16 @@ void BMS_Protect_Init(void)
     s_diagnostics.cc_queue_overflow_latched = false;
     s_diagnostics.w1c_finalization_ambiguous_latched = false;
     s_latest_cc.raw = (int16_t)0;
-    s_latest_cc.tick = (TickType_t)0U;
+    s_latest_cc.sample_ms = 0UL;
     s_latest_cc.sequence = 0UL;
     s_latest_cc.xready_generation = 0UL;
     s_latest_cc.valid = false;
+    s_pending_cc.raw = (int16_t)0;
+    s_pending_cc.sample_ms = 0UL;
+    s_pending_cc.xready_generation = 0UL;
+    s_pending_cc.transport_id = 0UL;
+    s_pending_cc_valid = false;
+    s_cc_transport_sequence = 0UL;
     s_xready_state.xready_generation = 0UL;
     s_xready_state.active = false;
     s_xready_recovery_pending = false;
@@ -198,11 +204,10 @@ void BMS_Protect_SetDevice(BQ76940_t *device)
     s_afe_device = device;
 }
 
-void BMS_Protect_SetPolicy(const BMS_Policy_t *policy)
+void BMS_Protect_SetPolicy(const BMS_Policy_t *policy, uint32_t now_ms)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
-    s_afe_last_success_ms =
-        (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+    s_afe_last_success_ms = now_ms;
 }
 
 void BMS_Protect_SetXreadyRecoveryHook(
@@ -215,9 +220,9 @@ BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void)
 {
     BMS_FaultSummary_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_fault;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 
@@ -244,7 +249,7 @@ BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void)
      * active 是“条件当前仍未恢复”，latched 是“事件历史要求额外释放流程”；
      * 某些源即使 active 已解除，latched 仍必须继续禁止对应方向。
      */
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot.faults = s_fault;
     snapshot.publication_revision = s_publication_revision;
     for (source_index = 0U;
@@ -256,7 +261,7 @@ BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void)
     }
     snapshot.xready_generation = s_xready_state.xready_generation;
     snapshot.xready_active = s_xready_state.active;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 
     snapshot.inhibit_chg_reasons = 0UL;
     snapshot.inhibit_dsg_reasons = 0UL;
@@ -326,11 +331,11 @@ BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void)
 {
     BMS_ProtectDiagnostics_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_diagnostics;
     snapshot.w1c_finalization_ambiguous_mask =
         s_w1c_finalization_ambiguous_mask;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 
@@ -354,7 +359,8 @@ static void BMS_Protect_RecordCcOverflow(bool oldest_was_dropped,
     s_diagnostics.cc_queue_overflow_latched = true;
 }
 
-static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status)
+static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status,
+                                         uint32_t now_ms)
 {
     BMS_FaultBitmap_t active_mask;
     BMS_FaultBitmap_t previous_active;
@@ -387,7 +393,7 @@ static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status)
     }
     if (active_mask != (BMS_FaultBitmap_t)0U)
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         previous_active = s_fault.active;
         s_fault.active |= active_mask;
         if (previous_active != s_fault.active)
@@ -396,16 +402,11 @@ static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status)
             if (BMS_Fault_Contains(active_mask,
                                    BMS_FAULT_ID_AFE_COMM))
             {
-                s_afe_comm_active_started_ms =
-                    (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+                s_afe_comm_active_started_ms = now_ms;
                 s_afe_comm_active_timing = true;
             }
         }
-        (void)xTaskResumeAll();
-    }
-    if ((status != BQ76940_STATUS_OK) && (xSysEvents != NULL))
-    {
-        (void)xEventGroupSetBits(xSysEvents, EVT_FAULT_PRESENT);
+        BMS_Runtime_CriticalExit();
     }
 }
 
@@ -422,7 +423,7 @@ static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
      * 提交；立即重写可能把期间新到达的同类事件也清掉，所以先 quarantine，
      * 只在后续明确观察到该 bit 为低时退休未决标记。
      */
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (s_diagnostics.w1c_finalization_ambiguous_count < UINT32_MAX)
     {
         ++s_diagnostics.w1c_finalization_ambiguous_count;
@@ -434,7 +435,7 @@ static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
     }
     s_w1c_finalization_ambiguous_mask |= clear_mask;
     s_diagnostics.w1c_finalization_ambiguous_latched = true;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
@@ -442,7 +443,7 @@ static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
     uint8_t resolved_mask;
     bool safety_changed;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     safety_changed = false;
     resolved_mask = (uint8_t)(s_w1c_finalization_ambiguous_mask &
                               (uint8_t)(~stat));
@@ -472,16 +473,15 @@ static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
     {
         BMS_Protect_AdvanceRevision();
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
-static void BMS_Protect_RecordAfeReadSuccess(void)
+static void BMS_Protect_RecordAfeReadSuccess(uint32_t now_ms)
 {
     BMS_FaultBitmap_t previous_active;
 
-    vTaskSuspendAll();
-    s_afe_last_success_ms =
-        (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+    BMS_Runtime_CriticalEnter();
+    s_afe_last_success_ms = now_ms;
     s_afe_consecutive_failures = 0U;
     if (s_afe_consecutive_successes < UINT8_MAX)
     {
@@ -502,7 +502,7 @@ static void BMS_Protect_RecordAfeReadSuccess(void)
     {
         BMS_Protect_AdvanceRevision();
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Protect_UpdateAfeCommPolicy(uint32_t now_ms)
@@ -515,7 +515,7 @@ static void BMS_Protect_UpdateAfeCommPolicy(uint32_t now_ms)
         return;
     }
     comm_mask = BMS_Fault_Mask(BMS_FAULT_ID_AFE_COMM);
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     previous = s_fault;
     if ((uint32_t)(now_ms - s_afe_last_success_ms) >=
         s_policy->afe_comm.no_success_timeout_ms)
@@ -549,7 +549,7 @@ static void BMS_Protect_UpdateAfeCommPolicy(uint32_t now_ms)
     {
         BMS_Protect_AdvanceRevision();
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 #if defined(TEST_PHASE7_IMAGE) || defined(TEST_PHASE9_IMAGE)
@@ -560,86 +560,67 @@ void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms)
 #endif
 
 /* ------------------------------------------------------------------ */
-/* CC queue：H-02 newest sample always wins，SOC 是 queue 唯一消费者。 */
+/* CC domain sample：FML 生产，APL 以 newest-wins 语义传入 CC queue。 */
 /* ------------------------------------------------------------------ */
-bool BMS_Protect_PushCcSample(int16_t cc_raw)
+bool BMS_Protect_GetPendingCcSample(BMS_CcSample_t *sample)
 {
-    BMS_CcSample_t sample;
-    BMS_CcSample_t discard;
-    BaseType_t inserted;
-    bool overflowed;
-    bool oldest_was_dropped;
-    bool newest_was_missed;
+    bool available;
 
-    sample.raw = cc_raw;
-    sample.tick = xTaskGetTickCount();
-    sample.xready_generation = s_xready_state.xready_generation;
-
-    if (xCcSampleQueue == NULL)
+    if (sample == NULL)
     {
         return false;
     }
-
-    overflowed = false;
-    oldest_was_dropped = false;
-    newest_was_missed = false;
-    inserted = pdFAIL;
-
-    /*
-     * full-check、只丢一个 oldest、enqueue newest 在同一 scheduler exclusion
-     * 内非阻塞完成，避免并发消费者穿插后让 wrapper 错丢两个 sample。
-     */
-    vTaskSuspendAll();
-    if (xQueueSend(xCcSampleQueue, &sample, 0U) == pdPASS)
+    BMS_Runtime_CriticalEnter();
+    *sample = s_pending_cc;
+    available = s_pending_cc_valid;
+    if (!available)
     {
-        inserted = pdPASS;
+        sample->transport_id = 0UL;
+    }
+    BMS_Runtime_CriticalExit();
+    return available;
+}
+
+bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
+                                     bool inserted,
+                                     bool overflowed,
+                                     bool oldest_was_dropped)
+{
+    if (overflowed)
+    {
+        BMS_Protect_RecordCcOverflow(oldest_was_dropped, !inserted);
+    }
+    BMS_Runtime_CriticalEnter();
+    if (!s_pending_cc_valid ||
+        (s_pending_cc.transport_id != transport_id))
+    {
+        BMS_Runtime_CriticalExit();
+        return false;
+    }
+    if (!inserted)
+    {
+        BMS_Runtime_CriticalExit();
+        return false;
+    }
+    if (!s_xready_state.active &&
+        (s_pending_cc.xready_generation ==
+         s_xready_state.xready_generation))
+    {
+        s_latest_cc.raw = s_pending_cc.raw;
+        s_latest_cc.sample_ms = s_pending_cc.sample_ms;
+        s_latest_cc.sequence =
+            BMS_PROTECT_CC_SEQUENCE_NEXT(s_latest_cc.sequence);
+        s_latest_cc.xready_generation = s_pending_cc.xready_generation;
+        s_latest_cc.valid = true;
     }
     else
     {
-        overflowed = true;
-        if (xQueueReceive(xCcSampleQueue, &discard, 0U) == pdPASS)
-        {
-            (void)discard;
-            oldest_was_dropped = true;
-            inserted = xQueueSend(xCcSampleQueue, &sample, 0U);
-        }
-        if (inserted != pdPASS)
-        {
-            newest_was_missed = true;
-        }
-    }
-    if (overflowed)
-    {
-        /* 恢复调度前发布多字段诊断快照，读者不会看到只更新一半的计数。 */
-        BMS_Protect_RecordCcOverflow(oldest_was_dropped,
-                                     newest_was_missed);
-    }
-    if ((inserted == pdPASS) && !s_xready_state.active)
-    {
-        s_latest_cc.raw = sample.raw;
-        s_latest_cc.tick = sample.tick;
-        s_latest_cc.sequence =
-            BMS_PROTECT_CC_SEQUENCE_NEXT(s_latest_cc.sequence);
-        s_latest_cc.xready_generation =
-            s_xready_state.xready_generation;
-        s_latest_cc.valid = true;
-    }
-    else if ((inserted == pdPASS) && s_xready_state.active)
-    {
-        /* 保持 queue/SOC contract，但 AFE reset epoch active 时不发布 CC mailbox。 */
         s_latest_cc.valid = false;
     }
-    (void)xTaskResumeAll();
-
-    if (overflowed)
-    {
-        if (xSysEvents != NULL)
-        {
-            (void)xEventGroupSetBits(xSysEvents, EVT_CC_QUEUE_OVERFLOW);
-        }
-    }
-
-    return (inserted == pdPASS);
+    s_pending_cc_valid = false;
+    s_cc_clear_pending = true;
+    BMS_Runtime_CriticalExit();
+    return true;
 }
 
 bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
@@ -651,7 +632,7 @@ bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
         return false;
     }
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     *snapshot = s_latest_cc;
     available = snapshot->valid && !s_xready_state.active &&
         (snapshot->xready_generation ==
@@ -660,7 +641,7 @@ bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
     {
         snapshot->valid = false;
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return available;
 }
 
@@ -671,9 +652,9 @@ bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot)
         return false;
     }
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     *snapshot = s_xready_state;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -688,7 +669,7 @@ bool BMS_Protect_XreadyBindingIsCurrent(
 /* ------------------------------------------------------------------ */
 /* XREADY recovery：request/ack 划分 coordinator 与 Protect W1C ownership。 */
 /* ------------------------------------------------------------------ */
-bool BMS_Protect_RecoverXready(BQ76940_t *device)
+bool BMS_Protect_RecoverXready(BQ76940_t *device, uint32_t now_ms)
 {
     BQ76940_Status_t status;
     bool coordinator_authorized;
@@ -712,12 +693,12 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     {
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     coordinator_authorized = s_xready_clear_authorization.valid &&
         s_xready_state.active &&
         (s_xready_clear_authorization.xready_generation ==
          s_xready_state.xready_generation);
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     if (!coordinator_authorized &&
         ((s_xready_recovery_hook == NULL) ||
          !s_xready_recovery_hook(device)))
@@ -731,7 +712,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
                                BMS_PROTECT_STAT_DEVICE_XREADY);
     if (status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS)
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         s_xready_clear_ack.xready_generation =
             s_xready_state.xready_generation;
         s_xready_clear_ack.recovery_revision =
@@ -740,19 +721,19 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
         s_xready_clear_ack.accepted = false;
         s_xready_clear_ack.finalization_ambiguous = true;
         s_xready_clear_authorization.valid = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         BMS_Protect_RecordW1cFinalizationAmbiguity(
             BMS_PROTECT_STAT_DEVICE_XREADY);
-        BMS_Protect_RecordAfeFailure(status);
+        BMS_Protect_RecordAfeFailure(status, now_ms);
         return false;
     }
     if (status != BQ76940_STATUS_OK)
     {
         /* clear 明确被拒绝，保留 fault pending，等待下一次有界 service。 */
-        BMS_Protect_RecordAfeFailure(status);
+        BMS_Protect_RecordAfeFailure(status, now_ms);
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     s_fault.active &= ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
     s_xready_state.active = false;
     s_xready_recovery_pending = false;
@@ -765,7 +746,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     s_xready_clear_ack.accepted = true;
     s_xready_clear_ack.finalization_ambiguous = false;
     s_xready_clear_authorization.valid = false;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -774,7 +755,7 @@ bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
 {
     bool accepted;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     accepted = s_xready_state.active &&
         (s_xready_state.xready_generation == xready_generation) &&
         !s_xready_clear_authorization.valid &&
@@ -787,7 +768,7 @@ bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
         s_xready_clear_ack.accepted = false;
         s_xready_clear_ack.finalization_ambiguous = false;
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return accepted;
 }
 
@@ -797,9 +778,9 @@ bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack)
     {
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     *ack = s_xready_clear_ack;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -808,7 +789,7 @@ bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
 {
     bool released;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     released = !s_xready_state.active &&
         s_xready_clear_ack.accepted &&
         (s_xready_state.xready_generation == xready_generation) &&
@@ -820,7 +801,7 @@ bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
             ~(BMS_Fault_Mask(BMS_FAULT_ID_AFE_XREADY));
         BMS_Protect_AdvanceRevision();
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return released;
 }
 
@@ -888,7 +869,8 @@ static bool BMS_Protect_HwRequestIsCurrent(
 }
 
 bool BMS_Protect_SubmitHwRecoveryRequest(
-    const BMS_ProtectHwRecoveryRequest_t *request)
+    const BMS_ProtectHwRecoveryRequest_t *request,
+    uint32_t now_ms)
 {
     bool accepted;
 
@@ -896,19 +878,14 @@ bool BMS_Protect_SubmitHwRecoveryRequest(
     {
         return false;
     }
-    vTaskSuspendAll();
-    accepted = BMS_Protect_HwRequestIsCurrent(
-        request, (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS));
+    BMS_Runtime_CriticalEnter();
+    accepted = BMS_Protect_HwRequestIsCurrent(request, now_ms);
     if (accepted)
     {
         s_hw_recovery_request = *request;
         s_hw_recovery_ack.accepted = false;
     }
-    (void)xTaskResumeAll();
-    if (accepted)
-    {
-        App_Rtos_RequestProtectService();
-    }
+    BMS_Runtime_CriticalExit();
     return accepted;
 }
 
@@ -918,9 +895,9 @@ bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack)
     {
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     *ack = s_hw_recovery_ack;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -942,11 +919,10 @@ bool BMS_Protect_SubmitServiceResetRequest(
         (identity.afe_generation == request->evaluated_afe_generation);
     if (accepted)
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         s_service_reset_request = *request;
         s_service_reset_ack.accepted = false;
-        (void)xTaskResumeAll();
-        App_Rtos_RequestProtectService();
+        BMS_Runtime_CriticalExit();
     }
     return accepted;
 }
@@ -957,9 +933,9 @@ bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack)
     {
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     *ack = s_service_reset_ack;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -977,9 +953,9 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
      * identity、source_generation 和 expiry 全部仍当前，并在 I2C 读取前后重复
      * 验证；否则新事件或新采样可能夹在检查之间，旧 request 必须作废。
      */
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     request = s_hw_recovery_request;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     if (!request.valid)
     {
         return;
@@ -987,35 +963,33 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
     if (!BMS_Protect_HwRequestIsCurrent(&request, now_ms) ||
         !BMS_Protect_SourceOfFault(request.fault_id,
                                    &source, &target_status_mask) ||
-        (xI2CMutex == NULL) ||
-        (xSemaphoreTake(xI2CMutex,
-                        pdMS_TO_TICKS(BMS_PROTECT_I2C_TIMEOUT_MS)) != pdTRUE))
+        !BMS_Runtime_BusLock(BMS_PROTECT_I2C_TIMEOUT_MS))
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         s_hw_recovery_request.valid = false;
         s_hw_recovery_ack.accepted = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
     if (!BMS_Protect_HwRequestIsCurrent(&request, now_ms))
     {
-        (void)xSemaphoreGive(xI2CMutex);
-        vTaskSuspendAll();
+        BMS_Runtime_BusUnlock();
+        BMS_Runtime_CriticalEnter();
         s_hw_recovery_request.valid = false;
         s_hw_recovery_ack.accepted = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
     stat = 0U;
     status = BQ76940_ReadByte(s_afe_device, BQ76940_REG_SYS_STAT, &stat);
     if (status != BQ76940_STATUS_OK)
     {
-        (void)xSemaphoreGive(xI2CMutex);
-        BMS_Protect_RecordAfeFailure(status);
-        vTaskSuspendAll();
+        BMS_Runtime_BusUnlock();
+        BMS_Protect_RecordAfeFailure(status, now_ms);
+        BMS_Runtime_CriticalEnter();
         s_hw_recovery_request.valid = false;
         s_hw_recovery_ack.accepted = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
     if (((stat & target_status_mask) != 0U) ||
@@ -1024,16 +998,16 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
                   BMS_PROTECT_STAT_SCD)) != 0U) ||
         !BMS_Protect_HwRequestIsCurrent(&request, now_ms))
     {
-        (void)xSemaphoreGive(xI2CMutex);
-        vTaskSuspendAll();
+        BMS_Runtime_BusUnlock();
+        BMS_Runtime_CriticalEnter();
         s_hw_recovery_request.valid = false;
         s_hw_recovery_ack.accepted = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (s_hw_recovery_request.valid &&
         (s_hw_recovery_request.request_id == request.request_id) &&
         (s_source_generation[source] ==
@@ -1051,7 +1025,7 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
         s_hw_recovery_ack.accepted = true;
     }
     s_hw_recovery_request.valid = false;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static bool BMS_Protect_ServiceResetMapping(
@@ -1094,9 +1068,9 @@ static void BMS_Protect_ServiceReset(uint32_t now_ms)
     uint8_t stat;
     bool current;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     request = s_service_reset_request;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     if (!request.valid ||
         !BMS_Protect_ServiceResetMapping(request.source,
                                          &fault_id, &status_mask) ||
@@ -1104,22 +1078,20 @@ static void BMS_Protect_ServiceReset(uint32_t now_ms)
         s_xready_state.active || !BMS_Data_GetIdentity(&identity) ||
         (identity.sample_sequence != request.evaluated_sample_sequence) ||
         (identity.afe_generation != request.evaluated_afe_generation) ||
-        (xI2CMutex == NULL) ||
-        (xSemaphoreTake(xI2CMutex,
-                        pdMS_TO_TICKS(BMS_PROTECT_I2C_TIMEOUT_MS)) != pdTRUE))
+        !BMS_Runtime_BusLock(BMS_PROTECT_I2C_TIMEOUT_MS))
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         s_service_reset_request.valid = false;
         s_service_reset_ack.accepted = false;
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
     stat = 0U;
     status = BQ76940_ReadByte(s_afe_device, BQ76940_REG_SYS_STAT, &stat);
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     if (status != BQ76940_STATUS_OK)
     {
-        BMS_Protect_RecordAfeFailure(status);
+        BMS_Protect_RecordAfeFailure(status, now_ms);
         current = false;
     }
     else
@@ -1135,7 +1107,7 @@ static void BMS_Protect_ServiceReset(uint32_t now_ms)
                                     BMS_FAULT_ID_AFE_COMM);
         }
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (current && s_service_reset_request.valid &&
         (s_service_reset_request.request_id == request.request_id))
     {
@@ -1152,14 +1124,15 @@ static void BMS_Protect_ServiceReset(uint32_t now_ms)
         s_service_reset_ack.accepted = false;
     }
     s_service_reset_request.valid = false;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 /* ------------------------------------------------------------------ */
 /* SYS_STAT drain（H-05）与逐 bit 处理（H-01/H-02/H-03）。 */
 /* ------------------------------------------------------------------ */
 static void BMS_Protect_HandleCcReady(BQ76940_t *device,
-                                      uint8_t *clear_mask)
+                                      uint8_t *clear_mask,
+                                      uint32_t now_ms)
 {
     int16_t cc_raw;
     BQ76940_Status_t status;
@@ -1181,19 +1154,32 @@ static void BMS_Protect_HandleCcReady(BQ76940_t *device,
         return;
     }
 
-    /* H-02：newest sample 确已入队后才允许 clear CC_READY。 */
+    /*
+     * H-02 两阶段交接：先读成 FML domain sample，但本轮不清 CC_READY。APL
+     * 将 sample 放入 newest-wins queue 并确认后，下一次 service 才进入上面的
+     * s_cc_clear_pending 分支，从而保持 queue commit 先于 W1C。
+     */
+    if (s_pending_cc_valid)
+    {
+        return;
+    }
     status = BQ76940_ReadCcRaw(device, &cc_raw);
     if (status == BQ76940_STATUS_OK)
     {
-        if (BMS_Protect_PushCcSample(cc_raw))
-        {
-            s_cc_clear_pending = true;
-            *clear_mask |= BMS_PROTECT_STAT_CC_READY;
-        }
+        BMS_Runtime_CriticalEnter();
+        s_cc_transport_sequence =
+            (uint32_t)(s_cc_transport_sequence + 1UL);
+        s_pending_cc.raw = cc_raw;
+        s_pending_cc.sample_ms = now_ms;
+        s_pending_cc.xready_generation =
+            s_xready_state.xready_generation;
+        s_pending_cc.transport_id = s_cc_transport_sequence;
+        s_pending_cc_valid = true;
+        BMS_Runtime_CriticalExit();
     }
     else
     {
-        BMS_Protect_RecordAfeFailure(status);
+        BMS_Protect_RecordAfeFailure(status, now_ms);
     }
 }
 
@@ -1281,7 +1267,8 @@ bool BMS_Protect_HasFaultBits(uint8_t stat)
                      BMS_PROTECT_STAT_OVRD_ALERT)) != 0U);
 }
 
-BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
+BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
+                                           uint32_t now_ms)
 {
     uint8_t stat;
     uint8_t clear_mask;
@@ -1307,14 +1294,14 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         if (status != BQ76940_STATUS_OK)
         {
             /* I2C/CRC 失败：按 H-05 保留 pending，并发布 AFE comm fault。 */
-            BMS_Protect_RecordAfeFailure(status);
+            BMS_Protect_RecordAfeFailure(status, now_ms);
             return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
         }
         BMS_Protect_ResolveObservedLowW1c(stat);
-        BMS_Protect_RecordAfeReadSuccess();
-        vTaskSuspendAll();
-        BMS_Protect_RecordNewSourceEvents(stat);
-        (void)xTaskResumeAll();
+        BMS_Protect_RecordAfeReadSuccess(now_ms);
+        BMS_Runtime_CriticalEnter();
+        BMS_Protect_RecordNewSourceEvents(stat, now_ms);
+        BMS_Runtime_CriticalExit();
 
         /*
          * 明确拒绝的 W1C 可能被 reset 或受权外部 clear 变得无须重试；成功读到
@@ -1329,7 +1316,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         {
             if (s_xready_recovery_pending)
             {
-                if (!BMS_Protect_RecoverXready(device))
+                if (!BMS_Protect_RecoverXready(device, now_ms))
                 {
                     return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
                 }
@@ -1340,7 +1327,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
 
         clear_mask = 0U;
         /* getter 同样 suspend scheduler，使 active+latched 作为一代发布而非 torn words。 */
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         previous_fault = s_fault;
         xready_was_active = s_xready_state.active;
         BMS_Protect_Decide(stat, &s_fault, &g_bms_fet_request, &clear_mask);
@@ -1366,14 +1353,10 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         {
             BMS_Protect_AdvanceRevision();
         }
-        (void)xTaskResumeAll();
-        if (BMS_Protect_HasFaultBits(stat) && (xSysEvents != NULL))
-        {
-            (void)xEventGroupSetBits(xSysEvents, EVT_FAULT_PRESENT);
-        }
+        BMS_Runtime_CriticalExit();
         if ((stat & BMS_PROTECT_STAT_CC_READY) != 0U)
         {
-            BMS_Protect_HandleCcReady(device, &clear_mask);
+            BMS_Protect_HandleCcReady(device, &clear_mask, now_ms);
         }
         /* 前次 finalization 未决的 W1C 永不 replay；同 snapshot 其他新 bit 可独立清除。 */
         clear_mask = (uint8_t)(clear_mask &
@@ -1390,13 +1373,13 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
                  * point 时，只要目标 bit 仍高，软件就不能安全选择 replay 或新事件。
                  */
                 BMS_Protect_RecordW1cFinalizationAmbiguity(clear_mask);
-                BMS_Protect_RecordAfeFailure(status);
+                BMS_Protect_RecordAfeFailure(status, now_ms);
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
             if (status != BQ76940_STATUS_OK)
             {
                 /* clear 明确失败：保留 pending，后续只重试对应 W1C。 */
-                BMS_Protect_RecordAfeFailure(status);
+                BMS_Protect_RecordAfeFailure(status, now_ms);
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
             if ((clear_mask & BMS_PROTECT_STAT_CC_READY) != 0U)
@@ -1411,111 +1394,69 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
          */
         if (s_xready_recovery_pending)
         {
-            if (!BMS_Protect_RecoverXready(device))
+            if (!BMS_Protect_RecoverXready(device, now_ms))
             {
                 return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
             }
+        }
+        if (s_pending_cc_valid)
+        {
+            /* APL must commit the staged domain sample before another status read. */
+            return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
         }
         /* H-05：重新读取 SYS_STAT，捕获 drain 期间新到达的事件。 */
     }
     return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
 }
 
-BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device)
+BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device,
+                                                      uint32_t now_ms)
 {
     BMS_ProtectDrainResult_t drain_result;
 
-    if ((device == NULL) || (xI2CMutex == NULL))
+    if (device == NULL)
     {
         return BMS_PROTECT_SERVICE_RETRY_REQUIRED;
     }
-    if (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_PROTECT_I2C_TIMEOUT_MS)) != pdTRUE)
+    if (!BMS_Runtime_BusLock(BMS_PROTECT_I2C_TIMEOUT_MS))
     {
         return BMS_PROTECT_SERVICE_RETRY_REQUIRED;
     }
 
-    drain_result = BMS_Protect_Drain(device);
-    (void)xSemaphoreGive(xI2CMutex);
+    drain_result = BMS_Protect_Drain(device, now_ms);
+    BMS_Runtime_BusUnlock();
 
-    if ((drain_result != BMS_PROTECT_DRAIN_COMPLETE) ||
-        BSP_ALERT_PinActive())
+    if (drain_result != BMS_PROTECT_DRAIN_COMPLETE)
     {
         return BMS_PROTECT_SERVICE_RETRY_REQUIRED;
     }
     return BMS_PROTECT_SERVICE_IDLE;
 }
 
-void Task_Protect(void *argument)
+void BMS_Protect_ServiceMaintenance(uint32_t now_ms)
 {
-    bool retry_pending;
-    uint32_t now_ms;
-    TickType_t wait_ticks;
-
-    (void)argument;
-
-    /*
-     * FreeRTOS 在 xPortStartScheduler 内初始化 Cortex-M ISR priority validator。
-     * 若提前启用 EXTI，真实边沿可能在 port state 未初始化时进入 FromISR API；
-     * 因此由已经运行的最高优先级 ProtectTask 启用 EXTI。
-     */
-    while (!BSP_ALERT_EXTI_Init())
-    {
-        vTaskDelay(pdMS_TO_TICKS(BMS_PROTECT_RETRY_DELAY_MS));
-    }
-
-    /* EXTI rising edge 无法补报禁用期间已为高的电平，启用后直接读 PB1 seed 工作。 */
-    retry_pending = BSP_ALERT_PinActive();
-
-    /*
-     * PB1 ALERT -> EXTI ISR -> binary semaphore -> ProtectTask。ISR 不能执行 I2C：
-     * 总线 transaction 会等待且依赖 mutex，W1C/fault/recovery 又需要多字段 owner
-     * 状态，这些都不适合中断上下文。Task 可有界等待、重试并按顺序发布快照。
-     */
-    for (;;)
-    {
-        if (!retry_pending)
-        {
-            wait_ticks = pdMS_TO_TICKS(BMS_PROTECT_HEALTH_WAIT_MS);
-            (void)xSemaphoreTake(xAfeAlertSem, wait_ticks);
-        }
-        else
-        {
-            vTaskDelay(pdMS_TO_TICKS(BMS_PROTECT_RETRY_DELAY_MS));
-        }
-
-        retry_pending =
-            (BMS_Protect_ServicePending(s_afe_device) ==
-             BMS_PROTECT_SERVICE_RETRY_REQUIRED);
-        now_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
-        BMS_Protect_UpdateAfeCommPolicy(now_ms);
-        BMS_Protect_ServiceHwRecovery(now_ms);
-        BMS_Protect_ServiceReset(now_ms);
-        BMS_Health_Heartbeat(BMS_HEALTH_TASK_PROTECT);
-        App_Rtos_NotifyStateUrgent();
-    }
+    BMS_Protect_UpdateAfeCommPolicy(now_ms);
+    BMS_Protect_ServiceHwRecovery(now_ms);
+    BMS_Protect_ServiceReset(now_ms);
 }
 
-/* ------------------------------------------------------------------ */
-/* EXTI1 ISR：只清 pending、give semaphore、按需 yield，不做复杂 Protect logic。 */
-/* ------------------------------------------------------------------ */
-void EXTI1_IRQHandler(void)
+#if defined(TEST_PHASE7_IMAGE)
+bool BMS_Protect_TestStageCcSample(int16_t raw, uint32_t sample_ms)
 {
-    BaseType_t higher_priority_task_woken = pdFALSE;
+    bool staged;
 
-    /*
-     * ISR 只确认中断源、清 EXTI pending、give semaphore，并在需要时触发一次
-     * 上下文切换。它不读取 SYS_STAT，也不清任何 AFE 位；这样硬件事件的 decode、
-     * W1C 和 fault lifecycle 始终由 ProtectTask 单线程 owner 完成。
-     */
-    if (EXTI_GetITStatus(EXTI_Line1) != RESET)
+    BMS_Runtime_CriticalEnter();
+    staged = !s_pending_cc_valid;
+    if (staged)
     {
-        EXTI_ClearITPendingBit(EXTI_Line1);
-        if (xAfeAlertSem != NULL)
-        {
-            (void)xSemaphoreGiveFromISR(xAfeAlertSem,
-                                        &higher_priority_task_woken);
-        }
-        portYIELD_FROM_ISR(higher_priority_task_woken);
+        s_cc_transport_sequence = (uint32_t)(s_cc_transport_sequence + 1UL);
+        s_pending_cc.raw = raw;
+        s_pending_cc.sample_ms = sample_ms;
+        s_pending_cc.xready_generation = s_xready_state.xready_generation;
+        s_pending_cc.transport_id = s_cc_transport_sequence;
+        s_pending_cc_valid = true;
     }
+    BMS_Runtime_CriticalExit();
+    return staged;
 }
+#endif

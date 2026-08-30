@@ -1,8 +1,7 @@
 #include "bms_health.h"
+#include "bms_runtime_port.h"
 
 #include <stddef.h>
-
-#include "apl_rtos.h"
 
 /*
  * 自然对齐的单调 generation；每个任务是自身 slot sole writer。StateTask 在
@@ -42,12 +41,12 @@ BMS_HealthSnapshot_t BMS_Health_GetSnapshot(void)
     BMS_HealthSnapshot_t snapshot;
     uint8_t index;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     for (index = 0U; index < (uint8_t)BMS_HEALTH_TASK_COUNT; ++index)
     {
         snapshot.generation[index] = s_generation[index];
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 

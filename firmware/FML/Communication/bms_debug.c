@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "FreeRTOS.h"
 #include "bms_balance.h"
 #include "bms_can.h"
 #include "bms_data.h"
@@ -15,11 +14,9 @@
 #include "bms_recovery.h"
 #include "bms_soc.h"
 #include "bms_state.h"
-#include "bsp_uart.h"
 
 #define BMS_DEBUG_PERIOD_MS                      (1000UL)
 #define BMS_DEBUG_LINE_CAPACITY                  (512U)
-#define BMS_DEBUG_TX_CHUNK_BYTES                 (8U)
 
 static char s_line[BMS_DEBUG_LINE_CAPACITY];
 static uint16_t s_line_length;
@@ -29,7 +26,7 @@ static bool s_first_output;
 
 /*
  * 大型诊断投影使用 static storage，避免挤占已审查的 CANTx task stack。
- * Task_CANTx 是 sole caller/writer，因此无需额外 mutex，也不会产生并发 torn data。
+ * APL CAN Tx task 是 sole caller/writer，因此无需额外 mutex，也不会产生并发 torn data。
  */
 static BMS_DataSnapshot_t s_measurement;
 static BMS_StateSafetySnapshot_t s_state;
@@ -227,34 +224,21 @@ static void BMS_Debug_CellRange(uint16_t *minimum_mv,
     *maximum_mv = maximum;
 }
 
-static void BMS_Debug_FlushChunk(void)
+bool BMS_Debug_PeekByte(uint8_t *value)
 {
-    /*
-     * 一次最多发送 BMS_DEBUG_TX_CHUNK_BYTES。TryWriteByte 只在 USART
-     * 当前可写时提交一个 byte；busy 就立即返回并保留 s_line_offset，形成
-     * partial-line continuation，而不是让 debug 阻塞安全控制或 CAN mailbox。
-     */
-    uint16_t remaining;
-    uint16_t chunk;
+    if ((value == NULL) || (s_line_offset >= s_line_length))
+    {
+        return false;
+    }
+    *value = (uint8_t)s_line[s_line_offset];
+    return true;
+}
 
-    if (s_line_offset >= s_line_length)
+void BMS_Debug_ConsumeByte(void)
+{
+    if (s_line_offset < s_line_length)
     {
-        return;
-    }
-    remaining = (uint16_t)(s_line_length - s_line_offset);
-    chunk = remaining;
-    if (chunk > BMS_DEBUG_TX_CHUNK_BYTES)
-    {
-        chunk = BMS_DEBUG_TX_CHUNK_BYTES;
-    }
-    while (chunk > 0U)
-    {
-        if (!BSP_UART1_TryWriteByte((uint8_t)s_line[s_line_offset]))
-        {
-            return;
-        }
         ++s_line_offset;
-        --chunk;
     }
 }
 
@@ -266,7 +250,9 @@ void BMS_Debug_Init(void)
     s_first_output = true;
 }
 
-void BMS_Debug_Service(uint32_t now_ms)
+bool BMS_Debug_PrepareSnapshot(uint32_t now_ms,
+                               uint32_t free_heap_bytes,
+                               uint32_t minimum_heap_bytes)
 {
     const BMS_Policy_t *policy;
     BMS_FaultBitmap_t active_faults;
@@ -285,13 +271,12 @@ void BMS_Debug_Service(uint32_t now_ms)
      */
     if (s_line_offset < s_line_length)
     {
-        BMS_Debug_FlushChunk();
-        return;
+        return false;
     }
     if (!s_first_output &&
         ((uint32_t)(now_ms - s_last_output_ms) < BMS_DEBUG_PERIOD_MS))
     {
-        return;
+        return false;
     }
     s_first_output = false;
     s_last_output_ms = now_ms;
@@ -304,8 +289,7 @@ void BMS_Debug_Service(uint32_t now_ms)
         BMS_Debug_AppendText("BMS1 t=");
         BMS_Debug_AppendU32(now_ms);
         BMS_Debug_AppendText(" data=UNAVAILABLE\r\n");
-        BMS_Debug_FlushChunk();
-        return;
+        return true;
     }
 
     s_state = BMS_State_GetSafetySnapshot();
@@ -409,10 +393,10 @@ void BMS_Debug_Service(uint32_t now_ms)
     BMS_Debug_AppendChar('/');
     BMS_Debug_AppendU32(s_flash.both_invalid_count);
     BMS_Debug_AppendText(" heap=");
-    BMS_Debug_AppendU32((uint32_t)xPortGetFreeHeapSize());
+    BMS_Debug_AppendU32(free_heap_bytes);
     BMS_Debug_AppendChar('/');
-    BMS_Debug_AppendU32((uint32_t)xPortGetMinimumEverFreeHeapSize());
+    BMS_Debug_AppendU32(minimum_heap_bytes);
     BMS_Debug_AppendText("\r\n");
 
-    BMS_Debug_FlushChunk();
+    return true;
 }

@@ -8,7 +8,7 @@
  * 正常运行期 task health 与 IWDG supervision 仍由 StateTask owner 负责。
  */
 
-static void App_Rtos_FatalStop(void)
+static void APL_Rtos_FatalStop(void)
 {
     taskDISABLE_INTERRUPTS();
     for (;;)
@@ -18,19 +18,19 @@ static void App_Rtos_FatalStop(void)
 
 void vApplicationAssertFailedHandler(void)
 {
-    App_Rtos_FatalStop();
+    APL_Rtos_FatalStop();
 }
 
 void vApplicationMallocFailedHook(void)
 {
-    App_Rtos_FatalStop();
+    APL_Rtos_FatalStop();
 }
 
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     (void)xTask;
     (void)pcTaskName;
-    App_Rtos_FatalStop();
+    APL_Rtos_FatalStop();
 }
 
 void vApplicationIdleHook(void)

@@ -1,4 +1,5 @@
 #include "bms_soc.h"
+#include "bms_runtime_port.h"
 
 /*
  * SOC 采用整数库仑计数：ProtectTask 每次 CC_READY 只产生一条带 generation 的
@@ -10,15 +11,11 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "apl_rtos.h"
 #include "bms_protect.h"
 #include "bq76940_measurement.h"
 
 #define BMS_SOC_MAMS_PER_MAH                    (3600000LL)
 #define BMS_SOC_OCV_POINT_COUNT                 (10U)
-#define BMS_SOC_MAX_DRAIN_PER_RUN               \
-    (APP_RTOS_CC_SAMPLE_QUEUE_DEPTH)
-
 typedef struct
 {
     uint16_t cell_mv;
@@ -411,12 +408,14 @@ bool BMS_Soc_Restore(uint16_t soc_permille,
     return true;
 }
 
-void BMS_Soc_RunOnce(uint32_t now_ms)
+void BMS_Soc_RunOnce(uint32_t now_ms,
+                     const BMS_CcSample_t *samples,
+                     uint8_t sample_count,
+                     bool queue_gap)
 {
     BMS_DataSnapshot_t measurement;
-    BMS_CcSample_t sample;
-    EventBits_t events;
-    uint8_t drained;
+    const BMS_CcSample_t *sample;
+    uint8_t index;
     int32_t current_ma;
 
     if ((s_policy == NULL) ||
@@ -429,25 +428,22 @@ void BMS_Soc_RunOnce(uint32_t now_ms)
         (void)BMS_Soc_EngineInit(&s_engine, &s_policy->soc,
                                  &measurement, now_ms);
     }
-    if (xSysEvents != NULL)
+    if (queue_gap ||
+        ((sample_count > 0U) && (samples == NULL)) ||
+        (sample_count > BMS_SOC_MAX_CC_SAMPLES_PER_RUN))
     {
-        events = xEventGroupGetBits(xSysEvents);
-        if ((events & EVT_CC_QUEUE_OVERFLOW) != 0U)
-        {
-            BMS_Soc_MarkQueueGap(&s_engine);
-            (void)xEventGroupClearBits(xSysEvents,
-                                       EVT_CC_QUEUE_OVERFLOW);
-        }
+        BMS_Soc_MarkQueueGap(&s_engine);
     }
-    drained = 0U;
-    while ((xCcSampleQueue != NULL) &&
-           (drained < BMS_SOC_MAX_DRAIN_PER_RUN) &&
-           (xQueueReceive(xCcSampleQueue, &sample, 0U) == pdPASS))
+    if (sample_count > BMS_SOC_MAX_CC_SAMPLES_PER_RUN)
     {
-        ++drained;
-        if ((sample.xready_generation != measurement.afe_generation) ||
+        sample_count = BMS_SOC_MAX_CC_SAMPLES_PER_RUN;
+    }
+    for (index = 0U; index < sample_count; ++index)
+    {
+        sample = &samples[index];
+        if ((sample->xready_generation != measurement.afe_generation) ||
             (BQ76940_ConvertCcRawToCurrentMa(
-                sample.raw, s_policy->rsense_uohm,
+                sample->raw, s_policy->rsense_uohm,
                 s_policy->current_polarity, &current_ma) !=
              BQ76940_STATUS_OK))
         {
@@ -456,8 +452,8 @@ void BMS_Soc_RunOnce(uint32_t now_ms)
         }
         (void)BMS_Soc_IntegrateCurrent(
             &s_engine, &s_policy->soc, current_ma,
-            (uint32_t)(sample.tick * portTICK_PERIOD_MS),
-            sample.xready_generation);
+            sample->sample_ms,
+            sample->xready_generation);
     }
     BMS_Soc_ObserveCorrection(&s_engine, &s_policy->soc,
                               &measurement, now_ms);
@@ -471,8 +467,8 @@ BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void)
 {
     BMS_SocSnapshot_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }

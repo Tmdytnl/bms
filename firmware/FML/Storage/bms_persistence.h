@@ -112,11 +112,13 @@ BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
 
 /*
  * 正式 target adapter。init 只读取 A/B page，绝不为“修复”无效记录而写 Flash；
- * Task_SOC 是低频 save service 唯一调用者，避免多个任务竞争 erase/program。
+ * APL SOC task 是低频 save service 唯一调用者，避免多个任务竞争 erase/program。
  * 例如 A 页 VALID/seq=10、B 页 VALID/seq=11 时启动选择 B；下一次保存擦写 A，
  * 写入 body+CRC、读回验证，最后才写 commit marker。任一步掉电仍可回退到 B。
  */
-bool BMS_Persistence_TargetInit(const BMS_FlashPolicy_t *policy);
+bool BMS_Persistence_TargetInit(
+    const BMS_FlashPolicy_t *policy,
+    const BMS_PersistenceStorageOps_t *storage);
 bool BMS_Persistence_TargetGetLatest(BMS_PersistencePayload_t *payload);
 BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
     uint16_t soc_permille,

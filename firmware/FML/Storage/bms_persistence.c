@@ -11,10 +11,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#if !defined(TEST_PHASE9_IMAGE)
-#include "bsp_flash.h"
-#endif
-
 #define BMS_PERSISTENCE_CRC_OFFSET               (28U)
 #define BMS_PERSISTENCE_COMMIT_OFFSET            (32U)
 
@@ -413,43 +409,11 @@ BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
 
 static BMS_PersistenceStore_t s_target_store;
 
-#if !defined(TEST_PHASE9_IMAGE)
-static bool BMS_Persistence_TargetRead(void *context, uint32_t address,
-                                       uint8_t *destination, uint16_t length)
+bool BMS_Persistence_TargetInit(
+    const BMS_FlashPolicy_t *policy,
+    const BMS_PersistenceStorageOps_t *storage)
 {
-    (void)context;
-    return BSP_Flash_Read(address, destination, length);
-}
-
-static bool BMS_Persistence_TargetErase(void *context,
-                                        uint32_t page_address)
-{
-    (void)context;
-    return BSP_Flash_ErasePersistencePage(page_address);
-}
-
-static bool BMS_Persistence_TargetProgram(void *context, uint32_t address,
-                                          uint16_t value)
-{
-    (void)context;
-    return BSP_Flash_ProgramPersistenceHalfWord(address, value);
-}
-#endif
-
-bool BMS_Persistence_TargetInit(const BMS_FlashPolicy_t *policy)
-{
-#if defined(TEST_PHASE9_IMAGE)
-    (void)policy;
-    return false;
-#else
-    BMS_PersistenceStorageOps_t storage;
-
-    storage.read = BMS_Persistence_TargetRead;
-    storage.erase_page = BMS_Persistence_TargetErase;
-    storage.program_halfword = BMS_Persistence_TargetProgram;
-    storage.context = NULL;
-    return BMS_Persistence_StoreInit(&s_target_store, policy, &storage);
-#endif
+    return BMS_Persistence_StoreInit(&s_target_store, policy, storage);
 }
 
 bool BMS_Persistence_TargetGetLatest(BMS_PersistencePayload_t *payload)

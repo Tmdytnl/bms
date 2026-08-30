@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "apl_rtos.h"
 #include "bms_fault.h"
 #include "bms_policy.h"
 #include "bms_safety.h"
@@ -104,8 +103,16 @@ typedef struct
  */
 typedef struct
 {
+    int16_t raw;                 /* Protect 从当前 CC_READY 事件读取的原始值。 */
+    uint32_t sample_ms;          /* APL 传入的接纳时刻，已经是毫秒域。 */
+    uint32_t xready_generation;  /* 样本所属 AFE 生命周期。 */
+    uint32_t transport_id;       /* FML/APL 两阶段交接的单调身份。 */
+} BMS_CcSample_t;
+
+typedef struct
+{
     int16_t raw;                 /* 已被 Protect 接纳的有符号 CC 原始值。 */
-    TickType_t tick;             /* 读取/入队时刻，Sample 用于形成 timestamp。 */
+    uint32_t sample_ms;          /* 读取/入队时刻，Sample 用于形成 timestamp。 */
     uint32_t sequence;           /* mailbox 每次接受新样本递增，避免重复发布。 */
     uint32_t xready_generation;  /* 样本所属 AFE 生命周期。 */
     bool valid;                  /* false 表示尚无样本或已被 XREADY 立即失效。 */
@@ -230,19 +237,10 @@ void BMS_Protect_Init(void);
 
 /* 绑定 ALERT drain 共用的 BQ transport handle；指向对象必须覆盖任务生命周期。 */
 void BMS_Protect_SetDevice(BQ76940_t *device);
-void BMS_Protect_SetPolicy(const BMS_Policy_t *policy);
+void BMS_Protect_SetPolicy(const BMS_Policy_t *policy, uint32_t now_ms);
 
 void BMS_Protect_SetXreadyRecoveryHook(
     BMS_ProtectXreadyRecoveryHook_t recovery_hook);
-
-/* ProtectTask（priority 5）等待 xAfeAlertSem，并以有界 retry drain SYS_STAT。 */
-void Task_Protect(void *argument);
-
-/*
- * EXTI1 ALERT ISR 只 give xAfeAlertSem 并按需 yield；不访问 BQ、不取 I2C mutex、
- * 不做 fault decision。中断入口与 Protect owner 同文件，便于审计完整边界。
- */
-void EXTI1_IRQHandler(void);
 
 /*
  * 返回同一 publication generation 的 active+latched 快照。任务上下文通过
@@ -279,19 +277,27 @@ bool BMS_Protect_HasFaultBits(uint8_t stat);
  * 以 H-05 有界策略 drain 一轮 SYS_STAT。测试与任务驱动同一正式路径；每个
  * set bit 独立处理，只把已成功接纳/捕获的事件加入 W1C mask。
  */
-BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device);
+BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
+                                           uint32_t now_ms);
 
 /*
  * 执行一次有界任务级 service。RETRY 表示保留 pending、短暂 delay 后直接再调，
  * 不等待另一个 semaphore edge；这样 ALERT 持续为高也不会丢失工作。
  */
-BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device);
+BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device,
+                                                      uint32_t now_ms);
+void BMS_Protect_ServiceMaintenance(uint32_t now_ms);
 
 /*
- * 按 H-02 newest-wins 策略写 xCcSampleQueue：满时在同一 scheduler exclusion
- * 内只丢一个 oldest，再放入 newest；只有 newest 确已入队才返回 true。
+ * CC_READY 的两阶段交接。FML 先暂存带 transport identity 的 domain sample；
+ * APL Protect task 执行 newest-wins queue transport，再回报结果。只有确认 newest
+ * 已进入 APL queue，Protect 才授权后续 W1C CC_READY，保持 H-02 提交顺序。
  */
-bool BMS_Protect_PushCcSample(int16_t cc_raw);
+bool BMS_Protect_GetPendingCcSample(BMS_CcSample_t *sample);
+bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
+                                     bool inserted,
+                                     bool overflowed,
+                                     bool oldest_was_dropped);
 
 /*
  * 在 scheduler exclusion 内复制 current-epoch latest CC。NULL、XREADY active、
@@ -312,7 +318,7 @@ bool BMS_Protect_XreadyBindingIsCurrent(
  * 成功，或先前 ambiguous transaction 经 observed-low 消歧后才清 active；
  * latched 生命周期独立保留，不能随 active 一起顺手清除。
  */
-bool BMS_Protect_RecoverXready(BQ76940_t *device);
+bool BMS_Protect_RecoverXready(BQ76940_t *device, uint32_t now_ms);
 
 /* Recovery Coordinator 只发 request；Protect 仍是运行期 W1C sole owner。 */
 bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
@@ -325,7 +331,8 @@ bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
 
 /* State qualification 与 Protect fresh-status 组成两方 HW recovery 证据。 */
 bool BMS_Protect_SubmitHwRecoveryRequest(
-    const BMS_ProtectHwRecoveryRequest_t *request);
+    const BMS_ProtectHwRecoveryRequest_t *request,
+    uint32_t now_ms);
 bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack);
 
 /* source-specific service reset request；不存在通用 bitmap clear command。 */
@@ -335,6 +342,9 @@ bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
 
 #if defined(TEST_PHASE7_IMAGE) || defined(TEST_PHASE9_IMAGE)
 void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms);
+#endif
+#if defined(TEST_PHASE7_IMAGE)
+bool BMS_Protect_TestStageCcSample(int16_t raw, uint32_t sample_ms);
 #endif
 
 #endif /* BMS_PROTECT_H：头文件防重复包含 */

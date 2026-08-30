@@ -1,4 +1,5 @@
 #include "bms_state.h"
+#include "bms_runtime_port.h"
 
 /*
  * State owner 只负责软件保护、DATA_STALE、RTOS_HEALTH 与运行状态分类。
@@ -9,7 +10,6 @@
 
 #include <stddef.h>
 
-#include "apl_rtos.h"
 #include "bms_data.h"
 
 static BMS_StateEngine_t s_engine;
@@ -553,11 +553,11 @@ bool BMS_State_PublishIfCurrent(BMS_StateSafetySnapshot_t *decision)
     {
         return false;
     }
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     decision->publication_revision =
         (uint32_t)(s_snapshot.publication_revision + 1UL);
     s_snapshot = *decision;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return true;
 }
 
@@ -588,9 +588,9 @@ BMS_StateSafetySnapshot_t BMS_State_GetSafetySnapshot(void)
 {
     BMS_StateSafetySnapshot_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 

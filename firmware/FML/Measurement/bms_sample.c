@@ -1,4 +1,5 @@
 #include "bms_sample.h"
+#include "bms_runtime_port.h"
 
 /*
  * 一次 sampling transaction 先捕获 device/configuration/XREADY identity，
@@ -9,10 +10,8 @@
 
 #include <stddef.h>
 
-#include "apl_rtos.h"
 #include "bms_config.h"
 #include "bms_data.h"
-#include "bms_health.h"
 #include "bms_protect.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
@@ -114,7 +113,7 @@ static void BMS_Sample_RecordFailure(BMS_SampleGroup_t group,
                                      bool configuration_not_ready,
                                      bool publish_failure)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     BMS_Sample_SaturatingIncrement(&s_diagnostics.failure_count);
     BMS_Sample_SaturatingIncrement(&s_diagnostics.frame_reject_count);
     BMS_Sample_SaturatingIncrement(
@@ -152,13 +151,13 @@ static void BMS_Sample_RecordFailure(BMS_SampleGroup_t group,
         BMS_Sample_SaturatingIncrement(
             &s_diagnostics.data_publish_failure_count);
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Sample_RecordSuccess(bool ntc_curve_unavailable,
                                      bool temperature_unavailable)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     BMS_Sample_SaturatingIncrement(&s_diagnostics.success_count);
     s_diagnostics.consecutive_failure_count = 0UL;
     if (ntc_curve_unavailable)
@@ -171,20 +170,20 @@ static void BMS_Sample_RecordSuccess(bool ntc_curve_unavailable,
         BMS_Sample_SaturatingIncrement(
             &s_diagnostics.temperature_conversion_unavailable_count);
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Sample_RecordCcUnavailable(void)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     BMS_Sample_SaturatingIncrement(
         &s_diagnostics.cc_mailbox_unavailable_count);
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Sample_RecordXreadyReject(bool postcheck)
 {
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (postcheck)
     {
         BMS_Sample_SaturatingIncrement(
@@ -195,7 +194,7 @@ static void BMS_Sample_RecordXreadyReject(bool postcheck)
         BMS_Sample_SaturatingIncrement(
             &s_diagnostics.xready_precheck_reject_count);
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
@@ -208,10 +207,10 @@ static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
 
     if (!BMS_Data_GetFreshnessSnapshot(&snapshot, now_ms))
     {
-        vTaskSuspendAll();
+        BMS_Runtime_CriticalEnter();
         BMS_Sample_SaturatingIncrement(
             &s_diagnostics.stale_check_failure_count);
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
         return;
     }
 
@@ -232,7 +231,7 @@ static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
                           BMS_TEMPERATURE_FRESH_LIMIT_MS);
     stale = voltage_stale || current_stale || temperature_stale;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     if (stale)
     {
         BMS_Sample_SaturatingIncrement(&s_diagnostics.stale_sample_count);
@@ -243,7 +242,7 @@ static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
         }
     }
     s_stale_observed = stale;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 }
 
 static void BMS_Sample_InitFrame(BMS_MeasurementFrame_t *frame,
@@ -294,27 +293,17 @@ static bool BMS_Sample_TemperatureIsDue(void)
     return s_temperature_due;
 }
 
-static BMS_TimestampMs_t BMS_Sample_TickToTimestampMs(TickType_t tick)
-{
-    return (BMS_TimestampMs_t)(
-        tick * (TickType_t)portTICK_PERIOD_MS);
-}
-
 static bool BMS_Sample_BeginConfigUpdate(void)
 {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING)
-    {
-        vTaskSuspendAll();
-        return true;
-    }
-    return false;
+    BMS_Runtime_CriticalEnter();
+    return true;
 }
 
 static void BMS_Sample_EndConfigUpdate(bool resume_scheduler)
 {
     if (resume_scheduler)
     {
-        (void)xTaskResumeAll();
+        BMS_Runtime_CriticalExit();
     }
 }
 
@@ -580,9 +569,9 @@ BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void)
 {
     BMS_SampleDiagnostics_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_diagnostics;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 
@@ -637,7 +626,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      * 1. 捕获本轮 identity 与配置快照。scheduler exclusion 只保护多字段复制，
      * 不包围 I2C；这样 Recovery 的配置更新不会被撕裂，也不会被慢总线长期阻塞。
      */
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     device = s_device;
     calibration = s_calibration;
     calibration_xready_generation =
@@ -659,7 +648,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
           calibration_xready_generation));
     configuration_revision = s_configuration_revision;
     xready_available = BMS_Protect_GetXreadyState(&xready_state);
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 
     /* 首次访问 AFE 前先证明 calibration provenance 仍绑定当前非 active generation。 */
     if (device == NULL)
@@ -693,14 +682,6 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         return false;
     }
     frame.afe_generation = calibration_xready_generation;
-    if (xI2CMutex == NULL)
-    {
-        BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_CELL,
-                                 BQ76940_STATUS_NOT_INITIALIZED,
-                                 false, true, false);
-        return false;
-    }
-
     temperature_due = BMS_Sample_TemperatureIsDue();
 
     /*
@@ -708,8 +689,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      * 不把后续换算和检查放在锁内；ProtectTask 因优先级更高，可在 transaction
      * 边界之间及时处理 ALERT。完整 BQ transaction 内部仍保持不可交叉。
      */
-    if (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_I2C_MUTEX_TIMEOUT_MS)) != pdTRUE)
+    if (!BMS_Runtime_BusLock(BMS_I2C_MUTEX_TIMEOUT_MS))
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_CELL,
                                  BQ76940_STATUS_I2C_TIMEOUT,
@@ -719,7 +699,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     status = BQ76940_ReadCellVoltages13(device,
                                         &calibration,
                                         frame.cell_voltage_mv);
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     if (status != BQ76940_STATUS_OK)
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_CELL, status,
@@ -747,8 +727,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      * 4. BAT 是独立诊断通道，仍属于 mandatory core；它失败时不发布只有电芯的
      * 半帧。再次短暂取锁让 ALERT 有机会插入，而不是从 13S 一直锁到温度结束。
      */
-    if (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_I2C_MUTEX_TIMEOUT_MS)) != pdTRUE)
+    if (!BMS_Runtime_BusLock(BMS_I2C_MUTEX_TIMEOUT_MS))
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_PACK,
                                  BQ76940_STATUS_I2C_TIMEOUT,
@@ -758,7 +737,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     status = BQ76940_ReadPackVoltageMv(device,
                                        &calibration,
                                        &frame.bq_pack_voltage_mv);
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     if (status != BQ76940_STATUS_OK)
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_PACK, status,
@@ -802,8 +781,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
             return false;
         }
         frame.update_current = true;
-        frame.current_timestamp_ms =
-            BMS_Sample_TickToTimestampMs(latest_cc.tick);
+        frame.current_timestamp_ms = latest_cc.sample_ms;
         frame.current_valid = true;
         frame.current_in_range = true;
     }
@@ -829,8 +807,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      */
     if (temperature_due)
     {
-        if (xSemaphoreTake(xI2CMutex,
-                           pdMS_TO_TICKS(BMS_I2C_MUTEX_TIMEOUT_MS)) != pdTRUE)
+        if (!BMS_Runtime_BusLock(BMS_I2C_MUTEX_TIMEOUT_MS))
         {
             BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_TEMPERATURE,
                                      BQ76940_STATUS_I2C_TIMEOUT,
@@ -838,7 +815,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
             return false;
         }
         status = BQ76940_ReadTs1Raw(device, &frame.ts1_raw14);
-        (void)xSemaphoreGive(xI2CMutex);
+        BMS_Runtime_BusUnlock();
         if (status != BQ76940_STATUS_OK)
         {
             BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_TEMPERATURE, status,
@@ -888,7 +865,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      * 注意这里没有持有 I2C mutex：共享数据发布不能反向阻塞 ALERT 总线事务。
      */
     publish_succeeded = false;
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     xready_available = BMS_Protect_GetXreadyState(&xready_state);
     xready_guard_current = xready_available &&
         s_calibration_generation_bound &&
@@ -931,7 +908,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
             s_current_epoch_invalidation_pending = false;
         }
     }
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
 
     if (!xready_guard_current)
     {
@@ -970,26 +947,5 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     }
     BMS_Sample_RecordSuccess(ntc_curve_unavailable,
                              temperature_unavailable);
-    if (xSysEvents != NULL)
-    {
-        (void)xEventGroupSetBits(xSysEvents, EVT_SAMPLE_READY);
-    }
     return true;
-}
-
-void Task_Sample(void *argument)
-{
-    const TickType_t period = pdMS_TO_TICKS(BMS_SAMPLE_PERIOD_MS);
-    TickType_t last_wake;
-
-    (void)argument;
-    last_wake = xTaskGetTickCount();
-    for (;;)
-    {
-        vTaskDelayUntil(&last_wake, period);
-        (void)BMS_Sample_RunOnce(
-            (BMS_TimestampMs_t)(xTaskGetTickCount() *
-                                portTICK_PERIOD_MS));
-        BMS_Health_Heartbeat(BMS_HEALTH_TASK_SAMPLE);
-    }
 }

@@ -1,4 +1,5 @@
 #include "bms_fet_manager.h"
+#include "bms_runtime_port.h"
 
 /*
  * FET transaction 采用 capture revisions → compose requested/effective →
@@ -10,7 +11,6 @@
 
 #include <stddef.h>
 
-#include "apl_rtos.h"
 #include "bms_data.h"
 #include "bms_protect.h"
 #include "bq76940_regs.h"
@@ -233,10 +233,8 @@ void BMS_FetManager_Service(void)
     s_snapshot.effective = effective;
     s_snapshot.register_state_confirmed = false;
 
-    if ((s_device == NULL) || (xI2CMutex == NULL) ||
-        (xSemaphoreTake(xI2CMutex,
-                       pdMS_TO_TICKS(BMS_FET_MANAGER_I2C_TIMEOUT_MS)) !=
-         pdTRUE))
+    if ((s_device == NULL) ||
+        !BMS_Runtime_BusLock(BMS_FET_MANAGER_I2C_TIMEOUT_MS))
     {
         if (!quarantined)
         {
@@ -262,7 +260,7 @@ void BMS_FetManager_Service(void)
                 BMS_FET_TRANSACTION_CONFIRMED_SAFE :
                 BMS_FET_TRANSACTION_UNVERIFIED;
         }
-        (void)xSemaphoreGive(xI2CMutex);
+        BMS_Runtime_BusUnlock();
         BMS_FetManager_Publish();
         return;
     }
@@ -276,7 +274,7 @@ void BMS_FetManager_Service(void)
         {
             s_snapshot.transaction_state = BMS_FET_TRANSACTION_UNVERIFIED;
         }
-        (void)xSemaphoreGive(xI2CMutex);
+        BMS_Runtime_BusUnlock();
         BMS_FetManager_Publish();
         return;
     }
@@ -298,7 +296,7 @@ void BMS_FetManager_Service(void)
                 BMS_FET_TRANSACTION_CONFIRMED_SAFE :
                 BMS_FET_TRANSACTION_UNVERIFIED;
         }
-        (void)xSemaphoreGive(xI2CMutex);
+        BMS_Runtime_BusUnlock();
         BMS_FetManager_Publish();
         return;
     }
@@ -331,7 +329,7 @@ void BMS_FetManager_Service(void)
                 s_snapshot.transaction_state =
                     BMS_FET_TRANSACTION_UNVERIFIED;
             }
-            (void)xSemaphoreGive(xI2CMutex);
+            BMS_Runtime_BusUnlock();
             BMS_FetManager_Publish();
             return;
         }
@@ -342,7 +340,7 @@ void BMS_FetManager_Service(void)
                 s_snapshot.transaction_state =
                     BMS_FET_TRANSACTION_UNVERIFIED;
             }
-            (void)xSemaphoreGive(xI2CMutex);
+            BMS_Runtime_BusUnlock();
             BMS_FetManager_Publish();
             return;
         }
@@ -369,7 +367,7 @@ void BMS_FetManager_Service(void)
         {
             s_snapshot.transaction_state = BMS_FET_TRANSACTION_UNVERIFIED;
         }
-        (void)xSemaphoreGive(xI2CMutex);
+        BMS_Runtime_BusUnlock();
         BMS_FetManager_Publish();
         return;
     }
@@ -398,7 +396,7 @@ void BMS_FetManager_Service(void)
             BMS_FET_TRANSACTION_CONFIRMED_APPLIED :
             BMS_FET_TRANSACTION_CONFIRMED_SAFE;
     }
-    (void)xSemaphoreGive(xI2CMutex);
+    BMS_Runtime_BusUnlock();
     BMS_FetManager_Publish();
 }
 
@@ -406,9 +404,9 @@ BMS_FetManagerSnapshot_t BMS_FetManager_GetSnapshot(void)
 {
     BMS_FetManagerSnapshot_t snapshot;
 
-    vTaskSuspendAll();
+    BMS_Runtime_CriticalEnter();
     snapshot = s_snapshot;
-    (void)xTaskResumeAll();
+    BMS_Runtime_CriticalExit();
     return snapshot;
 }
 

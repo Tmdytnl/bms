@@ -30,4 +30,8 @@ bool BSP_ALERT_EXTI_IsInitialized(void);
  */
 bool BSP_ALERT_PinActive(void);
 
+/* RTOS-aware ISR handoff stays in APL; BSP only exposes the peripheral primitive. */
+bool BSP_ALERT_EXTI_IsPending(void);
+void BSP_ALERT_EXTI_ClearPending(void);
+
 #endif /* BSP_EXTI_H：头文件防重复包含 */
