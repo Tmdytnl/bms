@@ -93,7 +93,7 @@ static void TestSample_SetCc(bool valid,
                              uint32_t sequence)
 {
     g_phase8_sample_stub_control.latest_cc.raw = raw;
-    g_phase8_sample_stub_control.latest_cc.tick = tick;
+    g_phase8_sample_stub_control.latest_cc.sample_ms = tick;
     g_phase8_sample_stub_control.latest_cc.sequence = sequence;
     g_phase8_sample_stub_control.latest_cc.xready_generation =
         g_phase8_sample_stub_control.xready_state.xready_generation;
@@ -610,7 +610,7 @@ static void TestSample_StaleAndProtectOrdering(void)
     TestSample_Reset(true);
     TestSample_SetCc(true, (int16_t)500, (TickType_t)10U, 1UL);
     g_phase8_sample_stub_control.replacement_cc.raw = (int16_t)-500;
-    g_phase8_sample_stub_control.replacement_cc.tick = (TickType_t)200U;
+    g_phase8_sample_stub_control.replacement_cc.sample_ms = (TickType_t)200U;
     g_phase8_sample_stub_control.replacement_cc.sequence = 2UL;
     g_phase8_sample_stub_control.replacement_cc.xready_generation =
         g_phase8_sample_stub_control.xready_state.xready_generation;
@@ -958,7 +958,7 @@ static void TestSample_XreadyGenerationGuard(void)
         diagnostics.xready_precheck_reject_count;
     TEST_SAMPLE_CHECK(BMS_Sample_SetCalibration(&calibration));
     g_phase8_sample_stub_control.latest_cc.raw = (int16_t)123;
-    g_phase8_sample_stub_control.latest_cc.tick = (TickType_t)100U;
+    g_phase8_sample_stub_control.latest_cc.sample_ms = (TickType_t)100U;
     g_phase8_sample_stub_control.latest_cc.sequence = 1UL;
     g_phase8_sample_stub_control.latest_cc.xready_generation = UINT32_MAX;
     g_phase8_sample_stub_control.latest_cc.valid = true;

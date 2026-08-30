@@ -3,7 +3,8 @@ param(
     [string]$Uv4Path = 'D:\Keil_v5\UV4\UV4.exe',
     [string]$PythonPath = 'python',
     [switch]$SkipSimulator,
-    [switch]$SkipProductionBuild
+    [switch]$SkipProductionBuild,
+    [switch]$ArchitectureRefactorMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -286,9 +287,13 @@ $phase6Sources = [ordered]@{
     'test_main' = 'firmware\Tests\test_phase6_main.c'
 }
 $phase7Sources = [ordered]@{
+    'apl_cc_transport' = 'firmware\APL\apl_cc_transport.c'
+    'apl_task_protect' = 'firmware\APL\Task\apl_task_protect.c'
+    'apl_irq' = 'firmware\APL\apl_irq.c'
     'bms_protect' = 'firmware\FML\Protect\bms_protect.c'
     'bms_fault' = 'firmware\FML\Core\bms_fault.c'
     'bq76940_control' = 'firmware\DRV\BQ76940\bq76940_control.c'
+    'fml_runtime_port' = 'firmware\Tests\test_fml_runtime_port.c'
     'test_stub' = 'firmware\Tests\test_phase7_stub_i2c.c'
     'test_phase5_trip' = 'firmware\Tests\test_phase5_trip.c'
     'test_phase5_ocdscd' = 'firmware\Tests\test_phase5_ocdscd.c'
@@ -299,6 +304,7 @@ $phase7Sources = [ordered]@{
 }
 $phase8DataSources = [ordered]@{
     'bms_data' = 'firmware\FML\Data\bms_data.c'
+    'fml_runtime_port' = 'firmware\Tests\test_fml_runtime_port.c'
     'bms_ntc' = 'firmware\FML\Measurement\bms_ntc.c'
     'bms_fault' = 'firmware\FML\Core\bms_fault.c'
     'test_data' = 'firmware\Tests\test_phase8_data.c'
@@ -309,6 +315,7 @@ $phase8SampleSources = [ordered]@{
     'bms_ntc' = 'firmware\FML\Measurement\bms_ntc.c'
     'bms_fault' = 'firmware\FML\Core\bms_fault.c'
     'bms_sample' = 'firmware\FML\Measurement\bms_sample.c'
+    'fml_runtime_port' = 'firmware\Tests\test_fml_runtime_port.c'
     'test_stub' = 'firmware\Tests\test_phase8_sample_stub.c'
     'test_sample' = 'firmware\Tests\test_phase8_sample.c'
     'test_main' = 'firmware\Tests\test_phase8_main.c'
@@ -533,19 +540,19 @@ if (-not $SkipProductionBuild) {
             [System.Text.RegularExpressions.RegexOptions]::Singleline
         $taskStackBlocks = [regex]::Matches(
             $productionStackText,
-            '<P><STRONG><a name="[^"]+"></a>Task_Sample</STRONG>\s*' +
-            '\(Thumb,.*?bms_sample\.o\(i\.Task_Sample\)\)' +
+            '<P><STRONG><a name="[^"]+"></a>APL_TaskSample</STRONG>\s*' +
+            '\(Thumb,.*?apl_task_sample\.o\(i\.APL_TaskSample\)\)' +
             '(.*?)(?=<P><STRONG>|</BODY>)',
             $stackRegexOptions)
         if ($taskStackBlocks.Count -ne 1) {
-            throw 'Production callgraph must contain one Task_Sample block'
+            throw 'Production callgraph must contain one APL_TaskSample block'
         }
         $taskStackDepth = [regex]::Matches(
             $taskStackBlocks[0].Groups[1].Value,
             'Max Depth\s*=\s*(\d+)(?:\s*\+\s*Unknown)?',
             [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
         if ($taskStackDepth.Count -ne 1) {
-            throw 'Production Task_Sample must have one Max Depth record'
+            throw 'Production APL_TaskSample must have one Max Depth record'
         }
         $taskStackUnknown = [regex]::IsMatch(
             $taskStackBlocks[0].Groups[1].Value,
@@ -606,6 +613,20 @@ if ($SkipSimulator -or $SkipProductionBuild) {
     Save-BuildLog
     Write-Output $notExecuted
     exit $notExecutedExitCode
+}
+
+if ($ArchitectureRefactorMode) {
+    $architectureVerifier = Join-Path $PSScriptRoot 'verify_architecture.py'
+    & $PythonPath $architectureVerifier
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Architecture refactor verifier reported FAIL'
+    }
+    $refactorPass =
+        'RESULT: PHASE8 ARCHITECTURE-REFACTOR REGRESSION PASS'
+    $logLines.Add($refactorPass)
+    Save-BuildLog
+    Write-Output $refactorPass
+    exit 0
 }
 
 $verifier = Join-Path $PSScriptRoot 'verify_phase8.py'

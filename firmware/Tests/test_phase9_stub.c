@@ -203,14 +203,6 @@ EventBits_t xEventGroupClearBits(EventGroupHandle_t event_group,
     return 0U;
 }
 
-void App_Rtos_NotifyStateUrgent(void)
-{
-}
-
-void App_Rtos_RequestProtectService(void)
-{
-}
-
 bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
 {
     if (identity == NULL)

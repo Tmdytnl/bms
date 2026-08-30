@@ -85,6 +85,7 @@ $sources = [ordered]@{
     bms_balance = 'firmware\FML\Balance\bms_balance.c'
     bms_can = 'firmware\FML\Communication\bms_can.c'
     bms_persistence = 'firmware\FML\Storage\bms_persistence.c'
+    fml_runtime_port = 'firmware\Tests\test_fml_runtime_port.c'
     test_stub = 'firmware\Tests\test_phase9_stub.c'
     test_phase9 = 'firmware\Tests\test_phase9.c'
     test_phase10 = 'firmware\Tests\test_phase10.c'

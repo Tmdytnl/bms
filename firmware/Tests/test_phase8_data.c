@@ -34,6 +34,16 @@ static uint8_t s_give_hook;
 static BMS_DataSnapshot_t s_publish_observation;
 
 SemaphoreHandle_t xDataMutex;
+SemaphoreHandle_t xI2CMutex;
+
+void vTaskSuspendAll(void)
+{
+}
+
+BaseType_t xTaskResumeAll(void)
+{
+    return pdFALSE;
+}
 
 volatile uint32_t g_phase8_data_test_failures;
 volatile uint32_t g_phase8_data_test_completed;

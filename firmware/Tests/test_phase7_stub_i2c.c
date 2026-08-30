@@ -11,11 +11,14 @@
 #include "bms_health.h"
 #include "bq76940_measurement.h"
 #include "bq76940_regs.h"
+#include "Task/apl_tasks.h"
 #include "stm32f10x_exti.h"
 
-#define TEST_P7_QUEUE_CAPACITY       (APP_RTOS_CC_SAMPLE_QUEUE_DEPTH)
+#define TEST_P7_QUEUE_CAPACITY       (APL_RTOS_CC_SAMPLE_QUEUE_DEPTH)
 #define TEST_P7_SCRIPT_CAPACITY      (16U)
 #define TEST_P7_WRITE_CAPACITY       (16U)
+
+void EXTI1_IRQHandler(void);
 
 /* FreeRTOS public header 保持类型 opaque；harness 只提供 Protect 正式路径所需的
  * 最小确定性行为。 */
@@ -50,11 +53,11 @@ QueueHandle_t xCanRxQueue;
 QueueHandle_t xCcSampleQueue;
 EventGroupHandle_t xSysEvents;
 
-void App_Rtos_NotifyStateUrgent(void)
+void APL_Rtos_NotifyStateUrgent(void)
 {
 }
 
-void App_Rtos_RequestProtectService(void)
+void APL_Rtos_RequestProtectService(void)
 {
 }
 
@@ -343,7 +346,7 @@ static bool TestP7_RunProtectTaskScenario(bool seed_semaphore,
     if (escape_reason == 0)
     {
         /* 正式 task 完成 retry/drain 并回到下一次 blocking ALERT wait 时，fake semaphore 退出。 */
-        Task_Protect(NULL);
+        APL_TaskProtect(NULL);
         s_task_guard_failed = true;
     }
     s_task_escape_armed = false;
@@ -386,6 +389,60 @@ bool TestP7_ExerciseAlertIsr(void)
     EXTI1_IRQHandler();
     return !s_exti_pending && (s_exti_clear_count == 1U) &&
            (s_isr_give_count == 1U) && s_alert_sem_available;
+}
+
+BQ76940_t *APL_SystemAfeDevice(void)
+{
+    return &s_device;
+}
+
+uint32_t APL_TimeMs(void)
+{
+    return (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+}
+
+bool TestP7_PushCcSample(int16_t raw)
+{
+    BMS_CcSample_t sample;
+    bool inserted;
+    bool overflowed;
+    bool oldest_was_dropped;
+
+    if (!BMS_Protect_TestStageCcSample(raw, APL_TimeMs()) ||
+        !BMS_Protect_GetPendingCcSample(&sample))
+    {
+        return false;
+    }
+    inserted = APL_Rtos_TransportCcSample(
+        &sample, &overflowed, &oldest_was_dropped);
+    return BMS_Protect_CompleteCcTransport(
+        sample.transport_id, inserted, overflowed,
+        oldest_was_dropped) && inserted;
+}
+
+BMS_ProtectDrainResult_t TestP7_ProtectDrain(void)
+{
+    BMS_ProtectDrainResult_t result;
+    BMS_CcSample_t sample;
+    bool inserted;
+    bool overflowed;
+    bool oldest_was_dropped;
+    uint8_t attempt;
+
+    for (attempt = 0U; attempt < 4U; ++attempt)
+    {
+        result = BMS_Protect_Drain(&s_device, APL_TimeMs());
+        if (!BMS_Protect_GetPendingCcSample(&sample))
+        {
+            return result;
+        }
+        inserted = APL_Rtos_TransportCcSample(
+            &sample, &overflowed, &oldest_was_dropped);
+        (void)BMS_Protect_CompleteCcTransport(
+            sample.transport_id, inserted, overflowed,
+            oldest_was_dropped);
+    }
+    return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
 }
 
 void TestP7_SetRecoveryResult(bool result)
@@ -659,6 +716,17 @@ bool BSP_ALERT_EXTI_Init(void)
 {
     ++s_exti_init_count;
     return true;
+}
+
+bool BSP_ALERT_EXTI_IsPending(void)
+{
+    return s_exti_pending;
+}
+
+void BSP_ALERT_EXTI_ClearPending(void)
+{
+    s_exti_pending = false;
+    ++s_exti_clear_count;
 }
 
 ITStatus EXTI_GetITStatus(uint32_t exti_line)

@@ -159,7 +159,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(!latest_cc.valid);
     TEST_CHECK(latest_cc.raw == (int16_t)0);
-    TEST_CHECK(latest_cc.tick == (TickType_t)0U);
+    TEST_CHECK(latest_cc.sample_ms == (uint32_t)0U);
     TEST_CHECK(latest_cc.sequence == 0UL);
     TEST_CHECK(latest_cc.xready_generation == 0UL);
     TEST_CHECK(BMS_PROTECT_CC_SEQUENCE_NEXT(UINT32_MAX) == 0UL);
@@ -168,27 +168,27 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_SchedulerProtectionBalanced());
 
     /* queue 确认接纳后才发布 mailbox generation。 */
-    TEST_CHECK(BMS_Protect_PushCcSample(77));
+    TEST_CHECK(TestP7_PushCcSample(77));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.valid);
     TEST_CHECK(latest_cc.raw == 77);
-    TEST_CHECK(latest_cc.tick == (TickType_t)0U);
+    TEST_CHECK(latest_cc.sample_ms == (uint32_t)0U);
     TEST_CHECK(latest_cc.sequence == 1UL);
     TEST_CHECK(latest_cc.xready_generation == 0UL);
-    TEST_CHECK(BMS_Protect_PushCcSample(78));
+    TEST_CHECK(TestP7_PushCcSample(78));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.raw == 78);
-    TEST_CHECK(latest_cc.tick == (TickType_t)1U);
+    TEST_CHECK(latest_cc.sample_ms == (uint32_t)1U);
     TEST_CHECK(latest_cc.sequence == 2UL);
     TEST_CHECK(latest_cc.xready_generation == 0UL);
 
     /* 单次 overflow：只用 newest 替换一个 oldest。 */
     TestP7_StubReset();
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
-        TEST_CHECK(BMS_Protect_PushCcSample((int16_t)(100 + index)));
+        TEST_CHECK(TestP7_PushCcSample((int16_t)(100 + index)));
     }
-    TEST_CHECK(BMS_Protect_PushCcSample(108));
+    TEST_CHECK(TestP7_PushCcSample(108));
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.cc_queue_overflow_count == 1UL);
     TEST_CHECK(diagnostics.cc_sample_missed_count == 1UL);
@@ -196,12 +196,12 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(diagnostics.cc_queue_overflow_latched);
     TEST_CHECK((TestP7_EventBits() & EVT_CC_QUEUE_OVERFLOW) != 0U);
     TEST_CHECK(TestP7_QueueOpsProtected());
-    TEST_CHECK(TestP7_QueueCount() == APP_RTOS_CC_SAMPLE_QUEUE_DEPTH);
+    TEST_CHECK(TestP7_QueueCount() == APL_RTOS_CC_SAMPLE_QUEUE_DEPTH);
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.raw == 108);
-    TEST_CHECK(latest_cc.tick == (TickType_t)8U);
+    TEST_CHECK(latest_cc.sample_ms == (uint32_t)8U);
     TEST_CHECK(latest_cc.sequence == 9UL);
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
         TEST_CHECK(TestP7_QueuePop(&sample));
         TEST_CHECK(sample.raw == (int16_t)(101 + index));
@@ -210,18 +210,18 @@ uint32_t Test_Phase7_CcQueue(void)
 
     /* 连续 producer overflow 仍保持每次只丢一个且 newest wins。 */
     TestP7_StubReset();
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
-        TEST_CHECK(BMS_Protect_PushCcSample((int16_t)index));
+        TEST_CHECK(TestP7_PushCcSample((int16_t)index));
     }
-    TEST_CHECK(BMS_Protect_PushCcSample(8));
-    TEST_CHECK(BMS_Protect_PushCcSample(9));
-    TEST_CHECK(BMS_Protect_PushCcSample(10));
+    TEST_CHECK(TestP7_PushCcSample(8));
+    TEST_CHECK(TestP7_PushCcSample(9));
+    TEST_CHECK(TestP7_PushCcSample(10));
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.cc_queue_overflow_count == 3UL);
     TEST_CHECK(diagnostics.cc_sample_missed_count == 3UL);
     TEST_CHECK(diagnostics.cc_enqueue_failure_count == 0UL);
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
         TEST_CHECK(TestP7_QueuePop(&sample));
         TEST_CHECK(sample.raw == (int16_t)(3 + index));
@@ -229,17 +229,17 @@ uint32_t Test_Phase7_CcQueue(void)
 
     /* 丢 oldest 后 replacement enqueue 失败，rejected newest 不得推进 mailbox。 */
     TestP7_StubReset();
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
-        TEST_CHECK(BMS_Protect_PushCcSample((int16_t)index));
+        TEST_CHECK(TestP7_PushCcSample((int16_t)index));
     }
     TEST_CHECK(BMS_Protect_GetLatestCc(&previous_cc));
     TestP7_SetReplacementFailures(1U);
-    TEST_CHECK(!BMS_Protect_PushCcSample(900));
+    TEST_CHECK(!TestP7_PushCcSample(900));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.valid == previous_cc.valid);
     TEST_CHECK(latest_cc.raw == previous_cc.raw);
-    TEST_CHECK(latest_cc.tick == previous_cc.tick);
+    TEST_CHECK(latest_cc.sample_ms == previous_cc.sample_ms);
     TEST_CHECK(latest_cc.sequence == previous_cc.sequence);
     TEST_CHECK(latest_cc.xready_generation ==
                previous_cc.xready_generation);
@@ -247,9 +247,9 @@ uint32_t Test_Phase7_CcQueue(void)
     /* replacement 失败时不 W1C，下次 bounded drain 重试 pending hardware sample；
      * diagnostics 分开记录 lost oldest 与 failed enqueue。 */
     TestP7_StubReset();
-    for (index = 0U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    for (index = 0U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
-        TEST_CHECK(BMS_Protect_PushCcSample((int16_t)index));
+        TEST_CHECK(TestP7_PushCcSample((int16_t)index));
     }
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
@@ -259,7 +259,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TestP7_SetStatScript(stat_values, NULL, 3U);
     TestP7_SetCcScript(cc_values, NULL, 2U);
     TestP7_SetReplacementFailures(1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.cc_queue_overflow_count == 1UL);
@@ -268,8 +268,8 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_CcReadCount() == 2U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
     TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_CC_READY);
-    TEST_CHECK(TestP7_QueueCount() == APP_RTOS_CC_SAMPLE_QUEUE_DEPTH);
-    for (index = 1U; index < APP_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
+    TEST_CHECK(TestP7_QueueCount() == APL_RTOS_CC_SAMPLE_QUEUE_DEPTH);
+    for (index = 1U; index < APL_RTOS_CC_SAMPLE_QUEUE_DEPTH; ++index)
     {
         TEST_CHECK(TestP7_QueuePop(&sample));
         TEST_CHECK(sample.raw == (int16_t)index);
@@ -284,7 +284,7 @@ uint32_t Test_Phase7_CcQueue(void)
     cc_values[0] = 321;
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TestP7_SetCcScript(cc_values, NULL, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_WriteCount() == 1U);
     TEST_CHECK(TestP7_WriteValue(0U) ==
@@ -303,9 +303,9 @@ uint32_t Test_Phase7_CcQueue(void)
     TestP7_SetStatScript(stat_values, NULL, 3U);
     TestP7_SetCcScript(cc_values, NULL, 1U);
     TestP7_SetWriteFailure(BQ76940_STATUS_I2C_NACK, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_CcReadCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 2U);
@@ -329,7 +329,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TestP7_SetCcScript(cc_values, NULL, 2U);
     TestP7_SetWriteFailure(
         BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_count == 1UL);
@@ -338,13 +338,13 @@ uint32_t Test_Phase7_CcQueue(void)
                BMS_PROTECT_STAT_CC_READY);
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_latched);
     /* 连续四次 high read 消耗下一次 bounded attempt，但不 replay 或虚构第二 sample。 */
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     TEST_CHECK(TestP7_CcReadCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
     TEST_CHECK(TestP7_QueueCount() == 1U);
     /* 只有 observed-low 能退休 quarantine；history 与 ambiguity counter 保留。 */
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     diagnostics = BMS_Protect_GetDiagnostics();
     TEST_CHECK(diagnostics.w1c_finalization_ambiguous_mask == 0U);
@@ -410,16 +410,16 @@ uint32_t Test_Phase7_AlertRetry(void)
     stat_values[3] = BMS_PROTECT_STAT_OV;
     stat_values[4] = 0U;
     TestP7_SetStatScript(stat_values, NULL, 5U);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_RETRY_REQUIRED);
     TEST_CHECK(TestP7_StatReadCount() == BMS_PROTECT_DRAIN_MAX_ITER);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_IDLE);
     TestP7_SetAlertActive(true);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_RETRY_REQUIRED);
     TestP7_SetAlertActive(false);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_IDLE);
     TEST_CHECK(TestP7_MutexAvailable());
 
@@ -429,7 +429,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     stat_values[1] = BMS_PROTECT_STAT_UV;
     stat_values[2] = 0U;
     TestP7_SetStatScript(stat_values, NULL, 3U);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_IDLE);
     TEST_CHECK(TestP7_WriteCount() == 2U);
     TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_OV);
@@ -443,7 +443,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     stat_values[0] = 0U;
     stat_statuses[0] = BQ76940_STATUS_I2C_TIMEOUT;
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device()) ==
+    TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_RETRY_REQUIRED);
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_COMM));
@@ -467,7 +467,7 @@ uint32_t Test_Phase7_AlertRetry(void)
     cc_statuses[3] = BQ76940_STATUS_CRC_MISMATCH;
     TestP7_SetStatScript(stat_values, NULL, 4U);
     TestP7_SetCcScript(cc_values, cc_statuses, 4U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_CRC));
@@ -516,7 +516,7 @@ uint32_t Test_Phase7_Xready(void)
 
     /* XREADY+CC_READY 可把 CC 入 SOC queue，但 Sample mailbox 既不暴露它也不暴露
      * 未消费旧代；只有随后 inactive-epoch CC 恢复 latest。 */
-    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)111));
+    TEST_CHECK(TestP7_PushCcSample((int16_t)111));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.xready_generation == 0UL);
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
@@ -527,7 +527,7 @@ uint32_t Test_Phase7_Xready(void)
     cc_values[0] = (int16_t)222;
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TestP7_SetCcScript(cc_values, NULL, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(!latest_cc.valid);
@@ -540,7 +540,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(cc_sample.raw == (int16_t)111);
     TEST_CHECK(TestP7_QueuePop(&cc_sample));
     TEST_CHECK(cc_sample.raw == (int16_t)222);
-    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)333));
+    TEST_CHECK(TestP7_PushCcSample((int16_t)333));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.raw == (int16_t)333);
     TEST_CHECK(latest_cc.sequence == 2UL);
@@ -552,7 +552,7 @@ uint32_t Test_Phase7_Xready(void)
     /* 无权威 recovery hook：保留 active+latched，绝不 W1C。 */
     TestP7_StubReset();
     TestP7_SetStatScript(stat_values, NULL, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_XREADY));
@@ -565,7 +565,7 @@ uint32_t Test_Phase7_Xready(void)
 
     /* 重读同一 active event 不推进 generation。 */
     TestP7_SetStatScript(stat_values, NULL, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
     TEST_CHECK(xready_state.xready_generation == 1UL);
@@ -576,7 +576,7 @@ uint32_t Test_Phase7_Xready(void)
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(false);
     TestP7_SetStatScript(stat_values, NULL, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 0U);
@@ -586,7 +586,7 @@ uint32_t Test_Phase7_Xready(void)
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
     TestP7_SetStatScript(stat_values, NULL, 2U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
@@ -600,7 +600,7 @@ uint32_t Test_Phase7_Xready(void)
 
     /* 新 inactive→active 再推进 generation；recovery 只清 active，不倒退 epoch。 */
     TestP7_SetStatScript(stat_values, NULL, 2U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
     TEST_CHECK(xready_state.xready_generation == 2UL);
@@ -611,13 +611,13 @@ uint32_t Test_Phase7_Xready(void)
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
-    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)10));
+    TEST_CHECK(TestP7_PushCcSample((int16_t)10));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     stat_values[0] = BMS_PROTECT_STAT_DEVICE_XREADY;
     stat_values[1] = BMS_PROTECT_STAT_DEVICE_XREADY;
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TestP7_SetWriteFailure(BQ76940_STATUS_I2C_NACK, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
     TEST_CHECK(xready_state.xready_generation == 1UL);
@@ -626,7 +626,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(!latest_cc.valid);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
     TEST_CHECK(xready_state.xready_generation == 1UL);
@@ -641,13 +641,13 @@ uint32_t Test_Phase7_Xready(void)
     TestP7_StubReset();
     BMS_Protect_SetXreadyRecoveryHook(TestP7_RecoveryHook);
     TestP7_SetRecoveryResult(true);
-    TEST_CHECK(BMS_Protect_PushCcSample((int16_t)20));
+    TEST_CHECK(TestP7_PushCcSample((int16_t)20));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     stat_values[1] = 0U;
     TestP7_SetStatScript(stat_values, NULL, 2U);
     TestP7_SetWriteFailure(
         BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active,
@@ -661,7 +661,7 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(xready_state.active);
     TEST_CHECK(!BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(!latest_cc.valid);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_RecoveryCallCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
@@ -701,7 +701,7 @@ uint32_t Test_Phase7_BoundaryContracts(void)
                      BMS_PROTECT_STAT_OVRD_ALERT;
     stat_values[1] = 0U;
     TestP7_SetStatScript(stat_values, NULL, 2U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
 
     /* getter 必须包围 active+latched 两个 word 的复制；static verifier 检查正式顺序。 */
@@ -757,23 +757,23 @@ uint32_t Test_Phase7_SimCommPolicy(void)
     policy.ocd_escalation.event_window_ms = 60000UL;
 
     TestP7_StubReset();
-    BMS_Protect_SetPolicy(&policy);
+    BMS_Protect_SetPolicy(&policy, 0UL);
     stat_values[0] = 0U;
     stat_statuses[0] = BQ76940_STATUS_I2C_NACK;
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     safety = BMS_Protect_GetSafetySnapshot();
     TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,
                                    BMS_FAULT_ID_AFE_COMM));
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     safety = BMS_Protect_GetSafetySnapshot();
     TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,
                                    BMS_FAULT_ID_AFE_COMM));
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_RETRY_REQUIRED);
     safety = BMS_Protect_GetSafetySnapshot();
     TEST_CHECK(BMS_Fault_Contains(safety.faults.active,
@@ -786,16 +786,16 @@ uint32_t Test_Phase7_SimCommPolicy(void)
 
     stat_statuses[0] = BQ76940_STATUS_OK;
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     safety = BMS_Protect_GetSafetySnapshot();
     TEST_CHECK(BMS_Fault_Contains(safety.faults.active,
                                   BMS_FAULT_ID_AFE_COMM));
     TestP7_SetStatScript(stat_values, stat_statuses, 1U);
-    TEST_CHECK(BMS_Protect_Drain(TestP7_Device()) ==
+    TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     safety = BMS_Protect_GetSafetySnapshot();
     TEST_CHECK(!BMS_Fault_Contains(safety.faults.active,

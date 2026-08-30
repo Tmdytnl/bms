@@ -46,6 +46,8 @@ uint8_t TestP7_TaskDelayCount(void);
 TickType_t TestP7_LastTaskDelay(void);
 uint8_t TestP7_ExtiInitCount(void);
 bool TestP7_ExerciseAlertIsr(void);
+bool TestP7_PushCcSample(int16_t raw);
+BMS_ProtectDrainResult_t TestP7_ProtectDrain(void);
 
 void TestP7_SetRecoveryResult(bool result);
 bool TestP7_RecoveryHook(BQ76940_t *device);

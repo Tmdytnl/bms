@@ -1,20 +1,16 @@
-#include "apl_rtos.h"
+#include "Task/apl_tasks.h"
 
-/* 本 construction image 只验证 scheduler 前七任务创建；正式 ProtectTask 在独立
- * regression image 执行，因此这里保留 non-running entry。 */
-void Task_Protect(void *argument)
-{
-    (void)argument;
-    for (;;)
-    {
+#define DEFINE_TASK_STUB(name_) \
+    void name_(void *argument)  \
+    {                           \
+        (void)argument;         \
+        for (;;) { }            \
     }
-}
 
-/* production SampleTask 在独立 image 执行；construction image 不引入 measurement driver。 */
-void Task_Sample(void *argument)
-{
-    (void)argument;
-    for (;;)
-    {
-    }
-}
+DEFINE_TASK_STUB(APL_TaskProtect)
+DEFINE_TASK_STUB(APL_TaskSample)
+DEFINE_TASK_STUB(APL_TaskState)
+DEFINE_TASK_STUB(APL_TaskSoc)
+DEFINE_TASK_STUB(APL_TaskBalance)
+DEFINE_TASK_STUB(APL_TaskCanTx)
+DEFINE_TASK_STUB(APL_TaskCanRx)

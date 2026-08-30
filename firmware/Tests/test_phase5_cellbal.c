@@ -5,7 +5,7 @@
 #include "bq76940_control.h"
 
 /* expected logical-cell→CELLBAL mapping（spec §5.1，TI Table 8-4..6）。 */
-static const uint8_t EXPECTED_CB[BMS_CELL_COUNT] =
+static const uint8_t EXPECTED_CB[BQ76940_CONTROL_LOGICAL_CELL_COUNT] =
 {
     1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 10U, 11U, 12U, 13U, 15U
 };
@@ -32,14 +32,14 @@ uint32_t Test_Phase5_CellBal(void)
     failures = 0UL;
 
     /* 每节 logical cell 都映射到 expected CELLBAL bit。 */
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         cb = BQ76940_Control_CellBalBitOfLogicalCell(index);
         TEST_CHECK(cb == EXPECTED_CB[index]);
     }
 
     /* CB9/CB14 永不暴露。 */
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         cb = BQ76940_Control_CellBalBitOfLogicalCell(index);
         TEST_CHECK(cb != 9U);
@@ -47,7 +47,7 @@ uint32_t Test_Phase5_CellBal(void)
     }
 
     /* 越界返回 0。 */
-    TEST_CHECK(BQ76940_Control_CellBalBitOfLogicalCell(BMS_CELL_COUNT) == 0U);
+    TEST_CHECK(BQ76940_Control_CellBalBitOfLogicalCell(BQ76940_CONTROL_LOGICAL_CELL_COUNT) == 0U);
     TEST_CHECK(BQ76940_Control_CellBalBitOfLogicalCell(0xFFU) == 0U);
 
     /* 组合 single-cell bitmap。 */
@@ -92,7 +92,7 @@ uint32_t Test_Phase5_CellBal(void)
     TEST_CHECK(bitmap == ((1U << 0U) | (1U << 8U)));
 
     /* 每节 cell 的 encode/decode round-trip。 */
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         bal1 = bal2 = bal3 = 0U;
         TEST_CHECK(BQ76940_Control_ComposeCellBal((uint16_t)(1U << index),

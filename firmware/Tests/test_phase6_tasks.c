@@ -34,7 +34,7 @@ uint32_t Test_Phase6_Tasks(void)
     g_p6_probe = 21UL;
     TEST_CHECK(result == pdTRUE);
 
-    result = App_Rtos_CreateTasks();
+    result = APL_Rtos_CreateTasks();
     g_p6_probe = 22UL;
     TEST_CHECK(result == pdTRUE);
 

@@ -50,20 +50,23 @@ check("bool BMS_Policy_Validate" in policy_c,
       "compiled policy has fail-closed structural validation")
 
 required_sources = {
-    "..\\..\\App\\bms_debug.c",
-    "..\\..\\App\\bms_state.c",
-    "..\\..\\App\\bms_hw_recovery.c",
-    "..\\..\\App\\bms_recovery.c",
-    "..\\..\\App\\bms_fet_manager.c",
-    "..\\..\\App\\bms_health.c",
-    "..\\..\\App\\bms_soc.c",
-    "..\\..\\App\\bms_balance.c",
-    "..\\..\\App\\bms_can.c",
-    "..\\..\\App\\bms_persistence.c",
-    "..\\..\\Driver\\bsp_iwdg.c",
-    "..\\..\\Driver\\bsp_can.c",
-    "..\\..\\Driver\\bsp_flash.c",
-    "..\\..\\Driver\\bsp_uart.c",
+    "..\\..\\FML\\Communication\\bms_debug.c",
+    "..\\..\\FML\\State\\bms_state.c",
+    "..\\..\\FML\\Recovery\\bms_hw_recovery.c",
+    "..\\..\\FML\\Recovery\\bms_recovery.c",
+    "..\\..\\FML\\Fet\\bms_fet_manager.c",
+    "..\\..\\FML\\Health\\bms_health.c",
+    "..\\..\\FML\\Soc\\bms_soc.c",
+    "..\\..\\FML\\Balance\\bms_balance.c",
+    "..\\..\\FML\\Communication\\bms_can.c",
+    "..\\..\\FML\\Storage\\bms_persistence.c",
+    "..\\..\\APL\\apl_system.c",
+    "..\\..\\APL\\apl_irq.c",
+    "..\\..\\APL\\Task\\apl_task_state.c",
+    "..\\..\\BSP\\bsp_iwdg.c",
+    "..\\..\\BSP\\bsp_can.c",
+    "..\\..\\BSP\\bsp_flash.c",
+    "..\\..\\BSP\\bsp_uart.c",
     "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_can.c",
     "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_flash.c",
     "..\\..\\..\\docs\\reference\\ST\\STM32F10x Standard Peripheral Library\\Libarary\\stm32f10x_usart.c",
@@ -82,25 +85,30 @@ if project_path.is_file():
 check(required_sources <= project_sources,
       "production Keil project includes every Phase 9 module")
 
-app_rtos = read("firmware/App/app_rtos.c")
-state_h = read("firmware/App/bms_state.h")
-state_c = read("firmware/App/bms_state.c")
-data_h = read("firmware/App/bms_data.h")
-data_c = read("firmware/App/bms_data.c")
-protect_c = read("firmware/App/bms_protect.c")
-recovery_h = read("firmware/App/bms_recovery.h")
-recovery_c = read("firmware/App/bms_recovery.c")
-sample_c = read("firmware/App/bms_sample.c")
-fet_c = read("firmware/App/bms_fet_manager.c")
-health_h = read("firmware/App/bms_health.h")
-balance_c = read("firmware/App/bms_balance.c")
-soc_c = read("firmware/App/bms_soc.c")
-can_c = read("firmware/App/bms_can.c")
-persistence_c = read("firmware/App/bms_persistence.c")
-can_driver = read("firmware/Driver/bsp_can.c")
-flash_driver = read("firmware/Driver/bsp_flash.c")
-uart_driver = read("firmware/Driver/bsp_uart.c")
-debug_c = read("firmware/App/bms_debug.c")
+apl_state = read("firmware/APL/Task/apl_task_state.c")
+apl_balance = read("firmware/APL/Task/apl_task_balance.c")
+apl_can = read("firmware/APL/apl_can.c")
+apl_irq = read("firmware/APL/apl_irq.c")
+apl_debug = read("firmware/APL/apl_debug.c")
+state_h = read("firmware/FML/State/bms_state.h")
+state_c = read("firmware/FML/State/bms_state.c")
+data_h = read("firmware/FML/Data/bms_data.h")
+data_c = read("firmware/FML/Data/bms_data.c")
+protect_c = read("firmware/FML/Protect/bms_protect.c")
+recovery_h = read("firmware/FML/Recovery/bms_recovery.h")
+recovery_c = read("firmware/FML/Recovery/bms_recovery.c")
+sample_c = read("firmware/FML/Measurement/bms_sample.c")
+fet_c = read("firmware/FML/Fet/bms_fet_manager.c")
+health_h = read("firmware/FML/Health/bms_health.h")
+balance_c = read("firmware/FML/Balance/bms_balance.c")
+soc_c = read("firmware/FML/Soc/bms_soc.c")
+can_c = read("firmware/FML/Communication/bms_can.c")
+persistence_c = read("firmware/FML/Storage/bms_persistence.c")
+can_driver = read("firmware/BSP/bsp_can.c")
+flash_driver = read("firmware/BSP/bsp_flash.c")
+board_config = read("firmware/BSP/bsp_board_config.h")
+uart_driver = read("firmware/BSP/bsp_uart.c")
+debug_c = read("firmware/FML/Communication/bms_debug.c")
 
 check(contains_all(data_h, ("sample_sequence", "afe_generation",
                             "BMS_DataIdentity_t")) and
@@ -133,7 +141,7 @@ protect_sysctrl2_write = re.search(
     r"BQ76940_WriteByte\s*\([^;]*BQ76940_REG_SYS_CTRL2", protect_c, re.S)
 check(protect_sysctrl2_write is None,
       "Protect has no scheduler-era SYS_CTRL2 write")
-check("BMS_FetManager_Service" in app_rtos and
+check("BMS_FetManager_Service" in apl_state and
       contains_all(fet_c, ("BQ76940_REG_SYS_CTRL2", "ReadByte", "WriteByte",
                            "UNVERIFIED", "QUARANTINED")),
       "State invokes the sole transactional scheduler-era FET manager")
@@ -146,7 +154,8 @@ check("BMS_Data_GetSnapshot" not in fet_c and
 
 other_runtime_app = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
-    for path in (ROOT / "firmware/App").glob("*.c")
+    for directory in ("firmware/FML", "firmware/APL")
+    for path in (ROOT / directory).rglob("*.c")
     if path.name not in {"bms_protect.c", "bms_afe_startup.c"}
 )
 other_xready_w1c = re.search(
@@ -159,11 +168,11 @@ check(other_xready_w1c is None and
 iwdg_calls_outside_state = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
     for path in (ROOT / "firmware").rglob("*.c")
-    if path.as_posix().endswith("firmware/App/app_rtos.c") is False and
-       path.as_posix().endswith("firmware/Driver/bsp_iwdg.c") is False and
+    if path.as_posix().endswith("firmware/APL/Task/apl_task_state.c") is False and
+       path.as_posix().endswith("firmware/BSP/bsp_iwdg.c") is False and
        "Tests" not in path.parts
 )
-check(contains_all(app_rtos, ("BSP_IWDG_StartNominal", "BSP_IWDG_Feed")) and
+check(contains_all(apl_state, ("BSP_IWDG_StartNominal", "BSP_IWDG_Feed")) and
       not re.search(r"BSP_IWDG_(?:StartNominal|Feed)\s*\(",
                     iwdg_calls_outside_state),
       "StateTask is the sole production IWDG starter/feeder")
@@ -173,13 +182,13 @@ check(contains_all(health_h, ("generation[BMS_HEALTH_TASK_COUNT]",
           line for line in health_h.splitlines()
           if line.strip().startswith(("void BMS_Health_", "bool BMS_Health_"))),
       "health uses monotonic per-task generations with no clear API")
-check("BMS_Balance_RunOnce" in app_rtos and
+check("BMS_Balance_RunOnce" in apl_balance and
       contains_all(balance_c, ("BQ76940_REG_CELLBAL1",
                                "BQ76940_REG_CELLBAL2",
                                "BQ76940_REG_CELLBAL3")) and
       "BQ76940_REG_CELLBAL" not in recovery_c,
       "BalanceTask is the sole scheduler-era CELLBAL writer")
-check(contains_all(soc_c, ("sample.xready_generation",
+check(contains_all(soc_c, ("sample->xready_generation",
                            "remaining_mams", "queue_gap_latched")) and
       not re.search(r"\b(?:float|double)\b", soc_c),
       "SOC is integer-only and binds CC samples to AFE generation")
@@ -192,17 +201,19 @@ check(contains_all(can_driver, ("CAN_Prescaler = BSP_CAN_PRESCALER",
                                 "CAN_BS1_6tq", "CAN_BS2_1tq",
                                 "CAN_FilterMode_IdMask",
                                 "BSP_CAN_RX_LOGICAL_PRIORITY")) and
-      contains_all(can_c, ("USB_LP_CAN1_RX0_IRQHandler",
-                            "xQueueSendFromISR",
-                            "BMS_Can_TxHardwareService")),
+      contains_all(apl_irq, ("USB_LP_CAN1_RX0_IRQHandler",
+                             "xQueueSendFromISR")) and
+      "APL_Can_TxHardwareService" in apl_can,
       "target bxCAN binding has locked timing, filter and ISR/task ownership")
 check(contains_all(persistence_c, ("BMS_Persistence_Crc32",
                                    "BMS_Persistence_SelectNewest",
                                    "BMS_PERSISTENCE_COMMIT_OFFSET",
                                    "BMS_Persistence_StoreSocIfDue",
                                    "BMS_Persistence_TargetServiceSoc")) and
-      contains_all(flash_driver, ("BMS_PARAM_A_ADDR",
-                                   "BMS_PARAM_B_ADDR",
+      contains_all(board_config, ("BSP_BOARD_PERSISTENCE_A_ADDR",
+                                   "BSP_BOARD_PERSISTENCE_B_ADDR")) and
+      contains_all(flash_driver, ("BSP_BOARD_PERSISTENCE_A_ADDR",
+                                   "BSP_BOARD_PERSISTENCE_B_ADDR",
                                    "FLASH_ErasePage",
                                    "FLASH_ProgramHalfWord")),
       "Flash A/B physical persistence is commit-last and page-restricted")
@@ -221,21 +232,22 @@ check(contains_all(debug_c, ("BMS_Data_GetSnapshot",
                              "BMS_Soc_GetSnapshot",
                              "BMS_Balance_GetSnapshot",
                              "BMS_Can_GetDiagnostics",
-                             "BMS_Persistence_TargetGetDiagnostics",
-                             "xPortGetFreeHeapSize",
-                             "xPortGetMinimumEverFreeHeapSize",
-                             "BMS_DEBUG_TX_CHUNK_BYTES",
-                             "BMS_Debug_FlushChunk",
-                             "BSP_UART1_TryWriteByte")) and
-      re.search(r"\bBSP_UART1_Write\s*\(", debug_c) is None and
-      "BSP_UART1_TryReadByte" not in debug_c and
-      "BMS_Debug_Service" in app_rtos,
+                             "BMS_Persistence_TargetGetDiagnostics")) and
+      contains_all(apl_debug, ("xPortGetFreeHeapSize",
+                               "xPortGetMinimumEverFreeHeapSize",
+                               "BMS_Debug_PrepareSnapshot",
+                               "BMS_Debug_PeekByte",
+                               "BMS_Debug_ConsumeByte",
+                               "BSP_UART1_TryWriteByte")) and
+      re.search(r"\bBSP_UART1_Write\s*\(", apl_debug) is None and
+      "BSP_UART1_TryReadByte" not in apl_debug,
       "debug UART publishes read-only non-blocking bring-up telemetry without commands")
 
 all_production = "\n".join(
     read(str(path.relative_to(ROOT)).replace("\\", "/"))
-    for directory in ("firmware/App", "firmware/User", "firmware/Driver")
-    for path in (ROOT / directory).glob("*.c")
+    for directory in ("firmware/APL", "firmware/FML", "firmware/BSP",
+                      "firmware/DRV", "firmware/User")
+    for path in (ROOT / directory).rglob("*.c")
 )
 check(not re.search(r"clear_all_latched|ClearAllLatched|"
                     r"fault_latched_bitmap\s*=\s*0", all_production),

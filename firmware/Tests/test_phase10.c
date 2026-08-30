@@ -320,10 +320,11 @@ static uint32_t TestContinuation_Can(void)
     TestP9_StubReset();
     TestP9_SetMeasurement(&measurement);
     BMS_Can_Init(policy);
-    BMS_Can_TxRunOnce(0UL);
+    count = BMS_Can_BuildPeriodicFrames(0UL, frames);
     diagnostics = BMS_Can_GetDiagnostics();
-    TEST_CONT_CHECK(failures,
-        diagnostics.tx_drop_count == BMS_CAN_TX_FRAME_COUNT);
+    TEST_CONT_CHECK(failures, count == BMS_CAN_TX_FRAME_COUNT);
+    TEST_CONT_CHECK(failures, diagnostics.tx_cycle_count == 1UL);
+    TEST_CONT_CHECK(failures, diagnostics.tx_drop_count == 0UL);
     TEST_CONT_CHECK(failures, BMS_Protect_GetSafetySnapshot().faults.active ==
                                 0UL);
     ++g_continuation_scenarios_completed; /* SIM-30 */
