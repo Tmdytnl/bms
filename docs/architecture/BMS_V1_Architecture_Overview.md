@@ -211,7 +211,7 @@ Protect/CANRx 等 event-driven tasks 使用 bounded wait，保证它们即使没
 
 ## 11. SOC
 
-`Task_SOC` 是 SOC estimate 的 sole writer，也是 `xCcSampleQueue` 的 sole consumer。Protect 在 CC_READY 交易成功且 sample 进入 queue 后才 W1C；queue full 时保留 newest、丢弃一个 oldest，并置 gap diagnostics。
+FML SOC 是 estimate 的 sole writer，`APL_TaskSoc` 是 APL-private CC queue 的 sole consumer。Protect 在 CC_READY 交易成功且 sample 进入 queue 后才 W1C；queue full 时保留 newest、丢弃一个 oldest，并置 gap diagnostics。
 
 SOC engine 使用整数 `mA*ms` (`remaining_mams`) 累积，正电流为充电、负电流为放电，应用 995/1000 charge efficiency 与 1000/1000 discharge efficiency。CC sample 绑定 `xready_generation`；generation change 或 queue gap 会使连续积分证据失效并可观测。startup 优先恢复 newest-valid Flash payload，否则根据 fresh cell OCV 与 fallback 初始化。full/empty correction 仅在配置条件持续满足时执行。
 
@@ -219,7 +219,7 @@ SOC engine 使用整数 `mA*ms` (`remaining_mams`) 累积，正电流为充电�
 
 Balance eligibility 同时要求：State 为 CHARGE/STANDBY、State/Protect 无任一方向 inhibit、Recovery ready、cell/current/temperature valid+fresh、温度/电流/电压在 policy 窗口内。选择器使用 20 mV start/10 mV stop hysteresis、最多 2 cells、禁止相邻、5 s rotation。
 
-`Task_Balance` 是 scheduler-era `CELLBAL1..3` 唯一 writer。写前和写后复核 measurement identity 与 State/Protect/Recovery revisions；发生变化、timeout、transport/readback mismatch 时尝试 all-off 并将 register confirmation 标为 false。startup 的 all-zero readback 是 pre-scheduler 例外。
+FML Balance 是 scheduler-era `CELLBAL1..3` 唯一 writer，`APL_TaskBalance` 只提供执行上下文。写前和写后复核 measurement identity 与 State/Protect/Recovery revisions；发生变化、timeout、transport/readback mismatch 时尝试 all-off 并将 register confirmation 标为 false。startup 的 all-zero readback 是 pre-scheduler 例外。
 
 ## 13. CAN：protocol/core 与 target binding
 
@@ -260,9 +260,9 @@ Simulator power-cut injection 证明软件选择逻辑；真实 single-bank Flas
 | 问题 | 首先阅读 |
 |---|---|
 | MCU 如何启动到 scheduler | `firmware/User/main.c` |
-| 7 tasks/objects/period | `firmware/App/app_rtos.[ch]` |
+| 7 tasks/objects/period | `firmware/APL/apl_rtos.[ch]` + `firmware/APL/Task/` |
 | policy 当前值 | `firmware/Config/bms_policy.[ch]` |
-| shared measurement identity | `firmware/App/bms_data.[ch]` |
+| shared measurement identity | `firmware/FML/Data/bms_data.[ch]` |
 | runtime XREADY | `bms_recovery.c` + `bms_protect.c` + `bms_sample.c` |
 | FET transaction | `bms_fet_manager.c` |
 | Flash layout/record | `bms_memory_map.h` + `bms_persistence.c` |

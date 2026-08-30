@@ -31,7 +31,7 @@
 
 startup calibration 与 simulation NTC table 安装到 Sample 后，依次初始化 Protect、Health、State、Recovery、FET、SOC、Persistence、Balance、CAN、Debug。Persistence startup 只读取两个 slots，若有 newest-valid payload 就恢复 SOC；没有 valid record 使用 SOC engine 的 OCV/fallback 路径。
 
-`App_Rtos_CreateObjects()` 原子式创建 2 mutex、1 binary semaphore、3 queues 和 event group；任何创建失败都会删除已创建对象。`App_Rtos_CreateTasks()` 按 Protect、Sample、State、SOC、Balance、CANTx、CANRx 顺序创建。ProtectTask 启动后才打开 EXTI，避免 FreeRTOS ISR-priority validator 尚未初始化时出现真实 edge。
+`APL_Rtos_CreateObjects()` 原子式创建 2 mutex、1 binary semaphore、3 queues 和 event group；任何创建失败都会删除已创建对象。raw handles 只在 `apl_rtos_internal.h` 的 APL-private registry 暴露。`APL_Rtos_CreateTasks()` 按 Protect、Sample、State、SOC、Balance、CANTx、CANRx 顺序创建，并把 AFE device 作为 ProtectTask argument 注入。ProtectTask 启动后才打开 EXTI，避免 FreeRTOS ISR-priority validator 尚未初始化时出现真实 edge。
 
 ### 1.4 第一次 measurement 与 readiness
 

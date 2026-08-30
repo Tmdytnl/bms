@@ -9,7 +9,7 @@
 - Branch：`codex/refactor-bsp-drv-fml-apl`
 - Starting HEAD：`f3eb9b03a224f1ea2ece895dfc621c060df4986f`
 - Final implementation/test HEAD（文档提交前）：`6ccb6df`
-- Final pushed HEAD：由包含本报告的最终文档提交确定，并在最终交付消息与远端 push 结果中记录。
+- Final pushed HEAD：`5d81c7f50479219e0e71bf98bb0fe2a0a8ee8c3f`
 
 ## 3. Commits
 
