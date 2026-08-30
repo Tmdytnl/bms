@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-#include "bms_memory_map.h"
+#include "bsp_board_config.h"
 #include "stm32f10x_flash.h"
 
 static bool BSP_Flash_RangeInsidePersistence(uint32_t address,
@@ -21,13 +21,14 @@ static bool BSP_Flash_RangeInsidePersistence(uint32_t address,
 {
     uint32_t end;
 
-    if ((length == 0U) || (address < BMS_PARAM_A_ADDR))
+    if ((length == 0U) || (address < BSP_BOARD_PERSISTENCE_A_ADDR))
     {
         return false;
     }
     /* end>=address 显式拒绝 32-bit 加法回绕，不能让大地址绕回合法窗口。 */
     end = address + (uint32_t)length;
-    return (end >= address) && (end <= BMS_PARAM_B_END_EXCLUSIVE);
+    return (end >= address) &&
+        (end <= BSP_BOARD_PERSISTENCE_END_EXCLUSIVE);
 }
 
 bool BSP_Flash_Read(uint32_t address, uint8_t *destination, uint16_t length)
@@ -54,8 +55,8 @@ bool BSP_Flash_ErasePersistencePage(uint32_t page_address)
     const volatile uint16_t *verify;
     uint16_t index;
 
-    if ((page_address != BMS_PARAM_A_ADDR) &&
-        (page_address != BMS_PARAM_B_ADDR))
+    if ((page_address != BSP_BOARD_PERSISTENCE_A_ADDR) &&
+        (page_address != BSP_BOARD_PERSISTENCE_B_ADDR))
     {
         return false;
     }
@@ -72,7 +73,7 @@ bool BSP_Flash_ErasePersistencePage(uint32_t page_address)
     }
     /* SPL 返回完成仍需逐 halfword 回读，擦除不完整不能交给上层继续写 record。 */
     verify = (const volatile uint16_t *)page_address;
-    for (index = 0U; index < (BMS_FLASH_PAGE_SIZE / 2UL); ++index)
+    for (index = 0U; index < (BSP_BOARD_FLASH_PAGE_SIZE / 2UL); ++index)
     {
         if (verify[index] != 0xFFFFU)
         {

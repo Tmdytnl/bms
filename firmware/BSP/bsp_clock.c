@@ -1,6 +1,6 @@
 #include "bsp_clock.h"
 
-#include "bms_config.h"
+#include "bsp_board_config.h"
 #include "stm32f10x.h"
 #include "stm32f10x_rcc.h"
 
@@ -38,10 +38,10 @@ BSP_ClockStatus_t BSP_Clock_Verify(void)
     }
 
     RCC_GetClocksFreq(&clocks);
-    if ((clocks.SYSCLK_Frequency != BMS_SYSCLK_HZ) ||
-        (clocks.HCLK_Frequency != BMS_HCLK_HZ) ||
-        (clocks.PCLK1_Frequency != BMS_PCLK1_HZ) ||
-        (clocks.PCLK2_Frequency != BMS_PCLK2_HZ))
+    if ((clocks.SYSCLK_Frequency != BSP_BOARD_SYSCLK_HZ) ||
+        (clocks.HCLK_Frequency != BSP_BOARD_HCLK_HZ) ||
+        (clocks.PCLK1_Frequency != BSP_BOARD_PCLK1_HZ) ||
+        (clocks.PCLK2_Frequency != BSP_BOARD_PCLK2_HZ))
     {
         return BSP_CLOCK_STATUS_FREQUENCY_MISMATCH;
     }

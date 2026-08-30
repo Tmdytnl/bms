@@ -3,8 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "bms_build_assert.h"
-#include "bms_config.h"
+#include "bsp_board_config.h"
 
 #include "misc.h"
 #include "stm32f10x.h"
@@ -16,19 +15,15 @@
 #define BSP_CAN_STD_ID_MAX                      (0x7FFU)
 #define BSP_CAN_EXT_ID_MAX                      (0x1FFFFFFFUL)
 
-BMS_BUILD_ASSERT(BMS_CAN_RX_PORT_ID == BMS_GPIO_PORT_A_ID,
-                 can_rx_pin_is_on_port_a);
-BMS_BUILD_ASSERT(BMS_CAN_RX_PIN == 11U,
+BSP_BUILD_ASSERT(BSP_BOARD_CAN_RX_PIN == 11U,
                  can_rx_pin_is_pa11);
-BMS_BUILD_ASSERT(BMS_CAN_TX_PORT_ID == BMS_GPIO_PORT_A_ID,
-                 can_tx_pin_is_on_port_a);
-BMS_BUILD_ASSERT(BMS_CAN_TX_PIN == 12U,
+BSP_BUILD_ASSERT(BSP_BOARD_CAN_TX_PIN == 12U,
                  can_tx_pin_is_pa12);
-BMS_BUILD_ASSERT(BMS_PCLK1_HZ == 36000000UL,
+BSP_BUILD_ASSERT(BSP_BOARD_PCLK1_HZ == 36000000UL,
                  can_pclk1_is_thirty_six_mhz);
-BMS_BUILD_ASSERT((BMS_PCLK1_HZ /
+BSP_BUILD_ASSERT((BSP_BOARD_PCLK1_HZ /
                   (BSP_CAN_PRESCALER * (1UL + 6UL + 1UL))) ==
-                     BMS_CAN_BITRATE,
+                     BSP_BOARD_CAN_BITRATE,
                  can_timing_is_five_hundred_kbit);
 
 static bool s_initialized;

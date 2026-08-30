@@ -426,7 +426,7 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
 /* ------------------------------------------------------------------ */
 
 /* logical cell 1..13→CB1..8、CB10..13、CB15；跳过 short channel CB9/CB14。 */
-static const uint8_t s_logical_cell_to_cb[BMS_CELL_COUNT] =
+static const uint8_t s_logical_cell_to_cb[BQ76940_CONTROL_LOGICAL_CELL_COUNT] =
 {
     1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U,
     10U, 11U, 12U, 13U, 15U
@@ -434,7 +434,7 @@ static const uint8_t s_logical_cell_to_cb[BMS_CELL_COUNT] =
 
 uint8_t BQ76940_Control_CellBalBitOfLogicalCell(uint8_t logical_cell_index)
 {
-    if (logical_cell_index >= BMS_CELL_COUNT)
+    if (logical_cell_index >= BQ76940_CONTROL_LOGICAL_CELL_COUNT)
     {
         return 0U;
     }
@@ -501,7 +501,7 @@ bool BQ76940_Control_ComposeCellBal(
     {
         return false;   /* 设置了多个 bit */
     }
-    if (balance_bitmap >= (1U << BMS_CELL_COUNT))
+    if (balance_bitmap >= (1U << BQ76940_CONTROL_LOGICAL_CELL_COUNT))
     {
         return false;   /* bitmap 越界 */
     }
@@ -509,7 +509,7 @@ bool BQ76940_Control_ComposeCellBal(
     *bal1 = 0U;
     *bal2 = 0U;
     *bal3 = 0U;
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         mask = (uint16_t)(1U << index);
         if ((balance_bitmap & mask) != 0U)
@@ -536,9 +536,9 @@ bool BQ76940_Control_ComposeCellBalPolicy(
 
     if ((bal1 == NULL) || (bal2 == NULL) || (bal3 == NULL) ||
         (max_parallel_cells == 0U) ||
-        (max_parallel_cells > BMS_CELL_COUNT) ||
+        (max_parallel_cells > BQ76940_CONTROL_LOGICAL_CELL_COUNT) ||
         ((balance_bitmap & (uint16_t)(~(
-            (uint16_t)((1U << BMS_CELL_COUNT) - 1U)))) != 0U) ||
+            (uint16_t)((1U << BQ76940_CONTROL_LOGICAL_CELL_COUNT) - 1U)))) != 0U) ||
         (!adjacent_cells_permitted &&
          ((balance_bitmap & (uint16_t)(balance_bitmap << 1U)) != 0U)))
     {
@@ -550,7 +550,7 @@ bool BQ76940_Control_ComposeCellBalPolicy(
     *bal2 = 0U;
     *bal3 = 0U;
     selected = 0U;
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         mask = (uint16_t)(1U << index);
         if ((balance_bitmap & mask) != 0U)
@@ -589,7 +589,7 @@ uint16_t BQ76940_Control_DecodeCellBal(uint8_t bal1,
 
     /* 反解仍遍历 logical mapping，所以物理 CB9/CB14 即使置位也不会冒充电芯。 */
     bitmap = 0U;
-    for (index = 0U; index < BMS_CELL_COUNT; ++index)
+    for (index = 0U; index < BQ76940_CONTROL_LOGICAL_CELL_COUNT; ++index)
     {
         cb_bit = s_logical_cell_to_cb[index];
         if (cb_bit <= 5U)

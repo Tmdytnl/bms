@@ -8,8 +8,7 @@
 
 #include <stddef.h>
 
-#include "bms_build_assert.h"
-#include "bms_config.h"
+#include "bsp_board_config.h"
 
 #include "stm32f10x.h"
 #include "stm32f10x_gpio.h"
@@ -20,15 +19,11 @@
 #define BSP_UART1_EXPECTED_BRR                  (0x0271U)
 #define BSP_UART1_TX_SPIN_LIMIT                 (100000UL)
 
-BMS_BUILD_ASSERT(BMS_UART_TX_PORT_ID == BMS_GPIO_PORT_A_ID,
-                 uart_tx_pin_is_on_port_a);
-BMS_BUILD_ASSERT(BMS_UART_TX_PIN == 9U,
+BSP_BUILD_ASSERT(BSP_BOARD_UART_TX_PIN == 9U,
                  uart_tx_pin_is_pa9);
-BMS_BUILD_ASSERT(BMS_UART_RX_PORT_ID == BMS_GPIO_PORT_A_ID,
-                 uart_rx_pin_is_on_port_a);
-BMS_BUILD_ASSERT(BMS_UART_RX_PIN == 10U,
+BSP_BUILD_ASSERT(BSP_BOARD_UART_RX_PIN == 10U,
                  uart_rx_pin_is_pa10);
-BMS_BUILD_ASSERT(BMS_PCLK2_HZ == 72000000UL,
+BSP_BUILD_ASSERT(BSP_BOARD_PCLK2_HZ == 72000000UL,
                  uart_pclk2_is_seventy_two_mhz);
 
 static bool s_initialized;

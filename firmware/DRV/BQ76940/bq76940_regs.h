@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "bms_build_assert.h"
+#include "bq76940_build_assert.h"
 
 /* BQ7694003：启用 CRC、3.3 V REGOUT、7 位地址 0x08。 */
 #define BQ76940_I2C_ADDRESS_7BIT          (0x08U)
@@ -80,17 +80,17 @@
 #define BQ76940_ADC_GAIN_MAX_UV_PER_LSB   (396U)
 #define BQ76940_CELL_RAW14_MASK           (0x3FFFU)
 
-BMS_BUILD_ASSERT(BQ76940_I2C_WIRE_WRITE ==
+BQ76940_BUILD_ASSERT(BQ76940_I2C_WIRE_WRITE ==
                      (BQ76940_I2C_ADDRESS_7BIT << 1),
                  bq_wire_write_matches_seven_bit_address);
-BMS_BUILD_ASSERT(BQ76940_I2C_WIRE_READ ==
+BQ76940_BUILD_ASSERT(BQ76940_I2C_WIRE_READ ==
                      ((BQ76940_I2C_ADDRESS_7BIT << 1) | 1U),
                  bq_wire_read_matches_seven_bit_address);
-BMS_BUILD_ASSERT(BQ76940_REG_VC15_LO == 0x29U,
+BQ76940_BUILD_ASSERT(BQ76940_REG_VC15_LO == 0x29U,
                  bq_cell_register_range_matches_datasheet);
-BMS_BUILD_ASSERT(BQ76940_REG_CC_LO == (BQ76940_REG_CC_HI + 1U),
+BQ76940_BUILD_ASSERT(BQ76940_REG_CC_LO == (BQ76940_REG_CC_HI + 1U),
                  bq_cc_registers_are_adjacent);
-BMS_BUILD_ASSERT(BQ76940_ADC_GAIN_MAX_UV_PER_LSB ==
+BQ76940_BUILD_ASSERT(BQ76940_ADC_GAIN_MAX_UV_PER_LSB ==
                      (BQ76940_ADC_GAIN_BASE_UV_PER_LSB + 31U),
                  bq_adc_gain_trim_range_is_thirty_two_values);
 /* 上述断言把芯片型号/地址/寄存器窗口假设变成编译期契约，防止静默漂移。 */

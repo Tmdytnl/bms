@@ -4,10 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bms_build_assert.h"
-#include "bms_config.h"
+#include "bq76940_build_assert.h"
 #include "bq76940.h"
 #include "bq76940_regs.h"
+
+#define BQ76940_CONTROL_LOGICAL_CELL_COUNT       (13U)
 
 /*
  * BQ7694003 protection register encoding、FET bit composition 与 CELLBAL mapping。

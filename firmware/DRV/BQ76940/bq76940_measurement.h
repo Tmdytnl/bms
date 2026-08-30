@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bms_build_assert.h"
-#include "bms_config.h"
+#include "bq76940_build_assert.h"
 #include "bq76940.h"
 #include "bq76940_regs.h"
 
@@ -23,15 +22,15 @@
  * 但必须同时依据返回状态把本次样本标成无效，不能把旧数值冒充新鲜数据。
  */
 
-#define BQ76940_MEASUREMENT_CELL_COUNT         (BMS_CELL_COUNT)  /* 13 节逻辑电芯 */
+#define BQ76940_MEASUREMENT_CELL_COUNT         (13U)
 #define BQ76940_MEASUREMENT_VC_WINDOW_BYTES    (30U)  /* VC1_HI..VC15_LO 连续窗口 */
 
 /*
  * BAT eq.9 原本覆盖完整 device window；13S mapping 中 short channel 贡献近 0，
- * OFFSET 项使用 BMS_CELL_COUNT。BAT 只与 cell-summed pack voltage 做诊断交叉检查，
+ * OFFSET 项使用 logical cell count。BAT 只与 cell-summed pack voltage 做诊断交叉检查，
  * 不代替逐节安全计算。
  */
-#define BQ76940_MEASUREMENT_BAT_NUM_CELLS      (BMS_CELL_COUNT)
+#define BQ76940_MEASUREMENT_BAT_NUM_CELLS      (13U)
 
 /* CC：8.44 uV/LSB×1000 = 8440 nV/LSB，便于全整数换算。 */
 #define BQ76940_MEASUREMENT_CC_LSB_NV          (8440UL)
@@ -43,19 +42,17 @@
 #define BQ76940_MEASUREMENT_TS_PULLUP_OHM      (10000UL)
 #define BQ76940_MEASUREMENT_TS_REGOUT_UV       (3300000UL)
 
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_CELL_COUNT == BMS_CELL_COUNT,
-                 measurement_cell_count_matches_config);
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_CELL_COUNT == 13U,
+BQ76940_BUILD_ASSERT(BQ76940_MEASUREMENT_CELL_COUNT == 13U,
                  measurement_cell_count_is_thirteen);
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_VC_WINDOW_BYTES ==
+BQ76940_BUILD_ASSERT(BQ76940_MEASUREMENT_VC_WINDOW_BYTES ==
                      (BQ76940_REG_VC15_LO - BQ76940_REG_VC1_HI + 1U),
                  vc_window_matches_register_range);
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_VC_WINDOW_BYTES <=
+BQ76940_BUILD_ASSERT(BQ76940_MEASUREMENT_VC_WINDOW_BYTES <=
                      BQ76940_MAX_BLOCK_LENGTH,
                  vc_window_fits_transport_block);
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_BAT_NUM_CELLS == BMS_CELL_COUNT,
-                 bat_cell_count_matches_config);
-BMS_BUILD_ASSERT(BQ76940_MEASUREMENT_CC_LSB_NV == 8440UL,
+BQ76940_BUILD_ASSERT(BQ76940_MEASUREMENT_BAT_NUM_CELLS == 13U,
+                 bat_cell_count_matches_supported_mapping);
+BQ76940_BUILD_ASSERT(BQ76940_MEASUREMENT_CC_LSB_NV == 8440UL,
                  cc_lsb_matches_datasheet);
 
 /*

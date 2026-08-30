@@ -1,6 +1,6 @@
 #include "bsp_timer.h"
 
-#include "bms_config.h"
+#include "bsp_board_config.h"
 #include "stm32f10x_rcc.h"
 #include "stm32f10x_tim.h"
 
@@ -12,9 +12,9 @@ void BSP_Timer_Init(void)
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
     TIM_TimeBaseStructInit(&timer);
-    timer.TIM_Prescaler = BMS_TIM3_PRESCALER;
+    timer.TIM_Prescaler = BSP_BOARD_TIM3_PRESCALER;
     timer.TIM_CounterMode = TIM_CounterMode_Up;
-    timer.TIM_Period = BMS_TIM3_AUTORELOAD;
+    timer.TIM_Period = BSP_BOARD_TIM3_AUTORELOAD;
     timer.TIM_ClockDivision = TIM_CKD_DIV1;
     timer.TIM_RepetitionCounter = 0U;
     TIM_TimeBaseInit(TIM3, &timer);
@@ -61,7 +61,7 @@ bool BSP_DelayUs(uint32_t delay_us)
         chunk = (delay_us > 32767UL) ? 32767U : (uint16_t)delay_us;
         start = BSP_TimeUs16();
         guard = ((uint32_t)chunk + 1UL) *
-                BMS_TIM3_DELAY_SPIN_GUARD_PER_US;
+                BSP_BOARD_TIM3_DELAY_SPIN_GUARD_PER_US;
         while (((uint16_t)(BSP_TimeUs16() - start) < chunk) &&
                (guard != 0UL))
         {
