@@ -212,9 +212,25 @@ foreach ($tool in @($armcc, $armasm, $armlink, $fromelf)) {
 }
 
 $includeDirs = @(
-    'firmware\App',
+    'firmware\APL',
+    'firmware\APL\Task',
+    'firmware\BSP',
     'firmware\Config',
-    'firmware\Driver',
+    'firmware\DRV\SoftI2C',
+    'firmware\DRV\BQ76940',
+    'firmware\FML\Core',
+    'firmware\FML\Data',
+    'firmware\FML\Afe',
+    'firmware\FML\Measurement',
+    'firmware\FML\Protect',
+    'firmware\FML\State',
+    'firmware\FML\Fet',
+    'firmware\FML\Recovery',
+    'firmware\FML\Health',
+    'firmware\FML\Soc',
+    'firmware\FML\Balance',
+    'firmware\FML\Communication',
+    'firmware\FML\Storage',
     'firmware\Tests',
     'docs\reference\ST\STM32F10x Standard Peripheral Library',
     'docs\reference\ST\STM32F10x Standard Peripheral Library\Start',
@@ -247,16 +263,16 @@ Invoke-Checked -FilePath $armasm `
     -Label 'assemble startup_stm32f10x_md.s'
 
 $phase4Sources = [ordered]@{
-    'bq76940' = 'firmware\Driver\bq76940.c'
-    'bq76940_measurement' = 'firmware\Driver\bq76940_measurement.c'
-    'crc8_bq76940' = 'firmware\Driver\crc8_bq76940.c'
+    'bq76940' = 'firmware\DRV\BQ76940\bq76940.c'
+    'bq76940_measurement' = 'firmware\DRV\BQ76940\bq76940_measurement.c'
+    'crc8_bq76940' = 'firmware\DRV\BQ76940\crc8_bq76940.c'
     'test_mapping' = 'firmware\Tests\test_phase4_mapping.c'
     'test_measurement' = 'firmware\Tests\test_phase4_measurement.c'
     'test_main' = 'firmware\Tests\test_phase4_main.c'
 }
 $phase6Sources = [ordered]@{
-    'app_rtos' = 'firmware\App\app_rtos.c'
-    'app_rtos_hooks' = 'firmware\App\app_rtos_hooks.c'
+    'apl_rtos' = 'firmware\APL\apl_rtos.c'
+    'apl_rtos_hooks' = 'firmware\APL\apl_rtos_hooks.c'
     'tasks' = 'docs\FreeRTOS\source\tasks.c'
     'queue' = 'docs\FreeRTOS\source\queue.c'
     'list' = 'docs\FreeRTOS\source\list.c'
@@ -270,9 +286,9 @@ $phase6Sources = [ordered]@{
     'test_main' = 'firmware\Tests\test_phase6_main.c'
 }
 $phase7Sources = [ordered]@{
-    'bms_protect' = 'firmware\App\bms_protect.c'
-    'bms_fault' = 'firmware\App\bms_fault.c'
-    'bq76940_control' = 'firmware\Driver\bq76940_control.c'
+    'bms_protect' = 'firmware\FML\Protect\bms_protect.c'
+    'bms_fault' = 'firmware\FML\Core\bms_fault.c'
+    'bq76940_control' = 'firmware\DRV\BQ76940\bq76940_control.c'
     'test_stub' = 'firmware\Tests\test_phase7_stub_i2c.c'
     'test_phase5_trip' = 'firmware\Tests\test_phase5_trip.c'
     'test_phase5_ocdscd' = 'firmware\Tests\test_phase5_ocdscd.c'
@@ -282,24 +298,24 @@ $phase7Sources = [ordered]@{
     'test_main' = 'firmware\Tests\test_phase7_main.c'
 }
 $phase8DataSources = [ordered]@{
-    'bms_data' = 'firmware\App\bms_data.c'
-    'bms_ntc' = 'firmware\App\bms_ntc.c'
-    'bms_fault' = 'firmware\App\bms_fault.c'
+    'bms_data' = 'firmware\FML\Data\bms_data.c'
+    'bms_ntc' = 'firmware\FML\Measurement\bms_ntc.c'
+    'bms_fault' = 'firmware\FML\Core\bms_fault.c'
     'test_data' = 'firmware\Tests\test_phase8_data.c'
     'test_main' = 'firmware\Tests\test_phase8_main.c'
 }
 $phase8SampleSources = [ordered]@{
-    'bms_data' = 'firmware\App\bms_data.c'
-    'bms_ntc' = 'firmware\App\bms_ntc.c'
-    'bms_fault' = 'firmware\App\bms_fault.c'
-    'bms_sample' = 'firmware\App\bms_sample.c'
+    'bms_data' = 'firmware\FML\Data\bms_data.c'
+    'bms_ntc' = 'firmware\FML\Measurement\bms_ntc.c'
+    'bms_fault' = 'firmware\FML\Core\bms_fault.c'
+    'bms_sample' = 'firmware\FML\Measurement\bms_sample.c'
     'test_stub' = 'firmware\Tests\test_phase8_sample_stub.c'
     'test_sample' = 'firmware\Tests\test_phase8_sample.c'
     'test_main' = 'firmware\Tests\test_phase8_main.c'
 }
 $phase8AfeSources = [ordered]@{
-    'bms_afe_startup' = 'firmware\App\bms_afe_startup.c'
-    'bq76940_control' = 'firmware\Driver\bq76940_control.c'
+    'bms_afe_startup' = 'firmware\FML\Afe\bms_afe_startup.c'
+    'bq76940_control' = 'firmware\DRV\BQ76940\bq76940_control.c'
     'test_afe' = 'firmware\Tests\test_phase8_afe_startup.c'
     'test_main' = 'firmware\Tests\test_phase8_main.c'
 }
@@ -321,11 +337,11 @@ foreach ($path in @(
     'firmware/Tests/test_phase8_data.h',
     'firmware/Tests/test_phase8_sample.h',
     'firmware/Tests/test_phase8_sample_stub.h',
-    'firmware/App/bms_data.h',
-    'firmware/App/bms_ntc.h',
-    'firmware/App/bms_sample.h',
-    'firmware/App/bms_afe_startup.h',
-    'firmware/App/bms_protect.h',
+    'firmware/FML/Data/bms_data.h',
+    'firmware/FML/Measurement/bms_ntc.h',
+    'firmware/FML/Measurement/bms_sample.h',
+    'firmware/FML/Afe/bms_afe_startup.h',
+    'firmware/FML/Protect/bms_protect.h',
     'firmware/Config/bms_config.h',
     'firmware/Config/FreeRTOSConfig.h',
     'firmware/Project/Keil/BMS_V1.uvprojx',
@@ -355,9 +371,11 @@ foreach ($fileNode in $projectXml.SelectNodes('//FilePath')) {
 # ARMCC dependency file 也作为 gate hash input；并发修改 transitive App/Driver/
 # RTOS/CMSIS/Test header 时，verify_phase8.py 重算 manifest 会 fail closed。
 $headerRoots = @(
-    'firmware\App',
+    'firmware\APL',
+    'firmware\BSP',
     'firmware\Config',
-    'firmware\Driver',
+    'firmware\DRV',
+    'firmware\FML',
     'firmware\Tests',
     'docs\FreeRTOS',
     'docs\reference\ST\STM32F10x Standard Peripheral Library'

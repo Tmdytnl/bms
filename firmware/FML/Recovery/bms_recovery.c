@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bms_afe_startup.h"
 #include "bms_balance.h"
 #include "bms_data.h"

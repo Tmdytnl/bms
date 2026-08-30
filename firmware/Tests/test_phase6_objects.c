@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 
 #define TEST_CHECK(expr_)          \
     do                             \

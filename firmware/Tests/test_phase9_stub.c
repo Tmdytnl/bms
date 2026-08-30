@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bms_recovery.h"
 #include "bq76940_regs.h"
 

@@ -1,4 +1,4 @@
-#include "app_rtos.h"
+#include "apl_rtos.h"
 
 /* 本 construction image 只验证 scheduler 前七任务创建；正式 ProtectTask 在独立
  * regression image 执行，因此这里保留 non-running entry。 */

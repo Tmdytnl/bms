@@ -6,7 +6,7 @@
 #if defined(BMS_PHASE8_HOST_TEST)
 #include "test_phase8_data_host_shim.h"
 #else
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #endif
 
 #include "bms_data.h"

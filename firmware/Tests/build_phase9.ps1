@@ -41,7 +41,15 @@ function Invoke-Checked {
 }
 
 $includeDirs = @(
-    'firmware\App', 'firmware\Config', 'firmware\Driver',
+    'firmware\APL', 'firmware\APL\Task', 'firmware\BSP',
+    'firmware\Config', 'firmware\DRV\SoftI2C',
+    'firmware\DRV\BQ76940', 'firmware\FML\Core',
+    'firmware\FML\Data', 'firmware\FML\Afe',
+    'firmware\FML\Measurement', 'firmware\FML\Protect',
+    'firmware\FML\State', 'firmware\FML\Fet',
+    'firmware\FML\Recovery', 'firmware\FML\Health',
+    'firmware\FML\Soc', 'firmware\FML\Balance',
+    'firmware\FML\Communication', 'firmware\FML\Storage',
     'firmware\Tests',
     'docs\reference\ST\STM32F10x Standard Peripheral Library',
     'docs\reference\ST\STM32F10x Standard Peripheral Library\Start',
@@ -64,19 +72,19 @@ Invoke-Checked $armasm @('--cpu', 'Cortex-M3', '--apcs=interwork', '-g',
     'assemble startup'
 
 $sources = [ordered]@{
-    bms_fault = 'firmware\App\bms_fault.c'
-    bms_ntc = 'firmware\App\bms_ntc.c'
+    bms_fault = 'firmware\FML\Core\bms_fault.c'
+    bms_ntc = 'firmware\FML\Measurement\bms_ntc.c'
     bms_policy = 'firmware\Config\bms_policy.c'
-    bq_control = 'firmware\Driver\bq76940_control.c'
-    bms_state = 'firmware\App\bms_state.c'
-    bms_health = 'firmware\App\bms_health.c'
-    bms_hw_recovery = 'firmware\App\bms_hw_recovery.c'
-    bms_recovery = 'firmware\App\bms_recovery.c'
-    bms_fet_manager = 'firmware\App\bms_fet_manager.c'
-    bms_soc = 'firmware\App\bms_soc.c'
-    bms_balance = 'firmware\App\bms_balance.c'
-    bms_can = 'firmware\App\bms_can.c'
-    bms_persistence = 'firmware\App\bms_persistence.c'
+    bq_control = 'firmware\DRV\BQ76940\bq76940_control.c'
+    bms_state = 'firmware\FML\State\bms_state.c'
+    bms_health = 'firmware\FML\Health\bms_health.c'
+    bms_hw_recovery = 'firmware\FML\Recovery\bms_hw_recovery.c'
+    bms_recovery = 'firmware\FML\Recovery\bms_recovery.c'
+    bms_fet_manager = 'firmware\FML\Fet\bms_fet_manager.c'
+    bms_soc = 'firmware\FML\Soc\bms_soc.c'
+    bms_balance = 'firmware\FML\Balance\bms_balance.c'
+    bms_can = 'firmware\FML\Communication\bms_can.c'
+    bms_persistence = 'firmware\FML\Storage\bms_persistence.c'
     test_stub = 'firmware\Tests\test_phase9_stub.c'
     test_phase9 = 'firmware\Tests\test_phase9.c'
     test_phase10 = 'firmware\Tests\test_phase10.c'

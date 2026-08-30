@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bms_data.h"
 #include "bms_fet_manager.h"
 #include "bms_policy.h"

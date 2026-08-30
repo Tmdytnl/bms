@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_MD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\App;..\..\Config;..\..\Driver;..\..\User;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Start;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary;..\..\..\docs\FreeRTOS\include;..\..\..\docs\FreeRTOS\portable</IncludePath>
+              <IncludePath>..\..\APL;..\..\BSP;..\..\Config;..\..\DRV\SoftI2C;..\..\DRV\BQ76940;..\..\FML\Core;..\..\FML\Data;..\..\FML\Afe;..\..\FML\Measurement;..\..\FML\Protect;..\..\FML\State;..\..\FML\Fet;..\..\FML\Recovery;..\..\FML\Health;..\..\FML\Soc;..\..\FML\Balance;..\..\FML\Communication;..\..\FML\Storage;..\..\User;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Start;..\..\..\docs\reference\ST\STM32F10x Standard Peripheral Library\Libarary;..\..\..\docs\FreeRTOS\include;..\..\..\docs\FreeRTOS\portable</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -382,7 +382,7 @@
       </TargetOption>
       <Groups>
         <Group>
-          <GroupName>Application</GroupName>
+          <GroupName>FML</GroupName>
           <Files>
             <File>
               <FileName>main.c</FileName>
@@ -392,12 +392,12 @@
             <File>
               <FileName>bms_data.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_data.c</FilePath>
+              <FilePath>..\..\FML\Data\bms_data.c</FilePath>
             </File>
             <File>
               <FileName>bms_debug.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_debug.c</FilePath>
+              <FilePath>..\..\FML\Communication\bms_debug.c</FilePath>
             </File>
             <File>
               <FileName>bms_policy.c</FileName>
@@ -407,147 +407,147 @@
             <File>
               <FileName>bms_state.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_state.c</FilePath>
+              <FilePath>..\..\FML\State\bms_state.c</FilePath>
             </File>
             <File>
               <FileName>bms_hw_recovery.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_hw_recovery.c</FilePath>
+              <FilePath>..\..\FML\Recovery\bms_hw_recovery.c</FilePath>
             </File>
             <File>
               <FileName>bms_recovery.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_recovery.c</FilePath>
+              <FilePath>..\..\FML\Recovery\bms_recovery.c</FilePath>
             </File>
             <File>
               <FileName>bms_fet_manager.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_fet_manager.c</FilePath>
+              <FilePath>..\..\FML\Fet\bms_fet_manager.c</FilePath>
             </File>
             <File>
               <FileName>bms_health.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_health.c</FilePath>
+              <FilePath>..\..\FML\Health\bms_health.c</FilePath>
             </File>
             <File>
               <FileName>bms_soc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_soc.c</FilePath>
+              <FilePath>..\..\FML\Soc\bms_soc.c</FilePath>
             </File>
             <File>
               <FileName>bms_balance.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_balance.c</FilePath>
+              <FilePath>..\..\FML\Balance\bms_balance.c</FilePath>
             </File>
             <File>
               <FileName>bms_can.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_can.c</FilePath>
+              <FilePath>..\..\FML\Communication\bms_can.c</FilePath>
             </File>
             <File>
               <FileName>bms_persistence.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_persistence.c</FilePath>
+              <FilePath>..\..\FML\Storage\bms_persistence.c</FilePath>
             </File>
             <File>
               <FileName>bms_ntc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_ntc.c</FilePath>
+              <FilePath>..\..\FML\Measurement\bms_ntc.c</FilePath>
             </File>
             <File>
               <FileName>bms_sample.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_sample.c</FilePath>
+              <FilePath>..\..\FML\Measurement\bms_sample.c</FilePath>
             </File>
             <File>
               <FileName>bms_afe_startup.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_afe_startup.c</FilePath>
+              <FilePath>..\..\FML\Afe\bms_afe_startup.c</FilePath>
             </File>
             <File>
               <FileName>bms_fault.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_fault.c</FilePath>
+              <FilePath>..\..\FML\Core\bms_fault.c</FilePath>
             </File>
             <File>
               <FileName>bms_protect.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\bms_protect.c</FilePath>
+              <FilePath>..\..\FML\Protect\bms_protect.c</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>Driver_Phase2</GroupName>
+          <GroupName>BSP_DRV</GroupName>
           <Files>
             <File>
               <FileName>bsp_clock.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_clock.c</FilePath>
+              <FilePath>..\..\BSP\bsp_clock.c</FilePath>
             </File>
             <File>
               <FileName>bsp_gpio.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_gpio.c</FilePath>
+              <FilePath>..\..\BSP\bsp_gpio.c</FilePath>
             </File>
             <File>
               <FileName>bsp_timer.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_timer.c</FilePath>
+              <FilePath>..\..\BSP\bsp_timer.c</FilePath>
             </File>
             <File>
               <FileName>soft_i2c.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\soft_i2c.c</FilePath>
+              <FilePath>..\..\DRV\SoftI2C\soft_i2c.c</FilePath>
             </File>
             <File>
               <FileName>crc8_bq76940.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\crc8_bq76940.c</FilePath>
+              <FilePath>..\..\DRV\BQ76940\crc8_bq76940.c</FilePath>
             </File>
             <File>
               <FileName>bsp_exti.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_exti.c</FilePath>
+              <FilePath>..\..\BSP\bsp_exti.c</FilePath>
             </File>
             <File>
               <FileName>bsp_iwdg.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_iwdg.c</FilePath>
+              <FilePath>..\..\BSP\bsp_iwdg.c</FilePath>
             </File>
             <File>
               <FileName>bsp_can.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_can.c</FilePath>
+              <FilePath>..\..\BSP\bsp_can.c</FilePath>
             </File>
             <File>
               <FileName>bsp_flash.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_flash.c</FilePath>
+              <FilePath>..\..\BSP\bsp_flash.c</FilePath>
             </File>
             <File>
               <FileName>bsp_uart.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bsp_uart.c</FilePath>
+              <FilePath>..\..\BSP\bsp_uart.c</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>Driver_Phase3</GroupName>
+          <GroupName>DRV_BQ76940</GroupName>
           <Files>
             <File>
               <FileName>bq76940.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bq76940.c</FilePath>
+              <FilePath>..\..\DRV\BQ76940\bq76940.c</FilePath>
             </File>
             <File>
               <FileName>bq76940_measurement.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bq76940_measurement.c</FilePath>
+              <FilePath>..\..\DRV\BQ76940\bq76940_measurement.c</FilePath>
             </File>
             <File>
               <FileName>bq76940_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Driver\bq76940_control.c</FilePath>
+              <FilePath>..\..\DRV\BQ76940\bq76940_control.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -665,14 +665,14 @@
               <FilePath>..\..\..\docs\FreeRTOS\portable\port.c</FilePath>
             </File>
             <File>
-              <FileName>app_rtos.c</FileName>
+              <FileName>apl_rtos.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\app_rtos.c</FilePath>
+              <FilePath>..\..\APL\apl_rtos.c</FilePath>
             </File>
             <File>
-              <FileName>app_rtos_hooks.c</FileName>
+              <FileName>apl_rtos_hooks.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\app_rtos_hooks.c</FilePath>
+              <FilePath>..\..\APL\apl_rtos_hooks.c</FilePath>
             </File>
           </Files>
         </Group>

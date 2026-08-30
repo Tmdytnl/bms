@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bq76940.h"
 
 extern volatile uint32_t g_p7_probe;

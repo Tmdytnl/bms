@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bq76940_control.h"
 #include "bq76940_regs.h"
 

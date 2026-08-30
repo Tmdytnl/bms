@@ -10,7 +10,7 @@
 
 #include <stddef.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 #include "bms_data.h"
 #include "bms_protect.h"
 #include "bq76940_regs.h"

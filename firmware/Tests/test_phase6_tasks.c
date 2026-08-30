@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "app_rtos.h"
+#include "apl_rtos.h"
 
 #define TEST_CHECK(expr_)          \
     do                             \
