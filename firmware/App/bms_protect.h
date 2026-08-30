@@ -59,14 +59,14 @@
 
 typedef enum
 {
-    BMS_PROTECT_DRAIN_COMPLETE = 0,
-    BMS_PROTECT_DRAIN_RETRY_REQUIRED
+    BMS_PROTECT_DRAIN_COMPLETE = 0, /* 本轮读到稳定低电平，暂无已知未处理工作。 */
+    BMS_PROTECT_DRAIN_RETRY_REQUIRED /* 仍高、锁忙或事务失败，必须短延时后续跑。 */
 } BMS_ProtectDrainResult_t;
 
 typedef enum
 {
-    BMS_PROTECT_SERVICE_IDLE = 0,
-    BMS_PROTECT_SERVICE_RETRY_REQUIRED
+    BMS_PROTECT_SERVICE_IDLE = 0,          /* ALERT 低且 drain 完成，可回到 semaphore 等待。 */
+    BMS_PROTECT_SERVICE_RETRY_REQUIRED     /* 保持 task-level pending，不依赖新边沿。 */
 } BMS_ProtectServiceResult_t;
 
 typedef struct
@@ -91,8 +91,8 @@ typedef struct
      * 持续高位当成新事件；软件无法区分“旧位未清”与“刚到达的新同类事件”。
      */
     uint8_t w1c_finalization_ambiguous_mask;
-    bool cc_queue_overflow_latched;
-    bool w1c_finalization_ambiguous_latched;
+    bool cc_queue_overflow_latched;          /* 曾发生队列拥塞，供精度降级诊断。 */
+    bool w1c_finalization_ambiguous_latched; /* 曾无法确认 W1C 最终提交状态。 */
 } BMS_ProtectDiagnostics_t;
 
 /*
@@ -104,11 +104,11 @@ typedef struct
  */
 typedef struct
 {
-    int16_t raw;
-    TickType_t tick;
-    uint32_t sequence;
-    uint32_t xready_generation;
-    bool valid;
+    int16_t raw;                 /* 已被 Protect 接纳的有符号 CC 原始值。 */
+    TickType_t tick;             /* 读取/入队时刻，Sample 用于形成 timestamp。 */
+    uint32_t sequence;           /* mailbox 每次接受新样本递增，避免重复发布。 */
+    uint32_t xready_generation;  /* 样本所属 AFE 生命周期。 */
+    bool valid;                  /* false 表示尚无样本或已被 XREADY 立即失效。 */
 } BMS_ProtectLatestCc_t;
 
 /*
@@ -119,56 +119,56 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t xready_generation;
-    bool active;
+    uint32_t xready_generation; /* 每次首次观察 inactive→active 时递增。 */
+    bool active;                /* 当前 XREADY 恢复链是否仍未完成。 */
 } BMS_ProtectXreadyState_t;
 
 typedef enum
 {
-    BMS_PROTECT_SOURCE_HW_OV = 0,
-    BMS_PROTECT_SOURCE_HW_UV,
-    BMS_PROTECT_SOURCE_HW_OCD,
-    BMS_PROTECT_SOURCE_HW_SCD,
-    BMS_PROTECT_SOURCE_COUNT
+    BMS_PROTECT_SOURCE_HW_OV = 0, /* AFE 单体过压 source identity。 */
+    BMS_PROTECT_SOURCE_HW_UV,     /* AFE 单体欠压 source identity。 */
+    BMS_PROTECT_SOURCE_HW_OCD,    /* AFE 放电过流 source identity。 */
+    BMS_PROTECT_SOURCE_HW_SCD,    /* AFE 放电短路 source identity。 */
+    BMS_PROTECT_SOURCE_COUNT      /* source_generation 数组边界。 */
 } BMS_ProtectSourceId_t;
 
 typedef struct
 {
-    BMS_FaultSummary_t faults;
-    BMS_InhibitReasonBitmap_t inhibit_chg_reasons;
-    BMS_InhibitReasonBitmap_t inhibit_dsg_reasons;
-    uint32_t publication_revision;
-    uint32_t source_generation[BMS_PROTECT_SOURCE_COUNT];
-    uint32_t xready_generation;
-    bool xready_active;
+    BMS_FaultSummary_t faults;            /* active=当前未恢复；latched=需独立动作释放。 */
+    BMS_InhibitReasonBitmap_t inhibit_chg_reasons; /* Protect 权威充电禁止原因。 */
+    BMS_InhibitReasonBitmap_t inhibit_dsg_reasons; /* Protect 权威放电禁止原因。 */
+    uint32_t publication_revision;        /* 任一安全可见字段改变时递增。 */
+    uint32_t source_generation[BMS_PROTECT_SOURCE_COUNT]; /* 各硬件源事件身份。 */
+    uint32_t xready_generation;           /* 当前/最近 XREADY epoch。 */
+    bool xready_active;                   /* 恢复未完成时始终 BOTH inhibit。 */
 } BMS_ProtectSafetySnapshot_t;
 
 typedef struct
 {
-    uint32_t xready_generation;
-    uint32_t recovery_revision;
-    bool valid;
+    uint32_t xready_generation; /* 只授权清当前 generation。 */
+    uint32_t recovery_revision; /* 发起授权的 Recovery transaction。 */
+    bool valid;                 /* 单次消费授权，Protect W1C 后作废。 */
 } BMS_ProtectXreadyClearAuthorization_t;
 
 typedef struct
 {
-    uint32_t xready_generation;
-    uint32_t recovery_revision;
-    uint32_t protect_revision;
-    bool accepted;
-    bool finalization_ambiguous;
+    uint32_t xready_generation;   /* ack 对应的 AFE epoch。 */
+    uint32_t recovery_revision;   /* ack 对应的恢复事务。 */
+    uint32_t protect_revision;    /* clear 结果进入安全快照后的版本。 */
+    bool accepted;                /* W1C 提交明确且 active 已清。 */
+    bool finalization_ambiguous;  /* STOP 失败导致提交点未知，禁止盲目重放。 */
 } BMS_ProtectXreadyClearAck_t;
 
 typedef struct
 {
-    BMS_FaultId_t fault_id;
-    uint32_t request_id;
-    uint32_t expected_source_generation;
-    uint32_t evaluated_sample_sequence;
-    uint32_t evaluated_afe_generation;
-    uint32_t qualification_revision;
-    uint32_t expiry_ms;
-    bool valid;
+    BMS_FaultId_t fault_id;              /* 只允许 HW_OV/HW_UV/HW_OCD。 */
+    uint32_t request_id;                 /* 每次资格完成形成的新请求身份。 */
+    uint32_t expected_source_generation; /* 必须仍是被评估的那次硬件事件。 */
+    uint32_t evaluated_sample_sequence;  /* 恢复证据读取的完整测量序号。 */
+    uint32_t evaluated_afe_generation;   /* 恢复证据所属 AFE 生命周期。 */
+    uint32_t qualification_revision;     /* HwRecovery 连续资格窗口版本。 */
+    uint32_t expiry_ms;                  /* 超时后即使字段相同也不再接受。 */
+    bool valid;                          /* false 表示没有可消费请求。 */
 } BMS_ProtectHwRecoveryRequest_t;
 
 typedef struct
@@ -183,10 +183,10 @@ typedef struct
 
 typedef enum
 {
-    BMS_SERVICE_RESET_HW_SCD = 0,
-    BMS_SERVICE_RESET_AFE_OVRD_ALERT,
-    BMS_SERVICE_RESET_AFE_COMM,
-    BMS_SERVICE_RESET_SOURCE_COUNT
+    BMS_SERVICE_RESET_HW_SCD = 0,       /* 释放短路动作锁存的受限服务请求。 */
+    BMS_SERVICE_RESET_AFE_OVRD_ALERT,   /* 释放 ALERT override 锁存。 */
+    BMS_SERVICE_RESET_AFE_COMM,         /* 释放满足策略条件的通信历史锁存。 */
+    BMS_SERVICE_RESET_SOURCE_COUNT      /* 服务源枚举边界。 */
 } BMS_ServiceResetSource_t;
 
 typedef struct
@@ -251,7 +251,12 @@ void EXTI1_IRQHandler(void);
  */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
 
-/* FET Manager 直接消费的 Protect-owned 权威方向性 inhibit 快照。 */
+/*
+ * FET Manager 直接消费的 Protect-owned 权威方向性 inhibit 快照。API 在 scheduler
+ * exclusion 中复制 owner state，再在局部构造 inhibit；调用者只读且无需 I2C mutex。
+ * active 表示当前条件未解决，latched 表示事件历史仍要求特定恢复/服务动作，两者
+ * 不能因为一次 SYS_STAT 读低就一起清除。
+ */
 BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void);
 
 /* H-02 诊断快照在任务上下文一致读取；计数器在 UINT32_MAX 饱和而不回绕。 */
@@ -332,4 +337,4 @@ bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
 void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms);
 #endif
 
-#endif /* BMS_PROTECT_H：include guard */
+#endif /* BMS_PROTECT_H：头文件防重复包含 */

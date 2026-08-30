@@ -4,6 +4,11 @@
  * 本模块不清 fault，只把 StateTask 观察到的 measurement recovery evidence
  * 组织成带 identity 的 request。generation 变化、source inactive/重触发、数据
  * 失效或 qualification expiry 都会使旧 exchange 失效，避免延迟 ack 清错事件。
+ *
+ * 以 HW_OV 为例：Protect 捕获 OV 并推进 source_generation -> 电压跨回恢复门限
+ * -> State/HwRecovery 用连续 fresh frame 完成资格计时 -> 形成带 sample/generation
+ * identity 的 request -> Protect 重新读取 SYS_STAT 并复核 identity -> 返回 ack。
+ * “当前 SYS_STAT 没有 OV bit”只是一个瞬时寄存器观察，不能替代这条证据链。
  */
 
 #include <stddef.h>
@@ -118,6 +123,11 @@ bool BMS_HwRecovery_Evaluate(
     {
         return false;
     }
+    /*
+     * 每个 source 独立跟踪自己的 generation 与连续安全窗口。条件中断或同类新
+     * 事件到达都会从 now_ms 重新计时，防止把两个不连续安全片段拼成恢复证据。
+     * SCD 不进入这里，因为它要求 source-specific service reset，而不是自动恢复。
+     */
     for (source = BMS_PROTECT_SOURCE_HW_OV;
          source <= BMS_PROTECT_SOURCE_HW_OCD;
          source = (BMS_ProtectSourceId_t)((uint32_t)source + 1UL))

@@ -230,7 +230,7 @@ static void BMS_Debug_CellRange(uint16_t *minimum_mv,
 static void BMS_Debug_FlushChunk(void)
 {
     /*
-     * 一次最多发送 BMS_DEBUG_MAX_BYTES_PER_SERVICE。TryWriteByte 只在 USART
+     * 一次最多发送 BMS_DEBUG_TX_CHUNK_BYTES。TryWriteByte 只在 USART
      * 当前可写时提交一个 byte；busy 就立即返回并保留 s_line_offset，形成
      * partial-line continuation，而不是让 debug 阻塞安全控制或 CAN mailbox。
      */
@@ -278,6 +278,11 @@ void BMS_Debug_Service(uint32_t now_ms)
     uint8_t index;
     uint8_t validity;
 
+    /*
+     * 状态机只有两种工作：若上一行未发完，先从 offset 继续最多 8 B；若已发完
+     * 且 1 s 周期到达，才捕获一组新快照并格式化下一行。这样不会在旧行中途
+     * 替换 buffer，也不会因为 UART busy 反复重建昂贵诊断投影。
+     */
     if (s_line_offset < s_line_length)
     {
         BMS_Debug_FlushChunk();

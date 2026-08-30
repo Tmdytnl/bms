@@ -52,8 +52,10 @@ static SoftI2C_Status_t SoftI2C_WaitSclHigh(SoftI2C_t *bus)
     uint16_t start;
     uint32_t guard;
 
+    /* open-drain 的“写 1”是 release；随后实读 high 才证明上拉/从机允许上升。 */
     bus->ops.scl_release();
     start = bus->ops.time_us16();
+    /* 时间差负责真实超时，guard 防止测试/故障 time source 永不前进时死循环。 */
     guard = (uint32_t)bus->config.scl_high_timeout_us + 1UL;
     while (guard != 0UL)
     {
@@ -112,6 +114,7 @@ SoftI2C_Status_t SoftI2C_Init(SoftI2C_t *bus,
     bus->initialized = true;
     bus->started = false;
     bus->read_response_pending = false;
+    /* 初始化结束前释放双线并确认 idle；“对象已填充”不等于物理总线可用。 */
     bus->ops.sda_release();
     bus->ops.scl_release();
     return SoftI2C_WaitBusIdle(bus);
@@ -138,6 +141,7 @@ SoftI2C_Status_t SoftI2C_WaitBusIdle(SoftI2C_t *bus)
         return SOFT_I2C_STATUS_STATE_ERROR;
     }
 
+    /* START 前不得覆盖尚未完成的 transaction/read-response 状态。 */
     bus->ops.sda_release();
     bus->ops.scl_release();
     start = bus->ops.time_us16();
@@ -203,6 +207,7 @@ SoftI2C_Status_t SoftI2C_RepeatedStart(SoftI2C_t *bus)
         return SOFT_I2C_STATUS_STATE_ERROR;
     }
 
+    /* 先在 SCL low 释放 SDA，再把 SCL 升高并验证 SDA high，最后制造 high→low。 */
     bus->ops.sda_release();
     SOFT_I2C_HALF_CYCLE_OR_RETURN(bus, status);
     status = SoftI2C_WaitSclHigh(bus);
@@ -263,6 +268,7 @@ SoftI2C_Status_t SoftI2C_Stop(SoftI2C_t *bus)
     }
 
 cleanup:
+    /* 无论 STOP 哪一相失败，软件状态都退休；上层据返回值决定是否恢复总线。 */
     bus->ops.scl_release();
     bus->ops.sda_release();
     bus->started = false;
@@ -286,6 +292,7 @@ SoftI2C_Status_t SoftI2C_WriteByte(SoftI2C_t *bus, uint8_t value)
         return SOFT_I2C_STATUS_STATE_ERROR;
     }
 
+    /* MSB first；SDA 只在 SCL low 时改变，SCL high 期间保持稳定供从机采样。 */
     for (bit_index = 0U; bit_index < 8U; ++bit_index)
     {
         if ((value & 0x80U) != 0U)
@@ -307,6 +314,7 @@ SoftI2C_Status_t SoftI2C_WriteByte(SoftI2C_t *bus, uint8_t value)
         value <<= 1;
     }
 
+    /* 第 9 位必须释放 SDA，把应答线的所有权交给从机。 */
     bus->ops.sda_release();
     SOFT_I2C_HALF_CYCLE_OR_RETURN(bus, status);
     status = SoftI2C_WaitSclHigh(bus);
@@ -349,6 +357,7 @@ SoftI2C_Status_t SoftI2C_ReadByteBegin(SoftI2C_t *bus, uint8_t *value)
                                  SOFT_I2C_STATUS_STATE_ERROR;
     }
 
+    /* 读数据时主机全程释放 SDA；每次 SCL high 采样一位并按 MSB first 拼接。 */
     received = 0U;
     bus->ops.sda_release();
     for (bit_index = 0U; bit_index < 8U; ++bit_index)
@@ -366,6 +375,7 @@ SoftI2C_Status_t SoftI2C_ReadByteBegin(SoftI2C_t *bus, uint8_t *value)
     }
 
     *value = received;
+    /* 把第 9 位拆成显式阶段，供 BQ 层在检查 CRC 后决定 ACK 还是 NACK。 */
     bus->read_response_pending = true;
     return SOFT_I2C_STATUS_OK;
 }
@@ -387,6 +397,7 @@ SoftI2C_Status_t SoftI2C_SendReadResponse(SoftI2C_t *bus,
         return SOFT_I2C_STATUS_STATE_ERROR;
     }
 
+    /* 此时第 9 位由 master 驱动：ACK=拉低，NACK=释放。 */
     if (response == SOFT_I2C_MASTER_ACK)
     {
         bus->ops.sda_drive_low();

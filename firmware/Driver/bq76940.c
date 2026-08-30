@@ -56,6 +56,7 @@ static BQ76940_Status_t BQ76940_StopAfterFailure(BQ76940_t *device,
 
     if ((device != NULL) && (device->bus != NULL))
     {
+        /* 即使主事务已失败也尽力生成 STOP，防止下一调用继承半截总线状态。 */
         stop_status = SoftI2C_Stop(device->bus);
         if (stop_status != SOFT_I2C_STATUS_OK)
         {
@@ -126,6 +127,7 @@ BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
+    /* write 流程：START -> SLA+W -> register -> (data, CRC)* -> STOP。 */
     i2c_status = SoftI2C_Start(device->bus);
     if (i2c_status != SOFT_I2C_STATUS_OK)
     {
@@ -154,6 +156,7 @@ BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
             result = BQ76940_MapI2CStatus(i2c_status);
             goto failure;
         }
+        /* 首字节 CRC 包含 address+register；后续 CRC 按器件协议对单 data 计算。 */
         crc = (index == 0U) ?
               BQ76940_CRC8_FirstWrite(BQ76940_I2C_WIRE_WRITE,
                                       start_register,
@@ -231,6 +234,7 @@ BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
+    /* read 流程先用 SLA+W 选择寄存器，再 repeated START + SLA+R 连续读取。 */
     i2c_status = SoftI2C_Start(device->bus);
     if (i2c_status != SOFT_I2C_STATUS_OK)
     {
@@ -266,6 +270,7 @@ BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
 
     for (index = 0U; index < length; ++index)
     {
+        /* 每个 data 后紧跟一个 CRC；读取 data 后先 ACK，才能取得其 CRC byte。 */
         i2c_status = SoftI2C_ReadByteBegin(device->bus, &staged[index]);
         if (i2c_status != SOFT_I2C_STATUS_OK)
         {
@@ -292,6 +297,7 @@ BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
                        BQ76940_CRC8_NextByte(staged[index]);
         if (actual_crc != expected_crc)
         {
+            /* CRC 错误后主机 NACK 当前 CRC，终止继续传输，并仍完成 mandatory STOP。 */
             result = BQ76940_STATUS_CRC_MISMATCH;
             i2c_status = SoftI2C_SendReadResponse(device->bus,
                                                   SOFT_I2C_MASTER_NACK);
@@ -302,6 +308,7 @@ BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
             goto failure;
         }
 
+        /* 只有最后一个 CRC 返回 NACK，告诉 AFE 本次 block 到此结束。 */
         response = ((index + 1U) < length) ? SOFT_I2C_MASTER_ACK :
                                              SOFT_I2C_MASTER_NACK;
         i2c_status = SoftI2C_SendReadResponse(device->bus, response);
@@ -317,6 +324,7 @@ BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
     {
         return BQ76940_MapI2CStatus(i2c_status);
     }
+    /* STOP 确认后才把 staging 整体发布，调用者不会看到半新半旧 block。 */
     (void)memcpy(data, staged, length);
     return BQ76940_STATUS_OK;
 
@@ -356,10 +364,12 @@ BQ76940_Status_t BQ76940_DecodeCalibration(uint8_t adc_gain1,
         return BQ76940_STATUS_INVALID_ARGUMENT;
     }
 
+    /* gain trim 被拆在两个非相邻寄存器中，必须掩码后按数据手册重新拼接。 */
     trim = (uint8_t)(((adc_gain1 & BQ76940_ADCGAIN1_MASK) << 1) |
                      ((adc_gain2 & BQ76940_ADCGAIN2_MASK) >> 5));
     decoded.gain_uv_per_lsb =
         (uint16_t)(BQ76940_ADC_GAIN_BASE_UV_PER_LSB + trim);
+    /* ADCOFFSET 是 8-bit 二补数；显式扩展避免编译器 char signedness 差异。 */
     decoded.offset_mv = ((adc_offset & 0x80U) != 0U) ?
                         (int16_t)((int16_t)adc_offset - 256) :
                         (int16_t)adc_offset;
@@ -390,6 +400,7 @@ BQ76940_Status_t BQ76940_ReadCalibration(
     {
         return BQ76940_STATUS_INVALID_ARGUMENT;
     }
+    /* 三次事务全部成功并解码后才写 caller，避免暴露拼到一半的校准。 */
     result = BQ76940_ReadByte(device, BQ76940_REG_ADCGAIN1, &gain1);
     if (result != BQ76940_STATUS_OK)
     {
@@ -451,6 +462,7 @@ BQ76940_Status_t BQ76940_ConvertCellRawToMv(
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
+    /* 先在 uV 域完成有符号 offset，再 half-up 到 mV，避免负值被无符号回绕。 */
     microvolts = ((int64_t)raw14 * calibration->gain_uv_per_lsb) +
                  ((int64_t)calibration->offset_mv * 1000LL);
     if (microvolts < 0LL)

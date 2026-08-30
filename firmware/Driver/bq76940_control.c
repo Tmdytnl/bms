@@ -4,7 +4,7 @@
 
 /* TI SLUSBK2I Rev.I Tables 8-9..8-11 threshold/delay；RSNS=0 为 lower range。 */
 
-/* OCD threshold（mV）：code 0x0..0xF。 */
+/* OCD 阈值表（mV）：编码范围 0x0..0xF。 */
 static const uint16_t s_ocd_threshold_rsns1[BQ76940_CONTROL_OCD_THRESHOLD_COUNT] =
 {
     17U, 22U, 28U, 33U, 39U, 44U, 50U, 56U,
@@ -17,13 +17,13 @@ static const uint16_t s_ocd_threshold_rsns0[BQ76940_CONTROL_OCD_THRESHOLD_COUNT]
     31U, 33U, 36U, 39U, 42U, 44U, 47U, 50U
 };
 
-/* OCD delay（ms）：code 0x0..0x7。 */
+/* OCD 延迟表（ms）：编码范围 0x0..0x7。 */
 static const uint16_t s_ocd_delay_ms[BQ76940_CONTROL_OCD_DELAY_COUNT] =
 {
     8U, 20U, 40U, 80U, 160U, 320U, 640U, 1280U
 };
 
-/* SCD threshold（mV）：code 0x0..0x7。 */
+/* SCD 阈值表（mV）：编码范围 0x0..0x7。 */
 static const uint16_t s_scd_threshold_rsns1[BQ76940_CONTROL_SCD_THRESHOLD_COUNT] =
 {
     44U, 67U, 89U, 111U, 133U, 155U, 178U, 200U
@@ -34,26 +34,26 @@ static const uint16_t s_scd_threshold_rsns0[BQ76940_CONTROL_SCD_THRESHOLD_COUNT]
     22U, 33U, 44U, 56U, 67U, 78U, 89U, 100U
 };
 
-/* SCD delay（us）：code 0x0..0x3。 */
+/* SCD 延迟表（us）：编码范围 0x0..0x3。 */
 static const uint16_t s_scd_delay_us[BQ76940_CONTROL_SCD_DELAY_COUNT] =
 {
     70U, 100U, 200U, 400U
 };
 
-/* OV delay（s）：code 0x0..0x3。 */
+/* OV 延迟表（s）：编码范围 0x0..0x3。 */
 static const uint8_t s_ov_delay_s[BQ76940_CONTROL_OV_DELAY_COUNT] =
 {
     1U, 2U, 4U, 8U
 };
 
-/* UV delay（s）：code 0x0..0x3。 */
+/* UV 延迟表（s）：编码范围 0x0..0x3。 */
 static const uint8_t s_uv_delay_s[BQ76940_CONTROL_UV_DELAY_COUNT] =
 {
     1U, 4U, 8U, 16U
 };
 
 /* ------------------------------------------------------------------ */
-/* OV / UV trip encoding。 */
+/* OV / UV 跳闸寄存器编码。 */
 /* ------------------------------------------------------------------ */
 
 static BQ76940_Status_t BQ76940_Control_RequireCalibration(
@@ -69,7 +69,7 @@ static BQ76940_Status_t BQ76940_Control_RequireCalibration(
     return BQ76940_STATUS_OK;
 }
 
-/* full_code=(target_mv-offset)×1000/gain；trip=(full>>4)&0xFF。 */
+/* 完整码 full_code=(target_mv-offset)×1000/gain；trip=(full>>4)&0xFF。 */
 static BQ76940_Status_t BQ76940_Control_EncodeTrip(
     uint16_t target_mv,
     const BQ76940_Calibration_t *calibration,
@@ -92,6 +92,7 @@ static BQ76940_Status_t BQ76940_Control_EncodeTrip(
         return result;
     }
 
+    /* 先移除 offset 再除 gain；64-bit 保证 mV→uV 放大不溢出。 */
     numerator = ((int64_t)target_mv - (int64_t)calibration->offset_mv) *
                 1000LL;
     if (numerator < 0LL)
@@ -121,7 +122,7 @@ BQ76940_Status_t BQ76940_Control_EncodeOvTrip(
     const BQ76940_Calibration_t *calibration,
     uint8_t *trip_value)
 {
-    /* OV：upper MSB=10，lower LSB=1000。 */
+    /* OV：高位前缀 MSB=10，低位预设 LSB=1000。 */
     return BQ76940_Control_EncodeTrip(target_mv, calibration,
                                       0x2U, 0x8U, trip_value);
 }
@@ -131,7 +132,7 @@ BQ76940_Status_t BQ76940_Control_EncodeUvTrip(
     const BQ76940_Calibration_t *calibration,
     uint8_t *trip_value)
 {
-    /* UV：upper MSB=01，lower LSB=0000。 */
+    /* UV：高位前缀 MSB=01，低位预设 LSB=0000。 */
     return BQ76940_Control_EncodeTrip(target_mv, calibration,
                                       0x1U, 0x0U, trip_value);
 }
@@ -190,7 +191,7 @@ uint16_t BQ76940_Control_DecodeUvTripMv(
 }
 
 /* ------------------------------------------------------------------ */
-/* OCD / SCD encoding。 */
+/* OCD / SCD 离散表编码。 */
 /* ------------------------------------------------------------------ */
 
 static BQ76940_Status_t BQ76940_Control_SelectFromTable(
@@ -205,7 +206,10 @@ static BQ76940_Status_t BQ76940_Control_SelectFromTable(
     {
         return BQ76940_STATUS_INVALID_ARGUMENT;
     }
-    /* 选择 value>=requested 的最小合法 code，避免低于请求门限。 */
+    /*
+     * 选择 value>=requested 的最小合法 code：离散硬件只能向更大的物理请求
+     * 取整，且结果可预测；超上限拒绝，绝不静默钳位到最后一项。
+     */
     for (index = 0U; index < count; ++index)
     {
         if (table[index] >= requested)
@@ -355,7 +359,7 @@ BQ76940_Status_t BQ76940_Control_ComposeProtect3(
 }
 
 /* ------------------------------------------------------------------ */
-/* FET bit composition。 */
+/* FET 位安全合成。 */
 /* ------------------------------------------------------------------ */
 
 uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
@@ -410,6 +414,7 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
         effective->dsg = BQ76940_FET_DESIRE_DISABLE;
         return;
     }
+    /* inhibit 的优先级高于 desire：任一安全 owner 都能单向撤销对应使能。 */
     effective->chg = (inhibit_chg) ? BQ76940_FET_DESIRE_DISABLE :
                      request->chg;
     effective->dsg = (inhibit_dsg) ? BQ76940_FET_DESIRE_DISABLE :
@@ -417,7 +422,7 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
 }
 
 /* ------------------------------------------------------------------ */
-/* Internal balancing mapping。 */
+/* AFE 内部均衡通道映射。 */
 /* ------------------------------------------------------------------ */
 
 /* logical cell 1..13→CB1..8、CB10..13、CB15；跳过 short channel CB9/CB14。 */
@@ -540,6 +545,7 @@ bool BQ76940_Control_ComposeCellBalPolicy(
         return false;
     }
 
+    /* 先清零输出；后续任何计数/映射失败都显式回到全关，禁止残留半成品。 */
     *bal1 = 0U;
     *bal2 = 0U;
     *bal3 = 0U;
@@ -581,6 +587,7 @@ uint16_t BQ76940_Control_DecodeCellBal(uint8_t bal1,
     uint8_t reg_value;
     uint8_t bit_in_reg;
 
+    /* 反解仍遍历 logical mapping，所以物理 CB9/CB14 即使置位也不会冒充电芯。 */
     bitmap = 0U;
     for (index = 0U; index < BMS_CELL_COUNT; ++index)
     {

@@ -73,6 +73,7 @@ BQ76940_Status_t BQ76940_ReadCellVoltages13(
 
     for (index = 0U; index < BQ76940_MEASUREMENT_CELL_COUNT; ++index)
     {
+        /* 查表跳过短接通道；converted 是第二级 staging，换算失败不污染 caller。 */
         vc_channel = s_logical_cell_to_vc[index];
         raw14 = BQ76940_DecodeRaw14(
             staged[(vc_channel - 1U) * 2U],
@@ -152,6 +153,7 @@ BQ76940_Status_t BQ76940_ReadCcRaw(BQ76940_t *device, int16_t *cc_raw)
     {
         return result;
     }
+    /* CC 的方向信息在二补数符号位中，此层只解码，不擅自套用板级 polarity。 */
     *cc_raw = BQ76940_DecodeSigned16((uint8_t)(raw >> 8),
                                      (uint8_t)(raw & 0xFFU));
     return BQ76940_STATUS_OK;
@@ -206,6 +208,7 @@ BQ76940_Status_t BQ76940_ReadTs1Raw(BQ76940_t *device,
     {
         return result;
     }
+    /* 与 cell 一样只取 HI 的低 6 bit；高位状态/保留位不能进入 ADC 值。 */
     *ts1_raw14 = BQ76940_DecodeRaw14((uint8_t)(raw >> 8),
                                      (uint8_t)(raw & 0xFFU));
     return BQ76940_STATUS_OK;
@@ -228,7 +231,7 @@ BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
         return BQ76940_STATUS_RANGE_ERROR;
     }
 
-    /* VTSX[uV] = raw×382 uV/LSB（eq.4）。 */
+    /* 热敏端电压 VTSX[uV] = raw×382 uV/LSB（公式 4）。 */
     ts_uv = (int64_t)ts1_raw14 *
             (int64_t)BQ76940_MEASUREMENT_TS_UV_PER_LSB;
     denominator = (int64_t)BQ76940_MEASUREMENT_TS_REGOUT_UV - ts_uv;

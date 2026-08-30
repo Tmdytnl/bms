@@ -84,6 +84,12 @@ BMS_HealthDecision_t BMS_Health_Evaluate(
     uint8_t roster_index;
     uint8_t task_index;
 
+    /*
+     * 默认 fail-closed：输入/roster 无效时直接给出 health fault 且不允许喂狗。
+     * 正常路径比较每个 task 的 generation；变化会刷新 last_advance_ms，不变化
+     * 则时间继续累积。只有全 roster 至少推进一次后才 arm IWDG，避免启动早期
+     * 某些任务尚未获得运行机会就误判，也避免“只启动了 State 自己”便开始喂狗。
+     */
     decision.all_tasks_advanced = false;
     decision.watchdog_armed = false;
     decision.feed_allowed = false;

@@ -4,7 +4,8 @@
  * A/B page record 使用 magic+version+sequence+payload+CRC32+commit marker。
  * decode 只有在格式、CRC 与 commit 全部有效时才接纳；两个 slot 都有效时用
  * wrap-safe sequence 选择 newest-valid。保存永远写 inactive slot，因此掉电前
- * active old slot 保持不动。
+ * active old slot 保持不动。典型过程：A(seq=10) 正常运行 -> 擦除并写 B(seq=11)
+ * -> 校验 body -> 最后提交 B。若在提交前掉电，B 没有 marker，重启仍选择 A。
  */
 
 #include <stddef.h>
@@ -150,6 +151,7 @@ BMS_PersistenceSlot_t BMS_Persistence_SelectNewest(
     }
     valid_a = BMS_Persistence_Decode(slot_a, &decoded_a);
     valid_b = BMS_Persistence_Decode(slot_b, &decoded_b);
+    /* 单页有效时直接选它；双页有效时才比较序号，坏页绝不参与“新旧”判断。 */
     if (!valid_a && !valid_b)
     {
         return BMS_PERSISTENCE_SLOT_NONE;
@@ -157,6 +159,7 @@ BMS_PersistenceSlot_t BMS_Persistence_SelectNewest(
     if (valid_a && (!valid_b ||
         ((int32_t)(decoded_a.sequence - decoded_b.sequence) > 0)))
     {
+        /* 有符号差让 UINT32_MAX -> 0 的自然回绕仍保持正确先后关系。 */
         *payload = decoded_a;
         return BMS_PERSISTENCE_SLOT_A;
     }
@@ -207,6 +210,10 @@ bool BMS_Persistence_StoreInit(
     (void)memset(store, 0, sizeof(*store));
     store->policy = *policy;
     store->storage = *storage;
+    /*
+     * 启动阶段只读两页：即使一页损坏，也不立即擦写。这样上电恢复不会制造
+     * 一次额外的 Flash 磨损，也不会在供电仍不稳定时破坏仅存的恢复证据。
+     */
     read_a = store->storage.read(store->storage.context,
         policy->slot_a_address, slot_a, sizeof(slot_a));
     read_b = store->storage.read(store->storage.context,
@@ -220,6 +227,7 @@ bool BMS_Persistence_StoreInit(
     }
     store->active_slot = BMS_Persistence_SelectNewest(
         slot_a, slot_b, &store->cached);
+    /* cached 只在 SelectNewest 成功时有意义，have_active 是其有效性所有者。 */
     store->have_active = store->active_slot != BMS_PERSISTENCE_SLOT_NONE;
     if (!store->have_active)
     {
@@ -257,6 +265,7 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
     uint16_t halfword;
 
     candidate = *requested;
+    /* sequence 属于存储层；调用者不能伪造“更新”的记录身份。 */
     candidate.sequence = store->have_active ?
         store->cached.sequence + 1UL : 1UL;
     if (!BMS_Persistence_Encode(&candidate, record))
@@ -268,6 +277,7 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
     target_address = target_slot == BMS_PERSISTENCE_SLOT_A ?
         store->policy.slot_a_address : store->policy.slot_b_address;
 
+    /* 永远选择 inactive 页，整个失败窗口内都不触碰当前 active 页。 */
     if (!store->storage.erase_page(store->storage.context, target_address))
     {
         BMS_Persistence_SaturatingIncrement(
@@ -278,7 +288,8 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
      * 先 erase inactive page，再写 CRC 覆盖的 payload/body 并逐字节 readback；
      * commit halfword 在最后一步前保持 erased 0xFFFF，使任一中途掉电得到的
      * candidate 都是 invalid。只有 body 完整验证后才写 commit marker，因此旧
-     * slot 至少一直可用到新 slot 真正提交。
+     * slot 至少一直可用到新 slot 真正提交。这里第一次 Decode 必须失败：body
+     * 虽然正确，但 marker 尚未写入；若意外成功，说明后端未真正擦除提交位置。
      */
     for (offset = 0U; offset < BMS_PERSISTENCE_BODY_BYTES; offset += 2U)
     {
@@ -302,6 +313,7 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
     }
     halfword = BMS_Persistence_GetU16(
         &record[BMS_PERSISTENCE_COMMIT_OFFSET]);
+    /* commit marker 是唯一“发布点”；此前新页只是候选记录。 */
     if (!store->storage.program_halfword(store->storage.context,
             target_address + BMS_PERSISTENCE_COMMIT_OFFSET, halfword))
     {
@@ -324,6 +336,7 @@ static BMS_PersistenceStoreResult_t BMS_Persistence_StoreRecord(
         return BMS_PERSISTENCE_STORE_VERIFY_ERROR;
     }
 
+    /* 只有提交后完整读回一致，RAM 的 active/cached 身份才原子式切换到新页。 */
     store->cached = verified;
     store->active_slot = target_slot;
     store->have_active = true;
@@ -353,12 +366,14 @@ BMS_PersistenceStoreResult_t BMS_Persistence_StoreSocIfDue(
     if ((uint32_t)(now_ms - store->last_save_ms) <
         store->policy.minimum_save_interval_ms)
     {
+        /* 时间门限先限流，避免 SOC 高频抖动把 Flash 当作运行时日志使用。 */
         BMS_Persistence_SaturatingIncrement(
             &store->diagnostics.save_not_due_count);
         return BMS_PERSISTENCE_STORE_NOT_DUE;
     }
     if (store->have_active)
     {
+        /* 已有基准时还需跨过 SOC 变化门限；首次有效样本不受该门限阻挡。 */
         change = soc_permille >= store->cached.soc_permille ?
             (uint16_t)(soc_permille - store->cached.soc_permille) :
             (uint16_t)(store->cached.soc_permille - soc_permille);
@@ -377,6 +392,7 @@ BMS_PersistenceStoreResult_t BMS_Persistence_StoreSocIfDue(
     result = BMS_Persistence_StoreRecord(store, &requested);
     if (result == BMS_PERSISTENCE_STORE_SAVED)
     {
+        /* 失败不能推进节流时间，否则会掩盖下一次本应立即进行的重试。 */
         store->last_save_ms = now_ms;
     }
     return result;

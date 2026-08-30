@@ -14,20 +14,25 @@
 
 typedef struct
 {
-    uint32_t sequence;               /* wrap-safe newest-valid 选择序号 */
-    uint16_t soc_permille;
-    uint32_t remaining_capacity_mah;
-    uint32_t persistent_counter0;
-    uint32_t persistent_counter1;
+    uint32_t sequence;               /* 单调提交序号；比较时按有符号差处理回绕 */
+    uint16_t soc_permille;           /* 0..1000，千分比而非百分比 */
+    uint32_t remaining_capacity_mah; /* 与 SOC 同一次快照对应的剩余容量 */
+    uint32_t persistent_counter0;    /* 上层定义的掉电后仍需延续的计数器 0 */
+    uint32_t persistent_counter1;    /* 上层定义的掉电后仍需延续的计数器 1 */
 } BMS_PersistencePayload_t;
 
 typedef enum
 {
-    BMS_PERSISTENCE_SLOT_NONE = 0,
-    BMS_PERSISTENCE_SLOT_A,
-    BMS_PERSISTENCE_SLOT_B
+    BMS_PERSISTENCE_SLOT_NONE = 0, /* 两页都不是可恢复的已提交记录 */
+    BMS_PERSISTENCE_SLOT_A,        /* 当前最新有效记录位于 A 页 */
+    BMS_PERSISTENCE_SLOT_B         /* 当前最新有效记录位于 B 页 */
 } BMS_PersistenceSlot_t;
 
+/*
+ * 存储后端接口把“掉电安全协议”与具体 MCU Flash 驱动解耦。
+ * program_halfword 必须遵守目标 Flash 的 1 -> 0 编程约束；擦除粒度由
+ * erase_page 承担。context 让主机测试可注入 RAM Flash/故障模型。
+ */
 typedef struct
 {
     bool (*read)(void *context, uint32_t address,
@@ -40,35 +45,36 @@ typedef struct
 
 typedef struct
 {
-    uint32_t load_io_failure_count;
-    uint32_t both_invalid_count;
-    uint32_t save_success_count;
-    uint32_t save_io_failure_count;
-    uint32_t save_verify_failure_count;
-    uint32_t save_not_due_count;
+    uint32_t load_io_failure_count;   /* 启动读取任一页失败 */
+    uint32_t both_invalid_count;      /* 两页都未通过格式/CRC/提交标志 */
+    uint32_t save_success_count;      /* 新页完整提交且二次校验成功 */
+    uint32_t save_io_failure_count;   /* 擦除、编程或读取操作失败 */
+    uint32_t save_verify_failure_count; /* 写入内容或提交后解码不一致 */
+    uint32_t save_not_due_count;      /* 周期/变化量门限尚未满足 */
 } BMS_PersistenceDiagnostics_t;
 
 typedef enum
 {
-    BMS_PERSISTENCE_STORE_NOT_DUE = 0,
-    BMS_PERSISTENCE_STORE_SAVED,
-    BMS_PERSISTENCE_STORE_REJECTED,
-    BMS_PERSISTENCE_STORE_IO_ERROR,
-    BMS_PERSISTENCE_STORE_VERIFY_ERROR
+    BMS_PERSISTENCE_STORE_NOT_DUE = 0, /* 合法请求，但尚无需磨损 Flash */
+    BMS_PERSISTENCE_STORE_SAVED,       /* 新记录已经成为最新有效页 */
+    BMS_PERSISTENCE_STORE_REJECTED,    /* 参数、初始化状态或数据无效 */
+    BMS_PERSISTENCE_STORE_IO_ERROR,    /* 底层擦写/读取失败，旧页仍保留 */
+    BMS_PERSISTENCE_STORE_VERIFY_ERROR /* 写后校验失败，不切换 active */
 } BMS_PersistenceStoreResult_t;
 
 typedef struct
 {
-    BMS_FlashPolicy_t policy;
-    BMS_PersistenceStorageOps_t storage;
-    BMS_PersistencePayload_t cached;
-    BMS_PersistenceDiagnostics_t diagnostics;
-    BMS_PersistenceSlot_t active_slot;
-    uint32_t last_save_ms;
-    bool initialized;
-    bool have_active;
+    BMS_FlashPolicy_t policy;          /* 地址、页大小、节流周期与变化门限 */
+    BMS_PersistenceStorageOps_t storage; /* 目标 Flash 或测试替身 */
+    BMS_PersistencePayload_t cached;   /* 最近一次完整提交并验证的内容 */
+    BMS_PersistenceDiagnostics_t diagnostics; /* 饱和累计的可观测性计数 */
+    BMS_PersistenceSlot_t active_slot; /* cached 对应的当前有效页 */
+    uint32_t last_save_ms;             /* 只在成功提交后推进 */
+    bool initialized;                  /* 后端配置和启动扫描已经完成 */
+    bool have_active;                  /* A/B 中至少存在一条有效记录 */
 } BMS_PersistenceStore_t;
 
+/* 记录格式工具无全局状态，可由单元测试直接验证 CRC、编码和损坏拒绝语义。 */
 uint32_t BMS_Persistence_Crc32(const uint8_t *data, uint16_t length);
 bool BMS_Persistence_Encode(
     const BMS_PersistencePayload_t *payload,
@@ -81,6 +87,11 @@ BMS_PersistenceSlot_t BMS_Persistence_SelectNewest(
     const uint8_t slot_b[BMS_PERSISTENCE_RECORD_BYTES],
     BMS_PersistencePayload_t *payload);
 
+/*
+ * StoreInit 只扫描 A/B 页并建立 RAM 缓存，不会为了“修复”坏页而写 Flash。
+ * StoreSocIfDue 由单一任务串行调用；store 自身不提供锁，调用者不得并发访问。
+ * 返回 NOT_DUE 表示正常节流，不是故障；失败返回时 active/cached 保持旧值。
+ */
 bool BMS_Persistence_StoreInit(
     BMS_PersistenceStore_t *store,
     const BMS_FlashPolicy_t *policy,
@@ -102,6 +113,8 @@ BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
 /*
  * 正式 target adapter。init 只读取 A/B page，绝不为“修复”无效记录而写 Flash；
  * Task_SOC 是低频 save service 唯一调用者，避免多个任务竞争 erase/program。
+ * 例如 A 页 VALID/seq=10、B 页 VALID/seq=11 时启动选择 B；下一次保存擦写 A，
+ * 写入 body+CRC、读回验证，最后才写 commit marker。任一步掉电仍可回退到 B。
  */
 bool BMS_Persistence_TargetInit(const BMS_FlashPolicy_t *policy);
 bool BMS_Persistence_TargetGetLatest(BMS_PersistencePayload_t *payload);
@@ -114,4 +127,4 @@ BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
     uint32_t now_ms);
 BMS_PersistenceDiagnostics_t BMS_Persistence_TargetGetDiagnostics(void);
 
-#endif /* BMS_PERSISTENCE_H：include guard */
+#endif /* BMS_PERSISTENCE_H：头文件防重复包含 */

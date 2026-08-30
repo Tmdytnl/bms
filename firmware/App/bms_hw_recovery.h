@@ -17,6 +17,7 @@ typedef struct
     uint32_t qualification_revision;                      /* measurement qualification 版本 */
 } BMS_HwRecoveryEngine_t;
 
+/* StateTask 启动时初始化纯内存 engine；不读取寄存器、不清 fault。 */
 void BMS_HwRecovery_Init(BMS_HwRecoveryEngine_t *engine);
 
 /*
@@ -24,7 +25,8 @@ void BMS_HwRecovery_Init(BMS_HwRecoveryEngine_t *engine);
  * OV/UV/OCD 条件已恢复；必须用 fresh、同 AFE generation 的 measurement 持续
  * 满足 threshold+hysteresis+delay，生成含 source_generation/request_id/evidence
  * expiry 的 request。Protect 再以 fresh status read 返回匹配 ack。SCD 仍只允许
- * source-specific service reset。
+ * source-specific service reset。返回 true 只表示产出一个 request，不表示 fault
+ * 已清；真正 owner 仍是 ProtectTask。
  */
 bool BMS_HwRecovery_Evaluate(
     BMS_HwRecoveryEngine_t *engine,
@@ -34,4 +36,4 @@ bool BMS_HwRecovery_Evaluate(
     uint32_t now_ms,
     BMS_ProtectHwRecoveryRequest_t *request);
 
-#endif /* BMS_HW_RECOVERY_H：include guard */
+#endif /* BMS_HW_RECOVERY_H：头文件防重复包含 */

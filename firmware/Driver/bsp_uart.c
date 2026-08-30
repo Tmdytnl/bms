@@ -38,6 +38,7 @@ bool BSP_UART1_Init115200(void)
     GPIO_InitTypeDef gpio;
     USART_InitTypeDef uart;
 
+    /* 配置期间先撤销可用身份；回读确认前 TryRead/TryWrite 都会 fail fast。 */
     s_initialized = false;
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA |
                            RCC_APB2Periph_USART1, ENABLE);
@@ -63,6 +64,7 @@ bool BSP_UART1_Init115200(void)
     USART_Init(USART1, &uart);
     USART_Cmd(USART1, ENABLE);
 
+    /* 固定时钟下 BRR 是可审核证据，同时确认收发器确已 enable。 */
     s_initialized = (USART1->BRR == BSP_UART1_EXPECTED_BRR) &&
         ((USART1->CR1 & (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE)) ==
          (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE));
@@ -76,6 +78,7 @@ bool BSP_UART1_TryWriteByte(uint8_t value)
     {
         return false;
     }
+    /* 只在 TXE 当下为真时装入 DR，绝不轮询，所以不会拖慢安全任务。 */
     USART_SendData(USART1, value);
     return true;
 }
@@ -87,6 +90,7 @@ bool BSP_UART1_TryReadByte(uint8_t *value)
     {
         return false;
     }
+    /* 先验证 RXNE 再提交 caller 输出；无数据与未初始化都保持原值。 */
     *value = (uint8_t)USART_ReceiveData(USART1);
     return true;
 }
@@ -103,6 +107,7 @@ uint16_t BSP_UART1_Write(const uint8_t *data, uint16_t length)
     written = 0U;
     while (written < length)
     {
+        /* 每个 byte 单独设置上限；超时返回已完成长度，调用者可识别短写。 */
         spins = 0UL;
         while (!BSP_UART1_TryWriteByte(data[written]))
         {

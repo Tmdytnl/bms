@@ -40,6 +40,16 @@ static void BMS_State_UpdateCondition(BMS_StateCondition_t *condition,
                                       uint32_t recovery_ms,
                                       uint32_t now_ms)
 {
+    /*
+     * 同一个保护源使用两条相互独立的连续时间证据：
+     *
+     * normal --触发条件持续 debounce_ms--> active
+     * active --跨回 hysteresis 且持续 recovery_ms--> normal
+     *
+     * 触发门限与恢复门限不同形成 hysteresis，避免噪声在单一阈值附近反复置位/
+     * 清除。任何一次条件中断都清除对应 tracking，因为断续样本不能拼成一段
+     * 连续证据；触发阶段也不能借用之前的恢复计时，反之亦然。
+     */
     if (!condition->active)
     {
         condition->recovery_tracking = false;
@@ -127,6 +137,12 @@ static void BMS_State_UpdateDataStale(BMS_StateEngine_t *engine,
 {
     bool fresh;
 
+    /*
+     * cell、pack、current、temperature 都参与安全判断，任一组无效、越界或过期，
+     * 继续沿用旧判断都可能允许已经不安全的方向，因此 DATA_STALE 立即双向禁止。
+     * 恢复时只接受 sample_sequence 不同的完整 fresh 帧；反复读同一帧不能增加
+     * 证据。要求连续多帧可过滤“偶尔成功一帧后又失联”的短暂恢复。
+     */
     fresh = BMS_State_AllSafetyMeasurementsFresh(measurement);
     if (!fresh)
     {
@@ -161,6 +177,11 @@ static void BMS_State_UpdateSoftwareProtection(
     int32_t current_ma;
     int16_t temperature_decic;
 
+    /*
+     * OV 看最高单体、UV 看最低单体；电流符号区分充/放方向，温度则分别使用
+     * 充电与放电策略。这里只在上层确认所有安全 measurement fresh 后运行，
+     * 所以不会用过期的极值刷新 debounce/recovery 计时器。
+     */
     minimum_cell_mv = measurement->cell_voltage_mv[0];
     maximum_cell_mv = measurement->cell_voltage_mv[0];
     for (index = 1UL; index < (uint32_t)BMS_CELL_COUNT; ++index)
@@ -235,6 +256,11 @@ static void BMS_State_BuildSoftwareActions(
     BMS_StateSafetySnapshot_t *decision,
     bool rtos_health_fault)
 {
+    /*
+     * fault bitmap 用于说明“发生了什么”，directional inhibit 决定“哪个方向不
+     * 允许”。例如 OV 只禁止继续充电、UV 只禁止继续放电；DATA_STALE 与任务
+     * 失活无法证明任一方向安全，必须 BOTH inhibit。FAULT 分类本身不直接写 MOS。
+     */
     BMS_State_SetFault(decision, BMS_FAULT_ID_SW_OV, engine->sw_ov.active);
     BMS_State_SetFault(decision, BMS_FAULT_ID_SW_UV, engine->sw_uv.active);
     BMS_State_SetFault(decision, BMS_FAULT_ID_SW_OC_CHARGE,
@@ -344,6 +370,12 @@ static void BMS_State_UpdateClassification(BMS_StateEngine_t *engine,
     uint32_t qualify_ms;
     int32_t current_ma;
 
+    /*
+     * 分类优先级：技术恢复未完成时保持 INIT（超时后显示 FAULT）；任一 State
+     * fault 存在时显示 FAULT；其余情况下再按电流方向分类。CHARGE/DISCHARGE
+     * 使用 enter/exit 两组阈值形成 hysteresis，并要求候选方向持续 qualify_ms，
+     * 防止零点噪声让状态在三个运行分类之间抖动。
+     */
     if (!technical_ready)
     {
         engine->state = BMS_State_TimeElapsed(
@@ -457,6 +489,11 @@ bool BMS_State_Evaluate(BMS_StateEngine_t *engine,
     {
         return false;
     }
+    /*
+     * decision 从零构造，并先记录它所依据的 sample identity。Evaluate 只修改
+     * 调用者提供的临时对象和 engine；真正的全局发布留给 PublishIfCurrent，
+     * 因而可以在发布前再次发现并拒绝并发到达的新测量。
+     */
     BMS_Fault_Init(&decision->faults);
     decision->inhibit_chg_reasons = 0UL;
     decision->inhibit_dsg_reasons = 0UL;
@@ -505,6 +542,11 @@ bool BMS_State_PublishIfCurrent(BMS_StateSafetySnapshot_t *decision)
         s_pre_publish_hook();
     }
 #endif
+    /*
+     * Evaluate 可能耗时；期间 SampleTask 可以发布新帧。如果不比较 identity，
+     * 旧电压/电流计算出的“允许”就可能覆盖到新 generation。先比较，再在调度器
+     * 临界区内递增 revision 并整 struct 替换，使 FET Manager 看到一致的权威版本。
+     */
     if (!BMS_Data_GetIdentity(&identity) ||
         (identity.sample_sequence != decision->evaluated_sample_sequence) ||
         (identity.afe_generation != decision->evaluated_afe_generation))

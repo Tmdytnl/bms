@@ -6,22 +6,22 @@
 
 typedef enum
 {
-    SOFT_I2C_STATUS_OK = 0,
-    SOFT_I2C_STATUS_INVALID_ARGUMENT,
-    SOFT_I2C_STATUS_NOT_INITIALIZED,
-    SOFT_I2C_STATUS_STATE_ERROR,
-    SOFT_I2C_STATUS_SCL_STUCK_LOW,
-    SOFT_I2C_STATUS_SDA_STUCK_LOW,
-    SOFT_I2C_STATUS_TIMEOUT,
-    SOFT_I2C_STATUS_NACK_ADDRESS,
-    SOFT_I2C_STATUS_NACK_DATA,
-    SOFT_I2C_STATUS_RECOVERY_FAILED
+    SOFT_I2C_STATUS_OK = 0,        /* 请求的线级动作和确认阶段均完成 */
+    SOFT_I2C_STATUS_INVALID_ARGUMENT, /* 指针、回调或 timing 配置无效 */
+    SOFT_I2C_STATUS_NOT_INITIALIZED,  /* 尚未绑定完整 line ops */
+    SOFT_I2C_STATUS_STATE_ERROR,      /* START/读响应阶段调用顺序错误 */
+    SOFT_I2C_STATUS_SCL_STUCK_LOW,    /* release 后超时仍低，含 clock stretch */
+    SOFT_I2C_STATUS_SDA_STUCK_LOW,    /* 期望空闲/高电平时从机仍拉低 */
+    SOFT_I2C_STATUS_TIMEOUT,          /* 延时源失败或其他有界等待超时 */
+    SOFT_I2C_STATUS_NACK_ADDRESS,     /* 地址阶段未被任何从机应答 */
+    SOFT_I2C_STATUS_NACK_DATA,        /* 数据/CRC byte 被从机拒绝 */
+    SOFT_I2C_STATUS_RECOVERY_FAILED   /* 9 脉冲 + STOP 后总线仍不空闲 */
 } SoftI2C_Status_t;
 
 typedef enum
 {
-    SOFT_I2C_MASTER_ACK = 0,
-    SOFT_I2C_MASTER_NACK = 1
+    SOFT_I2C_MASTER_ACK = 0,  /* 主机拉低第 9 位，请求从机继续发送 */
+    SOFT_I2C_MASTER_NACK = 1 /* 主机释放第 9 位，声明最后一个 byte */
 } SoftI2C_MasterResponse_t;
 
 typedef void (*SoftI2C_LineActionFn)(void);
@@ -53,11 +53,12 @@ typedef struct
 {
     SoftI2C_LineOps_t ops;
     SoftI2C_Config_t config;
-    bool initialized;
-    bool started;
-    bool read_response_pending;
+    bool initialized;           /* ops/config 已复制且启动时总线空闲 */
+    bool started;               /* 本 master 持有 START..STOP transaction */
+    bool read_response_pending; /* data 已采样，ACK/NACK 第 9 位尚未发送 */
 } SoftI2C_t;
 
+/* 驱动不内置锁；一个 owner 必须在完整 START..STOP 期间独占同一 bus。 */
 SoftI2C_Status_t SoftI2C_Init(SoftI2C_t *bus,
                               const SoftI2C_LineOps_t *ops,
                               const SoftI2C_Config_t *config);
@@ -79,4 +80,4 @@ SoftI2C_Status_t SoftI2C_ReadByte(SoftI2C_t *bus,
                                   SoftI2C_MasterResponse_t response);
 SoftI2C_Status_t SoftI2C_RecoverBus(SoftI2C_t *bus);
 
-#endif /* SOFT_I2C_H：include guard */
+#endif /* SOFT_I2C_H：头文件防重复包含 */

@@ -120,6 +120,7 @@ uint8_t BMS_Can_BuildTxFrames(
         }
     }
 
+    /* 0x180：运行分类、effective FET、技术就绪、事务状态与低 16-bit sample 序号。 */
     BMS_Can_InitFrame(&frames[0], 0x180U);
     frames[0].data[0] = BMS_CAN_PROTOCOL_VERSION;
     frames[0].data[1] = (uint8_t)state->state;
@@ -134,6 +135,7 @@ uint8_t BMS_Can_BuildTxFrames(
     BMS_Can_PutU16(&frames[0].data[6],
                    (uint16_t)measurement->sample_sequence);
 
+    /* 0x181：pack mV、10 mA 分辨率有符号电流、SOC permille 与剩余 mAh。 */
     BMS_Can_InitFrame(&frames[1], 0x181U);
     BMS_Can_PutU16(&frames[1].data[0],
                    (uint16_t)measurement->pack_voltage_mv);
@@ -151,6 +153,7 @@ uint8_t BMS_Can_BuildTxFrames(
     BMS_Can_PutU16(&frames[1].data[6],
                    (uint16_t)measurement->remaining_capacity_mah);
 
+    /* 0x182：最低/最高单体、0.1 °C 温度及 1-based 极值电芯编号。 */
     BMS_Can_InitFrame(&frames[2], 0x182U);
     BMS_Can_PutU16(&frames[2].data[0], minimum);
     BMS_Can_PutU16(&frames[2].data[2], maximum);
@@ -159,10 +162,12 @@ uint8_t BMS_Can_BuildTxFrames(
     frames[2].data[6] = (uint8_t)(min_index + 1U);
     frames[2].data[7] = (uint8_t)(max_index + 1U);
 
+    /* 0x183：完整 active 与 latched fault bitmap，便于区分当前条件和历史锁存。 */
     BMS_Can_InitFrame(&frames[3], 0x183U);
     BMS_Can_PutU32(&frames[3].data[0], active);
     BMS_Can_PutU32(&frames[3].data[4], latched);
 
+    /* 0x184：cell1..7 以 (mV-2000)/10 压缩，末字节携带 sequence 低位。 */
     BMS_Can_InitFrame(&frames[4], 0x184U);
     for (index = 0U; index < 7U; ++index)
     {
@@ -171,6 +176,7 @@ uint8_t BMS_Can_BuildTxFrames(
     }
     frames[4].data[7] = (uint8_t)measurement->sample_sequence;
 
+    /* 0x185：cell8..13 同样压缩，并携带 AFE generation/sequence 低位。 */
     BMS_Can_InitFrame(&frames[5], 0x185U);
     for (index = 0U; index < 6U; ++index)
     {
@@ -193,6 +199,11 @@ bool BMS_Can_DecodeServiceReset(
 {
     uint32_t request_id;
 
+    /*
+     * 0x280 是受限 service request，不是远程 MOS 命令。这里仅验证标准 ID、固定
+     * magic/command、source 枚举、保留位、接收时效与非零 request_id，并把当前
+     * measurement identity 写入 request；最终是否接受仍由 ProtectTask 决定。
+     */
     if ((frame == NULL) || (policy == NULL) || (identity == NULL) ||
         (request == NULL) || (frame->ext_id != policy->can.service_rx_id) ||
         (frame->ext_id > 0x7FFUL) || (frame->dlc != 8U) ||
@@ -276,6 +287,11 @@ void BMS_Can_TxHardwareService(uint32_t now_ms)
     BSP_CanFrame_t target;
     BSP_CanTxResult_t result;
 
+    /*
+     * 10 ms service 负责初始化重试、bus-off 恢复与 mailbox 排空；100 ms encoder
+     * 只负责把帧放入软件队列。硬件 mailbox 暂满时把当前帧放回队首并退出，
+     * 让后续周期继续，而不是在低优先级 CANTxTask 中忙等。
+     */
     if (!BSP_CAN_IsInitialized())
     {
         if (s_target_init_attempted &&
@@ -428,6 +444,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
     BSP_CanFrame_t target;
     BMS_CanFrame_t frame;
 
+    /* ISR 只排空 FIFO0、捕获 tick 并按值入队；协议解码和 service ownership 在 Task。 */
     higher_priority_task_woken = pdFALSE;
     if (BSP_CAN_IsRxFifoOverrun())
     {

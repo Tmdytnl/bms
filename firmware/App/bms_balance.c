@@ -126,6 +126,12 @@ uint16_t BMS_Balance_Evaluate(
     uint8_t selected_count;
     bool was_active;
 
+    /*
+     * 均衡决策漏斗：运行状态许可 -> 完整数据 valid/fresh/in-range -> 无任何方向
+     * fault/inhibit -> Recovery complete -> 温度与绝对电流合格 -> 最低单体高于
+     * 门限 -> max-min 达到 start/stop delta -> 按 rotation 选择最高候选 -> 检查
+     * adjacent 与 max_parallel 规则。任一上游门禁失败立即返回 all-off。
+     */
     if ((engine == NULL) || (policy == NULL) || (measurement == NULL) ||
         (state == NULL) || (protect == NULL) || (recovery == NULL) ||
         ((state->state != BMS_STATE_CHARGE) &&
@@ -166,6 +172,11 @@ uint16_t BMS_Balance_Evaluate(
         index = (uint8_t)((engine->rotation_cursor + offset) %
                           BMS_CELL_COUNT);
         mask = (uint16_t)(1U << index);
+        /*
+         * 已经 active 的电芯用较小 stop_delta，新的候选用较大 start_delta。
+         * start_delta > stop_delta 形成 hysteresis，防止均衡电流造成的毫伏波动
+         * 在阈值附近每秒启停。
+         */
         delta = (uint16_t)(measurement->cell_voltage_mv[index] - minimum);
         was_active = (engine->active_bitmap & mask) != 0U;
         if ((measurement->cell_voltage_mv[index] >=
@@ -196,6 +207,10 @@ static BQ76940_Status_t BMS_Balance_WriteAndVerifyLocked(
     uint8_t actual2;
     uint8_t actual3;
 
+    /*
+     * 调用者持有 xI2CMutex。三个 CELLBAL 寄存器共同表达一个逻辑 bitmap，必须
+     * 全部写完再全部回读；只确认其中一个字节会把部分更新误报成成功。
+     */
     status = BQ76940_WriteByte(s_device, BQ76940_REG_CELLBAL1, bal1);
     if (status == BQ76940_STATUS_OK)
     {
@@ -269,6 +284,11 @@ void BMS_Balance_RunOnce(uint32_t now_ms)
     uint8_t bal3;
     bool identities_current;
 
+    /*
+     * 先捕获 measurement 与三份安全 owner 快照并计算 desired；取得 I2C mutex 后
+     * 再比较 identity/revision，写后又比较一次。这样采样、fault 或 XREADY 在
+     * transaction 中途变化时，旧选择不会被提交；失败路径尽力写入并验证 all-off。
+     */
     if ((s_policy == NULL) || (s_device == NULL) ||
         (xI2CMutex == NULL) ||
         !BMS_Data_GetSnapshot(&measurement, now_ms))

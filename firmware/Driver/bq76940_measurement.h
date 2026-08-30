@@ -19,6 +19,8 @@
  * 或 FET control。calibration.valid 是电压换算前置条件。一次 30-byte VC block
  * read 只保证软件 transaction 原子提交，不表示 13 个 ADC 同时转换；SHIP→NORMAL
  * 后首帧所需 settle 由 BMS_AfeStartup 在 scheduler 前保证。
+ * 所有 public API 都遵守“成功才提交输出”：调用者可以保留上一份有效测量，
+ * 但必须同时依据返回状态把本次样本标成无效，不能把旧数值冒充新鲜数据。
  */
 
 #define BQ76940_MEASUREMENT_CELL_COUNT         (BMS_CELL_COUNT)  /* 13 节逻辑电芯 */
@@ -34,7 +36,7 @@
 /* CC：8.44 uV/LSB×1000 = 8440 nV/LSB，便于全整数换算。 */
 #define BQ76940_MEASUREMENT_CC_LSB_NV          (8440UL)
 
-/* TS：382 uV/LSB（SLUSBK2I eq.4）。 */
+/* TS 热敏输入：382 uV/LSB（SLUSBK2I 公式 4）。 */
 #define BQ76940_MEASUREMENT_TS_UV_PER_LSB      (382UL)
 
 /* TS divider 的 reference pull-up 与 REGOUT（SLUSBK2I eq.5）。 */
@@ -84,7 +86,10 @@ BQ76940_Status_t BQ76940_ReadPackVoltageMv(
     const BQ76940_Calibration_t *calibration,
     uint32_t *pack_mv);
 
-/* 原子读取 CC_HI/LO 并解码 signed16 two's-complement；失败保持 cc_raw 不变。 */
+/*
+ * 原子读取 CC_HI/LO 并解码 signed16 二补数；失败保持 cc_raw 不变。
+ * “原子”指两个 byte 属于同一 I2C block，不替代上层 CC_READY 事件身份绑定。
+ */
 BQ76940_Status_t BQ76940_ReadCcRaw(BQ76940_t *device, int16_t *cc_raw);
 
 /*
@@ -111,4 +116,4 @@ BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
     uint16_t ts1_raw14,
     uint32_t *resistance_ohm);
 
-#endif /* BQ76940_MEASUREMENT_H：include guard */
+#endif /* BQ76940_MEASUREMENT_H：头文件防重复包含 */

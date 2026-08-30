@@ -25,19 +25,19 @@
 
 typedef struct
 {
-    BQ76940_t *device;
-    const BMS_Policy_t *policy;
-    BMS_RecoverySnapshot_t snapshot;
-    uint8_t register_addresses[BMS_RECOVERY_CONFIG_REGISTER_COUNT];
-    uint8_t register_values[BMS_RECOVERY_CONFIG_REGISTER_COUNT];
-    uint8_t config_index;
-    uint8_t calibration_index;
-    uint8_t adc_gain1;
+    BQ76940_t *device;              /* 共享 transport handle，生命周期覆盖任务运行。 */
+    const BMS_Policy_t *policy;     /* 冻结策略，只读。 */
+    BMS_RecoverySnapshot_t snapshot;/* 对外发布的权威恢复状态。 */
+    uint8_t register_addresses[BMS_RECOVERY_CONFIG_REGISTER_COUNT]; /* 重写计划地址。 */
+    uint8_t register_values[BMS_RECOVERY_CONFIG_REGISTER_COUNT];    /* 与地址同索引目标值。 */
+    uint8_t config_index;           /* 当前正在 write/readback 的配置项。 */
+    uint8_t calibration_index;      /* ADCGAIN1/OFFSET/ADCGAIN2 分步读取进度。 */
+    uint8_t adc_gain1;              /* calibration staging，三字节齐备后才 decode。 */
     uint8_t adc_offset;
     uint8_t adc_gain2;
-    uint32_t settle_started_ms;
-    uint32_t handoff_baseline_sequence;
-    bool verify_register;
+    uint32_t settle_started_ms;     /* 锁外 settle 计时起点。 */
+    uint32_t handoff_baseline_sequence; /* 用于证明 handoff 后确有新帧。 */
+    bool verify_register;           /* false=下一步 write，true=下一步 readback。 */
 } BMS_RecoveryContext_t;
 
 static BMS_RecoveryContext_t s_recovery;
@@ -78,6 +78,11 @@ static void BMS_Recovery_Fail(BQ76940_Status_t status)
 
 static void BMS_Recovery_ResetEvidence(uint32_t generation)
 {
+    /*
+     * 新 XREADY generation 代表新的 AFE 生命周期。即使增益/偏移数值恰好相同，
+     * 旧 calibration、旧 sample_sequence、旧 clear ack 也不能证明新器件状态；
+     * 因而一次性清空全部阶段证据、递增 recovery_revision，并立即 BOTH inhibit。
+     */
     s_recovery.snapshot.xready_generation = generation;
     s_recovery.snapshot.recovery_revision =
         (uint32_t)(s_recovery.snapshot.recovery_revision + 1UL);
@@ -262,6 +267,11 @@ static void BMS_Recovery_ServiceConfiguration(uint32_t now_ms)
     BQ76940_Status_t status;
     uint8_t actual;
 
+    /*
+     * 每次 service 最多一次 read 或 write。单个寄存器也分成 write 与下一周期
+     * readback 两步，使 Protect/Sample 能在 transaction 边界取得 I2C mutex；
+     * 只有全表逐项相等后才开始锁外 settle。
+     */
     if (s_recovery.calibration_index < 3U)
     {
         BMS_Recovery_ServiceCalibrationRead();
@@ -357,6 +367,11 @@ void BMS_Recovery_Service(uint32_t now_ms)
     BQ76940_Status_t status;
     uint8_t sys_stat;
 
+    /*
+     * 总流程：安全执行器全关 -> Protect 单写 XREADY W1C -> 重建并回读配置 ->
+     * 锁外 settle -> 状态复核 -> 同代 calibration handoff -> 等待首个完整新帧 ->
+     * 释放 action latch 与 BOTH inhibit。每个箭头都代表不可省略的独立证据。
+     */
     if ((s_recovery.device == NULL) ||
         !BQ76940_IsInitialized(s_recovery.device) ||
         !BMS_Policy_Validate(s_recovery.policy) ||

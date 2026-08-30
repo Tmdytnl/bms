@@ -38,6 +38,11 @@ static TaskHandle_t s_state_task_handle;
 
 BaseType_t App_Rtos_CreateObjects(void)
 {
+    /*
+     * 对象在 scheduler 启动前一次性创建，后续所有模块共享同一 handle。逐个
+     * 创建后统一验空，使系统只能处于“完整 IPC 集合”或“完全失败”两种状态，
+     * 不会让某些任务拿到有效 mutex、另一些任务却拿到 NULL queue。
+     */
     xI2CMutex = xSemaphoreCreateMutex();
     xDataMutex = xSemaphoreCreateMutex();
     xAfeAlertSem = xSemaphoreCreateBinary();
@@ -77,10 +82,12 @@ BaseType_t App_Rtos_CreateObjects(void)
 /* ------------------------------------------------------------------ */
 
 /*
- * StateTask 是系统协调核心：每 10 ms 汇合 Recovery、State、Protect、
- * measurement 与 health 的同代快照，依次推进恢复、软件保护、硬件恢复
- * handshake 和 FET transaction。它只发布诊断聚合，不把 BMS_Data 当成
- * safety authority；紧急通知只缩短等待，不改变同一循环的所有权顺序。
+ * StateTask 是系统协调核心：按 policy->state.period_ms 做最大有界等待，当前
+ * 配置为 100 ms；Protect/Recovery 等安全事件可用 urgent notification 提前
+ * 唤醒。每次循环汇合 Recovery、State、Protect、measurement 与 health 的
+ * 同代快照，依次推进恢复、软件保护、硬件恢复 handshake 和 FET transaction。
+ * 它只发布诊断聚合，不把 BMS_Data 当成 safety authority；提前唤醒只缩短
+ * 等待，不改变同一循环的所有权顺序。
  */
 void Task_State(void *argument)
 {
@@ -209,7 +216,8 @@ void Task_SOC(void *argument)
 
 /*
  * BalanceTask 每 1 s 评估电芯差值与所有安全门禁，是调度器启动后唯一允许
- * 写 CELLBAL 的任务；独立周期使均衡控制不会延长 10 ms 安全协调路径。
+ * 写 CELLBAL 的任务；独立周期使均衡控制不会延长 State/Protect 的 urgent
+ * 安全协调路径。
  */
 void Task_Balance(void *argument)
 {
@@ -318,6 +326,7 @@ static BaseType_t App_Rtos_CreateOne(TaskFunction_t function,
     TaskHandle_t handle;
     BaseType_t result;
 
+    /* stack_words 沿用 FreeRTOS API 的 word 单位；priority 是固定调度契约。 */
     result = xTaskCreate(function, name, stack_words, NULL, priority, &handle);
     if ((result == pdPASS) && (created_handle != NULL))
     {
@@ -328,6 +337,12 @@ static BaseType_t App_Rtos_CreateOne(TaskFunction_t function,
 
 BaseType_t App_Rtos_CreateTasks(void)
 {
+    /*
+     * 按安全链依赖顺序创建：先让 Protect/Sample 的入口与资源就位，再创建协调
+     * 和慢速服务任务。此时 scheduler 尚未启动，所以“创建顺序”不等于运行
+     * 顺序；真正抢占关系由 priority 决定。任一失败立即返回，启动层不得在只
+     * 有部分任务的情况下继续正常运行，否则 heartbeat/IWDG 会形成虚假健康。
+     */
     if (App_Rtos_CreateOne(Task_Protect, "Protect",
                            APP_RTOS_STACK_PROTECT,
                            APP_RTOS_PRIO_PROTECT, NULL) != pdPASS)

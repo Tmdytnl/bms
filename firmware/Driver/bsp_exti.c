@@ -23,6 +23,7 @@ bool BSP_ALERT_EXTI_Init(void)
     GPIO_InitTypeDef gpio_config;
     NVIC_InitTypeDef nvic_config;
 
+    /* 配置顺序：开时钟 -> 输入/路由 -> 清 pending 并 unmask -> 最后开启 NVIC。 */
     /* 为 PB1 打开 GPIOB clock。 */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
     /* EXTI line routing 依赖 AFIO clock。 */
@@ -60,6 +61,7 @@ bool BSP_ALERT_EXTI_Init(void)
     nvic_config.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&nvic_config);
 
+    /* 只有 GPIO/EXTI/NVIC 全部配置后才发布 initialized，避免半配置被误用。 */
     s_exti_initialized = true;
     return true;
 }

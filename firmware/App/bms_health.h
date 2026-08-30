@@ -13,29 +13,31 @@ typedef struct
 
 typedef struct
 {
-    uint32_t last_generation[BMS_HEALTH_TASK_COUNT];
-    uint32_t last_advance_ms[BMS_HEALTH_TASK_COUNT];
-    bool observed_advance[BMS_HEALTH_TASK_COUNT];
-    uint32_t baseline_ms;
-    bool baseline_captured;
-    bool watchdog_armed;
-    bool rtos_health_fault;
+    uint32_t last_generation[BMS_HEALTH_TASK_COUNT]; /* supervisor 上次观察的各任务值。 */
+    uint32_t last_advance_ms[BMS_HEALTH_TASK_COUNT]; /* 最近一次确认变化的时间。 */
+    bool observed_advance[BMS_HEALTH_TASK_COUNT];    /* 启动后至少见过一次推进。 */
+    uint32_t baseline_ms;                            /* startup grace 计时起点。 */
+    bool baseline_captured;                          /* monitor 已获取初始快照。 */
+    bool watchdog_armed;                             /* 全 roster 至少推进一次后锁存。 */
+    bool rtos_health_fault;                          /* 至少一个任务超过 liveness 窗口。 */
 } BMS_HealthMonitor_t;
 
 typedef struct
 {
-    bool all_tasks_advanced;
-    bool watchdog_armed;
-    bool feed_allowed;
-    bool rtos_health_fault;
-    uint32_t stale_task_bitmap;
+    bool all_tasks_advanced;   /* 启动以来所有 roster task 都至少变化过。 */
+    bool watchdog_armed;       /* IWDG 是否已经具备启动资格。 */
+    bool feed_allowed;         /* 本次 State 周期是否允许唯一喂狗点执行。 */
+    bool rtos_health_fault;    /* 对 State owner 发布的健康 fault。 */
+    uint32_t stale_task_bitmap;/* bit=1：对应 task generation 超时未推进。 */
 } BMS_HealthDecision_t;
 
 void BMS_Health_Init(void);
 
 /*
- * 每个任务只推进自己的 ID。generation 而非 bool alive 可以证明“持续前进”，
- * 且无需 supervisor 与任务竞争 clear bit；因此刻意不存在 clear API。
+ * 每个任务只推进自己的 ID。generation 而非 bool alive 可以证明“持续前进”：
+ * bool 一旦写成 true，任务随后死锁也会永远保持 true；generation 10→11→12→13
+ * 若连续健康窗口都停在 13，StateTask 就能证明任务没有继续执行。该模型也无需
+ * supervisor 与任务竞争 clear bit，因此刻意不存在 clear API。
  */
 void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id);
 
@@ -47,4 +49,4 @@ BMS_HealthDecision_t BMS_Health_Evaluate(
     const BMS_HealthPolicy_t *policy,
     uint32_t now_ms);
 
-#endif /* BMS_HEALTH_H：include guard */
+#endif /* BMS_HEALTH_H：头文件防重复包含 */

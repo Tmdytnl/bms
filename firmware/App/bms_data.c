@@ -71,6 +71,11 @@ static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
     uint16_t undefined_valid_bits;
     uint16_t undefined_range_bits;
 
+    /*
+     * 发布前先验证 staging 内部关系，而不只是检查单个范围：未定义 bitmap 位
+     * 必须为零，in_range 不能在 valid=0 时成立，temperature 必须建立在有效
+     * TS1 证据上。这样错误 producer 不能把自相矛盾的元数据写进共享快照。
+     */
     if (frame == NULL)
     {
         return false;
@@ -134,6 +139,11 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
     bool pack_valid;
     bool pack_in_range;
 
+    /*
+     * 先在 mutex 外完成校验与 cell sum，缩短共享数据锁的持有时间；只有 staging
+     * 完整合法且能立即取得 xDataMutex，才一次替换 measurement-owned 字段。
+     * 任一失败都保留上一帧，绝不把“新电芯+旧包压”之类半帧暴露给读者。
+     */
     if (!BMS_Data_FrameIsValid(frame))
     {
         return false;
@@ -221,6 +231,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
                                  frame->temperature_in_range);
     }
 
+    /* sequence 最后推进，表示前面的 mandatory core 已全部写入同一 generation。 */
     g_bms_data.snapshot_timestamp_ms = frame->timestamp_ms;
     g_bms_data.afe_generation = frame->afe_generation;
     ++g_bms_data.sample_sequence;
@@ -312,6 +323,11 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
 {
     uint32_t cell_index;
 
+    /*
+     * 锁内先更新 sticky stale，再整 struct 复制；锁外只对私有副本计算 age，避免
+     * 在共享锁内做 O(cell_count) 的派生工作。读者得到的数值、质量元数据、
+     * sample_sequence 与 afe_generation 因而来自同一次原子观察。
+     */
     if ((snapshot == NULL) || (xDataMutex == NULL) ||
         (xSemaphoreTake(xDataMutex, (TickType_t)0U) != pdTRUE))
     {

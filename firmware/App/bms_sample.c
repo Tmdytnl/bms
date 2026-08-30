@@ -618,11 +618,25 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     bool ntc_config_current;
     bool publish_succeeded;
 
+    /*
+     * 采样流水线：
+     *   捕获 AFE/calibration/XREADY identity
+     *     -> 分段取得 I2C ownership，读取 13S 与 BAT
+     *     -> 绑定 ProtectTask 已接纳的同代 CC
+     *     -> 到期时读取 TS1 并换算温度
+     *     -> 发布前复核 configuration/generation/revision
+     *     -> 原子发布完整 measurement frame
+     * 所有中间值只放在本地 frame；任一步失败都不会污染上一份共享快照。
+     */
     ntc_curve_unavailable = false;
     temperature_unavailable = false;
     BMS_Sample_InitFrame(&frame, now_ms);
     BMS_Sample_CheckStale(now_ms);
 
+    /*
+     * 1. 捕获本轮 identity 与配置快照。scheduler exclusion 只保护多字段复制，
+     * 不包围 I2C；这样 Recovery 的配置更新不会被撕裂，也不会被慢总线长期阻塞。
+     */
     vTaskSuspendAll();
     device = s_device;
     calibration = s_calibration;
@@ -647,6 +661,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     xready_available = BMS_Protect_GetXreadyState(&xready_state);
     (void)xTaskResumeAll();
 
+    /* 首次访问 AFE 前先证明 calibration provenance 仍绑定当前非 active generation。 */
     if (device == NULL)
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_NONE,
@@ -688,6 +703,11 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
 
     temperature_due = BMS_Sample_TemperatureIsDue();
 
+    /*
+     * 2/3. 取得总线 ownership 后读取 mandatory 13S core。读完立即释放 mutex，
+     * 不把后续换算和检查放在锁内；ProtectTask 因优先级更高，可在 transaction
+     * 边界之间及时处理 ALERT。完整 BQ transaction 内部仍保持不可交叉。
+     */
     if (xSemaphoreTake(xI2CMutex,
                        pdMS_TO_TICKS(BMS_I2C_MUTEX_TIMEOUT_MS)) != pdTRUE)
     {
@@ -723,6 +743,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         }
     }
 
+    /*
+     * 4. BAT 是独立诊断通道，仍属于 mandatory core；它失败时不发布只有电芯的
+     * 半帧。再次短暂取锁让 ALERT 有机会插入，而不是从 13S 一直锁到温度结束。
+     */
     if (xSemaphoreTake(xI2CMutex,
                        pdMS_TO_TICKS(BMS_I2C_MUTEX_TIMEOUT_MS)) != pdTRUE)
     {
@@ -750,6 +774,11 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         (frame.bq_pack_voltage_mv >= pack_min_mv) &&
         (frame.bq_pack_voltage_mv <= pack_max_mv);
 
+    /*
+     * 5. current 绑定 ProtectTask mailbox，而不重新读取 CC 寄存器。Protect 已经
+     * 完成 CC_READY/W1C 生命周期；这里只接受同 xready_generation 且尚未发布的
+     * sequence，使 Data 中的电流与 AFE 生命周期一致，又不抢走 SOC queue ownership。
+     */
     have_latest_cc = BMS_Protect_GetLatestCc(&latest_cc);
     have_latest_cc = have_latest_cc && latest_cc.valid &&
         (latest_cc.xready_generation ==
@@ -794,6 +823,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         BMS_Sample_RecordCcUnavailable();
     }
 
+    /*
+     * 6. TS1 变化慢，按分频节拍读取以减少 I2C 占用。raw/resistance 与最终温度
+     * 分层记录：缺 NTC 曲线时仍可保留电阻诊断，但不能伪造 temperature_valid。
+     */
     if (temperature_due)
     {
         if (xSemaphoreTake(xI2CMutex,
@@ -848,9 +881,11 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     }
 
     /*
-     * ProtectTask 优先级高于 SampleTask。最终 generation check 与 zero-wait
+     * 7/8. 发布前重新核对 identity，然后原子发布整帧。ProtectTask 优先级高于
+     * SampleTask。最终 generation check 与 zero-wait
      * publish 必须处在同一 scheduler exclusion 内，否则 ProtectTask 可能在两者
      * 之间发布 XREADY 新代，使旧 staging frame 误进入新生命周期。
+     * 注意这里没有持有 I2C mutex：共享数据发布不能反向阻塞 ALERT 总线事务。
      */
     publish_succeeded = false;
     vTaskSuspendAll();

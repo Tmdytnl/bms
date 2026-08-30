@@ -111,6 +111,10 @@ static bool BMS_AfeStartup_ValidateConfig(
 
 static void BMS_AfeStartup_StageEarlyRegisters(BMS_AfeStartup_t *startup)
 {
+    /*
+     * 第一阶段先收敛危险输出：FET off、CELLBAL1..3 off，然后写固定 CC_CFG。
+     * 校准尚未读取，故这里不能提前计算依赖 ADC gain/offset 的 OV/UV 编码。
+     */
     startup->register_addresses[BMS_AFE_STARTUP_REG_FAILSAFE_CTRL2] =
         BQ76940_REG_SYS_CTRL2;
     startup->register_values[BMS_AFE_STARTUP_REG_FAILSAFE_CTRL2] =
@@ -140,6 +144,7 @@ static bool BMS_AfeStartup_StageProtectionRegisters(
     uint8_t ov_trip;
     uint8_t uv_trip;
 
+    /* 物理 mV 门限必须用刚读取的本器件校准值转换，不能照搬另一颗 AFE 的 code。 */
     status = BQ76940_Control_EncodeOvTrip(
         startup->config.ov_trip_mv, &startup->calibration, &ov_trip);
     if (status != BQ76940_STATUS_OK)
@@ -182,6 +187,7 @@ static bool BMS_AfeStartup_StageProtectionRegisters(
     startup->register_values[BMS_AFE_STARTUP_REG_FINAL_CTRL2] =
         BQ76940_Control_SysCtrl2WithFets(
             BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF, NULL);
+    /* 最后仍要求 CHG/DSG off；启动完成不等于自动授权上电。 */
     startup->register_count = BMS_AFE_STARTUP_REGISTER_COUNT;
     return true;
 }
@@ -202,6 +208,7 @@ bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
     }
 
     (void)memset(startup, 0, sizeof(*startup));
+    /* 先建立 fail-closed 默认值，任何后续早退都留下明确 FAILED 证据。 */
     startup->state = BMS_AFE_STARTUP_STATE_FAILED;
     startup->failure = BMS_AFE_STARTUP_FAILURE_INVALID_ARGUMENT;
     startup->last_transport_status = BQ76940_STATUS_INVALID_ARGUMENT;
@@ -235,6 +242,7 @@ bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
     startup->register_values[BMS_AFE_STARTUP_REG_PROTECT1] = protect1;
     startup->register_values[BMS_AFE_STARTUP_REG_PROTECT2] = protect2;
     startup->register_values[BMS_AFE_STARTUP_REG_PROTECT3] = protect3;
+    /* Init 只生成计划；首次 GPIO/I2C 动作必须等调用者显式执行 Step。 */
     BMS_AfeStartup_StageEarlyRegisters(startup);
     startup->state = BMS_AFE_STARTUP_STATE_WAKE;
     startup->failure = BMS_AFE_STARTUP_FAILURE_NONE;
@@ -343,6 +351,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
 
     if (startup->register_index == BMS_AFE_STARTUP_REG_CELLBAL3)
     {
+        /* FET-off 已在计划首项确认，CELLBAL3 读回后才凑齐“所有输出安全”。 */
         startup->safe_outputs_confirmed = true;
         if (startup->abort_after_safe_outputs)
         {
@@ -360,6 +369,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
     else if (startup->register_count ==
              BMS_AFE_STARTUP_EARLY_REGISTER_COUNT)
     {
+        /* 早期安全计划完成后才能收集校准，随后扩展为完整保护计划。 */
         startup->state = BMS_AFE_STARTUP_STATE_READ_ADCGAIN1;
     }
     else
@@ -409,6 +419,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ReadFinalStatus(
     }
     if (BMS_AfeStartup_HasBlockingStatus(startup->final_sys_stat))
     {
+        /* 保护位由运行期 Protect/recovery 拥有；startup 只阻断，不越权清除。 */
         startup->unsafe_sys_stat = startup->final_sys_stat;
         BMS_AfeStartup_Fail(startup,
                             BMS_AFE_STARTUP_FAILURE_UNSAFE_STATUS,
@@ -547,6 +558,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_SafeOffVerify(
         return BMS_AFE_STARTUP_RESULT_FAILED;
     }
     startup->safe_off_readback_value = actual;
+    /* 写成功只是意图；只有本次实读 FET 位为低才能恢复安全证据。 */
     startup->fet_off_confirmed = BMS_AfeStartup_HasFetsOff(actual);
     startup->safe_outputs_confirmed = startup->fet_off_confirmed;
     if (actual != BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF)
@@ -576,6 +588,7 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
     switch (startup->state)
     {
         case BMS_AFE_STARTUP_STATE_WAKE:
+            /* 每次 Step 最多调用一次 wake；失败也把重试留给下一调度周期。 */
             if (startup->attempt_count >=
                 BMS_AFE_STARTUP_MAX_PROBE_ATTEMPTS)
             {
@@ -602,6 +615,7 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             return BMS_AFE_STARTUP_RESULT_PENDING;
 
         case BMS_AFE_STARTUP_STATE_WAIT_WAKE_SETTLE:
+            /* elapsed-time 等待不占用 I2C，也兼容 32-bit tick 自然回绕。 */
             if (BMS_AfeStartup_TimeElapsed(
                     now_ms,
                     startup->wait_started_ms,
@@ -612,6 +626,7 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             return BMS_AFE_STARTUP_RESULT_PENDING;
 
         case BMS_AFE_STARTUP_STATE_PROBE:
+            /* 一次 Step 只有一次事务；探测失败先回到 WAKE，不在栈内循环重试。 */
             status = BQ76940_ReadByte(startup->device,
                                       BQ76940_REG_SYS_STAT,
                                       &startup->initial_sys_stat);
@@ -644,27 +659,33 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             return BMS_AFE_STARTUP_RESULT_PENDING;
 
         case BMS_AFE_STARTUP_STATE_WRITE_REGISTER:
+            /* 写一个计划项后立即让出；禁止一次 Step 连续改写多个安全寄存器。 */
             return BMS_AfeStartup_WriteRegister(startup);
 
         case BMS_AFE_STARTUP_STATE_VERIFY_REGISTER:
+            /* 对刚写的同一地址做 readback，旧 epoch 的历史读值不能充当证据。 */
             return BMS_AfeStartup_VerifyRegister(startup, now_ms);
 
         case BMS_AFE_STARTUP_STATE_READ_ADCGAIN1:
+            /* 校准三段分步读取，保持“一步最多一次 BQ transaction”的上界。 */
             return BMS_AfeStartup_ReadCalibrationRegister(
                 startup, BQ76940_REG_ADCGAIN1, &startup->adc_gain1,
                 BMS_AFE_STARTUP_STATE_READ_ADCOFFSET);
 
         case BMS_AFE_STARTUP_STATE_READ_ADCOFFSET:
+            /* offset 带符号，先保存原始 byte，统一在三段齐全后解码。 */
             return BMS_AfeStartup_ReadCalibrationRegister(
                 startup, BQ76940_REG_ADCOFFSET, &startup->adc_offset,
                 BMS_AFE_STARTUP_STATE_READ_ADCGAIN2);
 
         case BMS_AFE_STARTUP_STATE_READ_ADCGAIN2:
+            /* gain2 到达后校准证据才完整，下一阶段才能计算硬件 OV/UV code。 */
             return BMS_AfeStartup_ReadCalibrationRegister(
                 startup, BQ76940_REG_ADCGAIN2, &startup->adc_gain2,
                 BMS_AFE_STARTUP_STATE_PREPARE_PROTECTION);
 
         case BMS_AFE_STARTUP_STATE_PREPARE_PROTECTION:
+            /* 三个原始校准寄存器必须来自同一启动 epoch，解码成功才可配置门限。 */
             status = BQ76940_DecodeCalibration(startup->adc_gain1,
                                                 startup->adc_offset,
                                                 startup->adc_gain2,
@@ -686,6 +707,7 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             return BMS_AFE_STARTUP_RESULT_PENDING;
 
         case BMS_AFE_STARTUP_STATE_WAIT_INITIAL_DATA:
+            /* 等待 AFE 首批数据与保护比较器稳定，期间保持所有 FET 关闭。 */
             if (BMS_AfeStartup_TimeElapsed(
                     now_ms,
                     startup->wait_started_ms,
@@ -696,23 +718,29 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
             return BMS_AFE_STARTUP_RESULT_PENDING;
 
         case BMS_AFE_STARTUP_STATE_READ_FINAL_STATUS:
+            /* settle 后重新读当前 SYS_STAT；probe 时的历史值不能授权此刻 W1C。 */
             return BMS_AfeStartup_ReadFinalStatus(startup);
 
         case BMS_AFE_STARTUP_STATE_CLEAR_XREADY:
+            /* 只清 final read 亲眼看到的 XREADY，且一次尝试后无论结果都不重放。 */
             return BMS_AfeStartup_ClearXready(startup);
 
         case BMS_AFE_STARTUP_STATE_SAFE_OFF_WRITE:
+            /* final SYS_CTRL2 未证明双 FET 低时，仅允许一次幂等 safe-off 纠正。 */
             return BMS_AfeStartup_SafeOffWrite(startup);
 
         case BMS_AFE_STARTUP_STATE_SAFE_OFF_VERIFY:
+            /* 纠正意图必须再经实读确认；写成功本身不恢复安全证据。 */
             return BMS_AfeStartup_SafeOffVerify(startup, now_ms);
 
         case BMS_AFE_STARTUP_STATE_COMPLETE:
+            /* COMPLETE 是稳定终态，后续 Step 不再触发 GPIO/I2C 副作用。 */
             return BMS_AFE_STARTUP_RESULT_COMPLETE;
 
         case BMS_AFE_STARTUP_STATE_UNINITIALIZED:
         case BMS_AFE_STARTUP_STATE_FAILED:
         default:
+            /* 未初始化、失败和未知枚举都 fail closed，不尝试猜测恢复路径。 */
             return BMS_AFE_STARTUP_RESULT_FAILED;
     }
 }

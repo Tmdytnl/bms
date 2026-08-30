@@ -71,6 +71,16 @@ static void BMS_FetManager_ComposeEffective(
     const BMS_RecoverySnapshot_t *recovery,
     BQ76940_FetRequest_t *effective)
 {
+    /*
+     * requested 是 State 对运行方向的“希望”；Protect/State/Recovery 发布的
+     * inhibit 是不可绕过的安全否决；effective 才是允许送入寄存器合成器的目标：
+     *
+     * requested + directional inhibits + recovery readiness + quarantine
+     *     -> effective
+     *
+     * 因此 State=CHARGE 并不等于 CHG 位必然打开，任何 owner 的充电 inhibit 都
+     * 会把 effective.chg 压回 DISABLE，且不影响另一个方向的独立仲裁。
+     */
     s_snapshot.requested = state->operational_intent;
     s_snapshot.inhibit_chg_reasons =
         protect->inhibit_chg_reasons |
@@ -85,6 +95,10 @@ static void BMS_FetManager_ComposeEffective(
         s_snapshot.inhibit_chg_reasons |= BMS_INHIBIT_REASON_RECOVERY;
         s_snapshot.inhibit_dsg_reasons |= BMS_INHIBIT_REASON_RECOVERY;
     }
+    /*
+     * quarantine 不是普通业务 fault，而是“软件无法证明上一次寄存器事务最终
+     * 状态”。在重新获得可证明的 safe-off 之前，新的 enable 一律被技术性禁止。
+     */
     if (s_snapshot.transaction_state ==
         BMS_FET_TRANSACTION_QUARANTINED)
     {
@@ -112,6 +126,11 @@ static bool BMS_FetManager_AttemptSafeOffLocked(void)
     uint8_t expected;
     uint8_t actual;
 
+    /*
+     * 调用者已持有 xI2CMutex。safe-off 仍执行 read -> compose -> write -> readback，
+     * 而不是盲写常量，因为 SYS_CTRL2 中 CC_EN 等非 FET 位也属于完整寄存器契约。
+     * 只有 readback 全字节一致，manager 才能声称“已确认安全关断”。
+     */
     safe_off.chg = BQ76940_FET_DESIRE_DISABLE;
     safe_off.dsg = BQ76940_FET_DESIRE_DISABLE;
     current = 0U;
@@ -187,7 +206,20 @@ void BMS_FetManager_Service(void)
     bool enabling;
     bool quarantined;
 
-    /* 先捕获三个权威 owner 快照；BMS_Data 诊断 aggregate 不参与仲裁。 */
+    /*
+     * 一次完整 transaction：
+     *
+     * Capture Protect/State/Recovery snapshots
+     *   -> Compose requested/effective
+     *   -> Read SYS_CTRL2
+     *   -> Compose expected（只改 CHG/DSG，并保持 CC_EN）
+     *   -> Write（需要时）
+     *   -> Readback full byte
+     *   -> Confirm all revisions + measurement identity
+     *   -> Commit APPLIED/SAFE，或进入 UNVERIFIED/QUARANTINED
+     *
+     * BMS_Data 是诊断聚合，不参与仲裁；三份 owner snapshot 才是安全输入。
+     */
     protect = BMS_Protect_GetSafetySnapshot();
     state = BMS_State_GetSafetySnapshot();
     recovery = BMS_Recovery_GetSnapshot();
@@ -215,7 +247,10 @@ void BMS_FetManager_Service(void)
         return;
     }
 
-    /* enable 前先确认 captured revisions 与 measurement identity 未过期。 */
+    /*
+     * enable 比 disable 更严格：关断即使依据变旧通常仍是保守动作；打开 MOS 则
+     * 必须证明从捕获快照到真正写寄存器期间没有新 fault、恢复变化或新测量。
+     */
     if (enabling &&
         !BMS_FetManager_SnapshotsStillCurrent(&protect, &state, &recovery))
     {
@@ -278,6 +313,11 @@ void BMS_FetManager_Service(void)
         s_snapshot.last_transport_status = status;
         if (status == BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS)
         {
+            /*
+             * enable 写入的数据可能已被 AFE 接收，但 STOP 失败使提交点未知。
+             * 此时既不能声称打开成功，也不能简单重放；进入 quarantine，并尽力
+             * 执行可验证 safe-off。disable 不确定仍记 UNVERIFIED，但不扩大权限。
+             */
             if (enabling)
             {
                 s_snapshot.transaction_state =

@@ -12,10 +12,10 @@
 /* 一组逻辑测量的质量元数据；数值与“能否参与安全决策”分开表达。 */
 typedef struct
 {
-    BMS_TimestampMs_t timestamp_ms;
-    BMS_DataAgeMs_t age_ms;
-    bool valid;
-    bool in_range;
+    BMS_TimestampMs_t timestamp_ms; /* 最近一次成功/明确发布该组数据的时刻。 */
+    BMS_DataAgeMs_t age_ms;         /* 读取快照时由 now-timestamp 推导，不是独立采样值。 */
+    bool valid;                     /* 采集与换算链是否成功；不代表数值安全。 */
+    bool in_range;                  /* 有效数值是否落在允许域；不代表数据足够新。 */
     /* 一旦跨过 freshness 门限就锁存 stale，时间戳回绕不能让旧数据复活。 */
     bool stale_latched;
 } BMS_MeasurementMetadata_t;
@@ -23,11 +23,11 @@ typedef struct
 /* 13 节电芯并非严格同时完成转换，因此逐节保存时间与质量 bitmap。 */
 typedef struct
 {
-    BMS_TimestampMs_t timestamp_ms[BMS_CELL_COUNT];
-    BMS_DataAgeMs_t age_ms[BMS_CELL_COUNT];
-    uint16_t valid_bitmap;
-    uint16_t in_range_bitmap;
-    uint16_t stale_bitmap;
+    BMS_TimestampMs_t timestamp_ms[BMS_CELL_COUNT]; /* 每节数据的发布时刻。 */
+    BMS_DataAgeMs_t age_ms[BMS_CELL_COUNT];         /* 每节数据在读取时的年龄。 */
+    uint16_t valid_bitmap;                          /* bit=1：对应电芯采集/换算成功。 */
+    uint16_t in_range_bitmap;                       /* bit=1：对应有效值位于配置范围。 */
+    uint16_t stale_bitmap;                          /* bit=1：曾跨 freshness 门限并锁存。 */
 } BMS_CellMetadata_t;
 
 /*
@@ -37,16 +37,16 @@ typedef struct
  */
 struct BMS_DataSnapshot
 {
-    BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT];
+    BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT]; /* 同一 mandatory core 的 13S 电压。 */
     /* 安全计算使用 13 节 cell sum；BQ BAT 读数只做独立诊断交叉检查。 */
     BMS_PackVoltageMv_t pack_voltage_mv;
-    BMS_PackVoltageMv_t bq_pack_voltage_mv;
-    BMS_CurrentMa_t current_ma;
-    uint16_t ts1_raw14;
-    uint32_t ts1_resistance_ohm;
-    BMS_TemperatureDeciC_t temperature_decic;
-    BMS_CapacityMah_t remaining_capacity_mah;
-    BMS_SocPermille_t soc_permille;
+    BMS_PackVoltageMv_t bq_pack_voltage_mv; /* BQ BAT 通道诊断值，不替代 cell sum。 */
+    BMS_CurrentMa_t current_ma;             /* 最近一次绑定到本 generation 的 CC 电流。 */
+    uint16_t ts1_raw14;                     /* TS1 ADC 原始 14-bit 诊断值。 */
+    uint32_t ts1_resistance_ohm;            /* 由 TS1 比值反推的 NTC 电阻。 */
+    BMS_TemperatureDeciC_t temperature_decic; /* NTC 表换算温度，单位 0.1 °C。 */
+    BMS_CapacityMah_t remaining_capacity_mah; /* SOC owner 发布的诊断容量。 */
+    BMS_SocPermille_t soc_permille;           /* 0..1000 对应 0%..100%，无效时为哨兵。 */
 
     BMS_State_t state;
     BMS_FaultSummary_t faults;
@@ -60,9 +60,9 @@ struct BMS_DataSnapshot
     BMS_MeasurementMetadata_t temperature_metadata;
     BMS_MeasurementMetadata_t soc_metadata;
 
-    BMS_TimestampMs_t snapshot_timestamp_ms;
-    uint32_t sample_sequence;   /* 每次完整 core measurement 发布后单调递增 */
-    uint32_t afe_generation;    /* 当前 AFE/XREADY 生命周期代号 */
+    BMS_TimestampMs_t snapshot_timestamp_ms; /* 本帧 mandatory core 的统一采样时刻。 */
+    uint32_t sample_sequence;   /* 每次完整 core 成功发布递增，用于区分相邻快照。 */
+    uint32_t afe_generation;    /* AFE 生命周期；XREADY 后改变，旧帧不得跨代使用。 */
 };
 
 /*
@@ -95,23 +95,23 @@ typedef struct
  */
 typedef struct
 {
-    BMS_TimestampMs_t timestamp_ms;
-    uint32_t afe_generation;
-    BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT];
-    uint16_t cell_valid_bitmap;
-    uint16_t cell_in_range_bitmap;
+    BMS_TimestampMs_t timestamp_ms;                  /* mandatory core 完成时刻。 */
+    uint32_t afe_generation;                         /* 捕获并复核过的 AFE identity。 */
+    BMS_CellVoltageMv_t cell_voltage_mv[BMS_CELL_COUNT]; /* 本地 staging 的完整 13S。 */
+    uint16_t cell_valid_bitmap;                      /* 所有定义位都必须有效才能发布。 */
+    uint16_t cell_in_range_bitmap;                   /* 越界可随有效帧发布供保护判断。 */
 
     BMS_PackVoltageMv_t bq_pack_voltage_mv;
     bool bq_pack_valid;
     bool bq_pack_in_range;
 
-    bool update_current;
+    bool update_current;                 /* 本周期是否用新 CC 更新电流组。 */
     BMS_CurrentMa_t current_ma;
     BMS_TimestampMs_t current_timestamp_ms;
     bool current_valid;
     bool current_in_range;
 
-    bool update_temperature;
+    bool update_temperature;             /* 本周期是否达到温度分频节拍。 */
     uint16_t ts1_raw14;
     uint32_t ts1_resistance_ohm;
     BMS_TimestampMs_t temperature_timestamp_ms;
@@ -161,11 +161,16 @@ void BMS_Data_Init(void);
 bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame);
 
 /*
- * 持有 xDataMutex 时把同一 generation 直接复制到调用者，释放后再用无符号减法
+ * 调用者：State、FET、Balance、CAN/Debug 等任务上下文；API 内部获取 xDataMutex，
+ * 调用者不得预先持有它。持锁时把同一 generation 直接复制到调用者，释放后再用无符号减法
  * 计算 wrap-safe age；不在栈上再放第二个完整 snapshot。valid 表示采样/换算成功，
  * fresh 表示尚在时效窗口，in_range 表示数值位于配置域，三者不能互相代替。
  * stale 不会清除 valid，失败也不改调用者输出。周期读者一旦观察到门限跨越就
  * 锁存 stale，直到该测量组重新发布；完整 2^32 ms 停顿由 watchdog 约束。
+ *
+ * 必须一次读取完整 snapshot，不能分别 GetVoltage/GetCurrent/GetTemperature 后
+ * 自行拼接；独立 getter 可能跨越两个 sample_sequence，构造出现实中从未同时
+ * 存在的电压、电流和温度组合，进而破坏安全决策的一致性。
  */
 bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
                           BMS_TimestampMs_t now_ms);
@@ -178,7 +183,11 @@ bool BMS_Data_GetFreshnessSnapshot(
     BMS_DataFreshnessSnapshot_t *snapshot,
     BMS_TimestampMs_t now_ms);
 
-/* 在 xDataMutex 内只复制测量 identity，供轻量 compare-and-publish 检查。 */
+/*
+ * 在 xDataMutex 内只复制测量 identity，供轻量 compare-and-publish 检查。
+ * 调用者只读，返回 false 表示参数/handle 无效或 mutex 当下忙；API 不等待，
+ * 因为身份检查宁可稍后重试，也不能阻塞高优先级测量发布。
+ */
 bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity);
 
 /* 仅更新诊断投影；两个 API 都不会生成或转移 FET safety authority。 */
@@ -195,4 +204,4 @@ bool BMS_Data_IsFresh(bool valid,
                       uint32_t age_ms,
                       uint32_t max_age_ms);
 
-#endif /* BMS_DATA_H：include guard */
+#endif /* BMS_DATA_H：头文件防重复包含 */

@@ -25,13 +25,13 @@
  */
 typedef struct
 {
-    uint32_t success_count;
-    uint32_t failure_count;
-    uint32_t frame_reject_count;
-    uint32_t i2c_timeout_count;
-    uint32_t transport_failure_count;
-    uint32_t calibration_invalid_count;
-    uint32_t configuration_not_ready_count;
+    uint32_t success_count;                 /* 完整 core frame 被原子发布的次数。 */
+    uint32_t failure_count;                 /* 任一阶段失败、整帧未发布的总次数。 */
+    uint32_t frame_reject_count;            /* staging 自相矛盾或 Data 层拒绝的次数。 */
+    uint32_t i2c_timeout_count;             /* 未在有界时间取得共享 I2C ownership。 */
+    uint32_t transport_failure_count;       /* BQ transaction/CRC/ACK 等传输失败。 */
+    uint32_t calibration_invalid_count;     /* calibration 数值或 provenance 不可用。 */
+    uint32_t configuration_not_ready_count; /* device/config/generation 尚未形成闭环。 */
     uint32_t cell_group_failure_count;
     uint32_t pack_group_failure_count;
     uint32_t current_group_failure_count;
@@ -48,16 +48,16 @@ typedef struct
     uint32_t xready_precheck_reject_count;
     /* staging 完成但发布前 generation 改变，本地测量必须整体作废。 */
     uint32_t xready_postcheck_reject_count;
-    uint32_t consecutive_failure_count;
-    uint32_t max_consecutive_failure_count;
+    uint32_t consecutive_failure_count;     /* 当前连续未发布完整帧的周期数。 */
+    uint32_t max_consecutive_failure_count; /* 运行以来最大连续失败长度。 */
 } BMS_SampleDiagnostics_t;
 
 typedef struct
 {
-    uint32_t xready_generation;
-    uint32_t recovery_revision;
-    bool post_clear_verified;
-    BQ76940_Calibration_t calibration;
+    uint32_t xready_generation;       /* calibration 所属的 AFE 生命周期。 */
+    uint32_t recovery_revision;       /* 产生本次 handoff 的 Recovery transaction。 */
+    bool post_clear_verified;         /* clear 后配置/状态是否已经回读确认。 */
+    BQ76940_Calibration_t calibration;/* 与上述 provenance 一起原子安装的增益/偏移。 */
 } BMS_SampleCalibrationEvidence_t;
 
 /*
@@ -96,9 +96,12 @@ void BMS_Sample_TestSeedConfigurationRevision(uint32_t revision);
 #endif
 
 /*
- * 一个有界 250 ms cycle body。只有 bms_data 接受完整 core frame 才返回 true；
+ * 调用者为 SampleTask（production-C test 也可直接调用），函数内部按短 transaction
+ * 获取/释放共享 I2C mutex，调用者不得预持该 mutex。一个有界 250 ms cycle body。
+ * 只有 bms_data 接受完整 core frame 才返回 true；
  * 发布时不持有 I2C mutex。device/XREADY epoch 改变后的首帧若没有同代 CC，
  * 会同时使上一代 current 失效，防止电压来自新 AFE 而电流仍来自旧 AFE。
+ * false 表示本周期没有发布新完整帧；上一快照保持可诊断，但 freshness 会继续老化。
  */
 bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms);
 
@@ -108,4 +111,4 @@ BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void);
 /* measurement owner 自己持有的正式 FreeRTOS 任务入口。 */
 void Task_Sample(void *argument);
 
-#endif /* BMS_SAMPLE_H：include guard */
+#endif /* BMS_SAMPLE_H：头文件防重复包含 */

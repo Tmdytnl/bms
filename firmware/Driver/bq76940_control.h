@@ -127,27 +127,27 @@ BQ76940_Status_t BQ76940_Control_ComposeProtect3(
     uint8_t *register_value);
 
 /* ------------------------------------------------------------------ */
-/* FET arbitration primitive（H-04 single-writer rule）。 */
+/* FET 仲裁基础类型（H-04 单写者规则）。 */
 /* ------------------------------------------------------------------ */
 
 /* 与 register encoding 解耦的 requested FET desire。 */
 typedef enum
 {
-    BQ76940_FET_DESIRE_DISABLE = 0,
-    BQ76940_FET_DESIRE_ENABLE = 1
+    BQ76940_FET_DESIRE_DISABLE = 0, /* fail-safe 默认值；没有授权即关闭 */
+    BQ76940_FET_DESIRE_ENABLE = 1  /* 仅表达请求，仍需上层 inhibit 仲裁 */
 } BQ76940_FetDesire_t;
 
 typedef struct
 {
-    BQ76940_FetDesire_t chg;
-    BQ76940_FetDesire_t dsg;
+    BQ76940_FetDesire_t chg; /* 充电通路期望，不等于寄存器实际状态 */
+    BQ76940_FetDesire_t dsg; /* 放电通路期望，不等于寄存器实际状态 */
 } BQ76940_FetRequest_t;
 
 /* 从 SYS_CTRL2 readback 解码的 register-level observed FET bit。 */
 typedef struct
 {
-    bool chg_on;
-    bool dsg_on;
+    bool chg_on; /* 最近一次 SYS_CTRL2 readback 的 CHG_ON 位 */
+    bool dsg_on; /* 最近一次 SYS_CTRL2 readback 的 DSG_ON 位 */
 } BQ76940_FetObserved_t;
 
 /*
@@ -173,7 +173,7 @@ void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
                                    BQ76940_FetRequest_t *effective);
 
 /* ------------------------------------------------------------------ */
-/* Internal balancing mapping（SLUSBK2I 8.3.1.1.1 + CELLBAL）。 */
+/* AFE 内部均衡映射（SLUSBK2I 8.3.1.1.1 + CELLBAL）。 */
 /* ------------------------------------------------------------------ */
 
 /*
@@ -211,4 +211,4 @@ uint16_t BQ76940_Control_DecodeCellBal(uint8_t bal1,
                                        uint8_t bal2,
                                        uint8_t bal3);
 
-#endif /* BQ76940_CONTROL_H：include guard */
+#endif /* BQ76940_CONTROL_H：头文件防重复包含 */

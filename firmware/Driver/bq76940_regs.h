@@ -5,11 +5,12 @@
 
 #include "bms_build_assert.h"
 
-/* BQ7694003：CRC enabled、3.3 V REGOUT、7-bit address 0x08。 */
+/* BQ7694003：启用 CRC、3.3 V REGOUT、7 位地址 0x08。 */
 #define BQ76940_I2C_ADDRESS_7BIT          (0x08U)
 #define BQ76940_I2C_WIRE_WRITE           (0x10U)
 #define BQ76940_I2C_WIRE_READ            (0x11U)
 
+/* 0x00..0x0B：状态、输出控制与硬件保护配置；SYS_STAT 含 W1C 位。 */
 #define BQ76940_REG_SYS_STAT              (0x00U)
 #define BQ76940_REG_CELLBAL1              (0x01U)
 #define BQ76940_REG_CELLBAL2              (0x02U)
@@ -24,6 +25,7 @@
 #define BQ76940_REG_CC_CFG                (0x0BU)
 #define BQ76940_CC_CFG_REQUIRED_VALUE     (0x19U)
 
+/* 0x0C..0x29：15 个物理 VC channel；13S 板跳过短接的 VC9 与 VC14。 */
 #define BQ76940_REG_VC1_HI                (0x0CU)
 #define BQ76940_REG_VC1_LO                (0x0DU)
 #define BQ76940_REG_VC2_HI                (0x0EU)
@@ -55,6 +57,7 @@
 #define BQ76940_REG_VC15_HI               (0x28U)
 #define BQ76940_REG_VC15_LO               (0x29U)
 
+/* BAT/TS/CC 都是相邻 HI/LO 对，应通过一次 block transaction 原子读取。 */
 #define BQ76940_REG_BAT_HI                (0x2AU)
 #define BQ76940_REG_BAT_LO                (0x2BU)
 #define BQ76940_REG_TS1_HI                (0x2CU)
@@ -66,6 +69,7 @@
 #define BQ76940_REG_CC_HI                 (0x32U)
 #define BQ76940_REG_CC_LO                 (0x33U)
 
+/* 出厂校准值分散在三个寄存器；gain trim 需要由 ADCGAIN1/2 拼接。 */
 #define BQ76940_REG_ADCGAIN1              (0x50U)
 #define BQ76940_REG_ADCOFFSET             (0x51U)
 #define BQ76940_REG_ADCGAIN2              (0x59U)
@@ -89,5 +93,6 @@ BMS_BUILD_ASSERT(BQ76940_REG_CC_LO == (BQ76940_REG_CC_HI + 1U),
 BMS_BUILD_ASSERT(BQ76940_ADC_GAIN_MAX_UV_PER_LSB ==
                      (BQ76940_ADC_GAIN_BASE_UV_PER_LSB + 31U),
                  bq_adc_gain_trim_range_is_thirty_two_values);
+/* 上述断言把芯片型号/地址/寄存器窗口假设变成编译期契约，防止静默漂移。 */
 
-#endif /* BQ76940_REGS_H：include guard */
+#endif /* BQ76940_REGS_H：头文件防重复包含 */

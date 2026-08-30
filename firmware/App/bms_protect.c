@@ -54,6 +54,11 @@ static void BMS_Protect_RecordNewSourceEvents(uint8_t stat)
     uint32_t now_ms;
     bool changed;
 
+    /*
+     * source_generation 只在观察到 0→1 的新事件时推进。request/ack 绑定该代号，
+     * 所以旧恢复资格不能清除随后到达的同类 OV/UV/OCD/SCD。持续高电平是同一
+     * 未决事件，不应每次 drain 都制造新 generation。
+     */
     new_events = (uint8_t)(stat & (uint8_t)(~s_last_sys_stat));
     changed = false;
     if ((new_events & BMS_PROTECT_STAT_OV) != 0U)
@@ -234,6 +239,11 @@ BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void)
     BMS_FaultBitmap_t mapped_sources;
     uint8_t source_index;
 
+    /*
+     * 先一致捕获 active/latched/generation/revision，再在私有副本上映射方向动作。
+     * active 是“条件当前仍未恢复”，latched 是“事件历史要求额外释放流程”；
+     * 某些源即使 active 已解除，latched 仍必须继续禁止对应方向。
+     */
     vTaskSuspendAll();
     snapshot.faults = s_fault;
     snapshot.publication_revision = s_publication_revision;
@@ -406,6 +416,12 @@ static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
         return;
     }
 
+    /*
+     * W1C（Write 1 to Clear）不能用普通 read-modify-write 思维处理：写 1 会消费
+     * 对应事件，写 0 才保持。若数据已 ACK 而 STOP 失败，软件不知道写入是否
+     * 提交；立即重写可能把期间新到达的同类事件也清掉，所以先 quarantine，
+     * 只在后续明确观察到该 bit 为低时退休未决标记。
+     */
     vTaskSuspendAll();
     if (s_diagnostics.w1c_finalization_ambiguous_count < UINT32_MAX)
     {
@@ -677,6 +693,12 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device)
     BQ76940_Status_t status;
     bool coordinator_authorized;
 
+    /*
+     * Protect 是运行期 XREADY W1C 唯一写者。Recovery Coordinator 只能提交带
+     * xready_generation/recovery_revision 的一次授权；Protect 复核 active identity
+     * 后执行 W1C，并用相同 identity 返回 ack。这样 generation 的创建、清除与
+     * active 发布只有一个权威来源，不会出现两个任务各自认为恢复完成。
+     */
     if (device == NULL)
     {
         return false;
@@ -949,6 +971,12 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
     uint8_t target_status_mask;
     uint8_t stat;
 
+    /*
+     * SYS_STAT 某 bit 已低只说明寄存器当前没有报告该条件，不足以直接恢复。
+     * 本函数还要求 State/HwRecovery 提交的连续 measurement 资格、sample/AFE
+     * identity、source_generation 和 expiry 全部仍当前，并在 I2C 读取前后重复
+     * 验证；否则新事件或新采样可能夹在检查之间，旧 request 必须作废。
+     */
     vTaskSuspendAll();
     request = s_hw_recovery_request;
     (void)xTaskResumeAll();
@@ -1179,6 +1207,12 @@ void BMS_Protect_Decide(uint8_t stat,
         return;
     }
 
+    /*
+     * SYS_STAT 软件语义：OV/UV/OCD 是可经证据恢复的方向性硬件源；SCD 是动作
+     * 锁存源；OVRD_ALERT 表示外部 override；XREADY 表示 AFE 生命周期中断；
+     * CC_READY 由独立队列路径处理。clear_mask 只包含本轮已经被各 owner 接纳的
+     * W1C source，绝不把整寄存器读值原样写回。
+     */
     *clear_mask = 0U;
 
     /* OV：捕获 unresolved active 并 inhibit CHG；只能通过完整 recovery handshake 清除。 */
@@ -1261,6 +1295,11 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device)
         return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
     }
 
+    /*
+     * 一次 drain 最多循环固定次数：每轮 read snapshot -> 记录新 source identity
+     * -> 分别 decode/接纳 -> 只 W1C 已拥有的位 -> 再读。上限防止 ALERT 持续高
+     * 时最高优先级任务饿死其他任务；RETRY 会在任务层短延时后继续，不丢 pending。
+     */
     for (iteration = 0U; iteration < BMS_PROTECT_DRAIN_MAX_ITER; ++iteration)
     {
         stat = 0U;
@@ -1428,6 +1467,11 @@ void Task_Protect(void *argument)
     /* EXTI rising edge 无法补报禁用期间已为高的电平，启用后直接读 PB1 seed 工作。 */
     retry_pending = BSP_ALERT_PinActive();
 
+    /*
+     * PB1 ALERT -> EXTI ISR -> binary semaphore -> ProtectTask。ISR 不能执行 I2C：
+     * 总线 transaction 会等待且依赖 mutex，W1C/fault/recovery 又需要多字段 owner
+     * 状态，这些都不适合中断上下文。Task 可有界等待、重试并按顺序发布快照。
+     */
     for (;;)
     {
         if (!retry_pending)
@@ -1459,6 +1503,11 @@ void EXTI1_IRQHandler(void)
 {
     BaseType_t higher_priority_task_woken = pdFALSE;
 
+    /*
+     * ISR 只确认中断源、清 EXTI pending、give semaphore，并在需要时触发一次
+     * 上下文切换。它不读取 SYS_STAT，也不清任何 AFE 位；这样硬件事件的 decode、
+     * W1C 和 fault lifecycle 始终由 ProtectTask 单线程 owner 完成。
+     */
     if (EXTI_GetITStatus(EXTI_Line1) != RESET)
     {
         EXTI_ClearITPendingBit(EXTI_Line1);

@@ -179,10 +179,16 @@ bool BMS_Soc_IntegrateCurrent(BMS_SocEngine_t *engine,
     int64_t delta_mams;
     int64_t maximum;
 
+    /*
+     * 整数形式的库仑积分：delta_mams = current_ma × elapsed_ms × efficiency/1000。
+     * 正电流按充电效率增加容量，负电流按放电效率减少容量；结果始终 clamp 在
+     * [0, nominal_capacity]，避免数值误差把 SOC 推到物理域之外。
+     */
     if ((engine == NULL) || (policy == NULL) || !engine->initialized)
     {
         return false;
     }
+    /* generation 改变时只建立新时间基线，禁止用旧电流跨越未知 reset 间隔积分。 */
     if (engine->afe_generation != afe_generation)
     {
         engine->afe_generation = afe_generation;
