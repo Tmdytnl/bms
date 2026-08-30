@@ -10,10 +10,9 @@
 #include "semphr.h"
 #include "task.h"
 
-#include "bms_can.h"
 #include "bms_protect.h"
 
-/* Frozen seven-task topology and priorities: Protect/Sample/State/SOC/Balance/CAN Tx/Rx. */
+/* 冻结的七任务拓扑与优先级：Protect/Sample/State/SOC/Balance/CAN Tx/Rx。 */
 #define APL_RTOS_PRIO_PROTECT                   (5)
 #define APL_RTOS_PRIO_SAMPLE                    (4)
 #define APL_RTOS_PRIO_STATE                     (3)
@@ -40,22 +39,20 @@
 #define EVT_PARAM_DIRTY                         ((EventBits_t)(1U << 3))
 #define EVT_CC_QUEUE_OVERFLOW                   ((EventBits_t)(1U << 4))
 
-extern SemaphoreHandle_t xI2CMutex;
-extern SemaphoreHandle_t xDataMutex;
-extern SemaphoreHandle_t xAfeAlertSem;
-extern QueueHandle_t xCanTxQueue;
-extern QueueHandle_t xCanRxQueue;
-extern QueueHandle_t xCcSampleQueue;
-extern EventGroupHandle_t xSysEvents;
-
+/* scheduler 前构造完整 IPC 集；任一对象失败会删除已经创建的对象。 */
 BaseType_t APL_Rtos_CreateObjects(void);
-BaseType_t APL_Rtos_CreateTasks(void);
+
+/*
+ * 创建七个任务并把 composition root 持有的 AFE device 直接交给 ProtectTask。
+ * NULL 会 fail-closed，避免任务启动后再通过全局 accessor 反向获取组装内部状态。
+ */
+BaseType_t APL_Rtos_CreateTasks(BQ76940_t *afe_device);
 void APL_Rtos_NotifyStateUrgent(void);
 void APL_Rtos_RequestProtectService(void);
 uint32_t APL_TimeMs(void);
 uint32_t APL_TimeMsFromISR(void);
 
-/* ProtectTask sole producer uses newest-wins transport; result feeds FML's two-phase ack. */
+/* ProtectTask 唯一生产者使用 newest-wins；结果回送 FML 完成两阶段确认。 */
 bool APL_Rtos_TransportCcSample(const BMS_CcSample_t *sample,
                                 bool *overflowed,
                                 bool *oldest_was_dropped);

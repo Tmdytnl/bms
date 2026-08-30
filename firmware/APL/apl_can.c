@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <string.h>
 
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
 #include "bms_can.h"
 #include "bsp_can.h"
 
@@ -21,6 +21,7 @@ static void APL_Can_FlushIsrDiagnostics(void)
     uint32_t overrun_count;
     uint32_t drop_count;
 
+    /* ISR 只累加 pending counter；task 临界复制并清零，FML 诊断永不在 ISR 内更新。 */
     taskENTER_CRITICAL();
     overrun_count = s_rx_fifo_overrun_pending;
     drop_count = s_rx_queue_drop_pending;
@@ -35,6 +36,7 @@ static void APL_Can_FlushIsrDiagnostics(void)
 
 void APL_Can_RecordRxFifoOverrunFromISR(void)
 {
+    /* 饱和而非回绕，避免长时间故障后诊断计数伪装成较小值。 */
     if (s_rx_fifo_overrun_pending < UINT32_MAX)
     {
         ++s_rx_fifo_overrun_pending;
@@ -154,6 +156,7 @@ void APL_Can_TxHardwareService(uint32_t now_ms)
         }
         else if (result == BSP_CAN_TX_NO_MAILBOX)
         {
+            /* mailbox 暂满不是 frame 失败：放回队首并结束本轮，保持队列顺序。 */
             if (xQueueSendToFront(xCanTxQueue, &queued, 0U) != pdPASS)
             {
                 BMS_Can_RecordDiagnostic(BMS_CAN_DIAG_TARGET_TX_DROP);

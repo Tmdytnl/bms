@@ -2,9 +2,9 @@
 #include "bms_runtime_port.h"
 
 /*
- * CAN ownership 分为三层：APL CAN Tx task 构造周期 frame；
- * APL RX ISR 只 drain FIFO0 到 queue；APL CAN Rx task 执行协议 decode。显式 encode/decode
- * 隔离 C struct layout，所有 service request 仍回到 Protect owner 完成授权。
+ * FML 拥有 frame 编解码、协议校验与 service-request 语义；APL 只提供周期调度、
+ * RX ISR→queue handoff 和 bxCAN Tx 执行上下文。显式 encode/decode 隔离 C struct
+ * layout，service frame 只能提交 source-specific request，最终授权仍归 Protect。
  */
 
 #include <limits.h>

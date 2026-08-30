@@ -69,8 +69,8 @@ void BMS_Sample_Init(void);
 
 /*
  * 下列配置 API 只允许启动/任务上下文调用，绝不是 ISR API。调度器启动前属于
- * 单线程直接赋值；启动后用 scheduler exclusion 保护多字段更新，而且不会误将
- * 调用者已经 suspend 的 scheduler 提前恢复。
+ * 单线程直接赋值；启动后用可嵌套 runtime critical region 保护多字段更新，而且
+ * 不会提前退出调用者已经建立的外层 critical region。
  *
  * device 与 NTC table 的生命周期必须覆盖全部 sampling call，已安装 table 在
  * clear/replace 前保持 immutable。SetNtcTable(NULL, 0) 明确清空曲线，非法的

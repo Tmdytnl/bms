@@ -18,7 +18,7 @@
  * CC_EN/DSG_ON/CHG_ON；CELLBAL1..3 对应 CB1..CB15。
  *
  * 本层只提供纯 register encoding 与安全 composition primitive：不运行 SYS_STAT
- * service、ALERT、Task 或 RTOS object，也不选择产品 threshold。App owner 提供
+ * service、ALERT、Task 或 RTOS object，也不选择产品 threshold。FML 调用者提供
  * 目标 mV/uV/delay，本层负责映射为 datasheet code 并严格检查合法范围。
  */
 

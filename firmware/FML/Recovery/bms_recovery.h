@@ -66,7 +66,7 @@ void BMS_Recovery_Init(BQ76940_t *device,
 /* 返回 true 表示 APL 应立即唤醒 ProtectTask 完成已授权的唯一写入。 */
 bool BMS_Recovery_Service(uint32_t now_ms);
 
-/* FET/State/诊断只读；scheduler exclusion 保证 phase 与 identity 字段来自同一版。 */
+/* FET/State/诊断只读；runtime critical region 保证 phase 与 identity 来自同一版。 */
 BMS_RecoverySnapshot_t BMS_Recovery_GetSnapshot(void);
 
 #if defined(TEST_PHASE9_IMAGE)

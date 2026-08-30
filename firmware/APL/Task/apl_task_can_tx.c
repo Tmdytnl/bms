@@ -17,6 +17,7 @@ void APL_TaskCanTx(void *argument)
     last_publish_ms = APL_TimeMs() - 100UL;
     for (;;)
     {
+        /* 10 ms hardware service 与 100 ms protocol publication 是两个冻结节拍。 */
         vTaskDelayUntil(&last, period);
         now_ms = APL_TimeMs();
         if ((uint32_t)(now_ms - last_publish_ms) >= 100UL)
@@ -25,6 +26,7 @@ void APL_TaskCanTx(void *argument)
             last_publish_ms = now_ms;
         }
         APL_Can_TxHardwareService(now_ms);
+        /* UART service 每轮最多 8 B 且 busy 即返回，不拉长 CAN/heartbeat 周期。 */
         APL_Debug_Service(now_ms);
         BMS_Health_Heartbeat(BMS_HEALTH_TASK_CAN_TX);
     }

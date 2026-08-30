@@ -6,10 +6,9 @@
 
 /*
  * BQ ALERT 使用 PB1/EXTI1 rising edge。logical priority 6（raw 0x60）不高于
- * FreeRTOS max-syscall priority 5，因此 ISR 可以合法调用 FromISR API。
- * ISR 只清 STM32 pending、give xAfeAlertSem、按需 yield，不访问 BQ/I2C。
- * NVIC PriorityGroup_4 在 scheduler 前一次配置；EXTI 由 ProtectTask 启用，
- * 确保 port priority validator 已初始化。
+ * 项目定义的 syscall-capable IRQ 上限。BSP 只配置/查询/清除 EXTI peripheral；
+ * semaphore/yield handoff 留在 APL ISR，BQ/I2C 事务留在任务上下文。
+ * NVIC PriorityGroup_4 由 APL composition 在 scheduler 前统一配置。
  */
 
 /* EXTI1 逻辑优先级（C-02/Gate §3.3）。 */
@@ -17,7 +16,7 @@
 
 /*
  * 按冻结 priority 配置 PB1/EXTI1 rising edge；重复调用幂等重配同一 line。
- * 必须从任务上下文调用，成功后 EXTI1_IRQHandler 才拥有 give semaphore 权限。
+ * 上层必须在 IRQ handoff 环境就绪后调用，避免启动早期边沿进入未就绪的软件路径。
  */
 bool BSP_ALERT_EXTI_Init(void);
 
@@ -30,7 +29,7 @@ bool BSP_ALERT_EXTI_IsInitialized(void);
  */
 bool BSP_ALERT_PinActive(void);
 
-/* RTOS-aware ISR handoff stays in APL; BSP only exposes the peripheral primitive. */
+/* RTOS-aware ISR handoff 留在 APL；BSP 只暴露 peripheral primitive。 */
 bool BSP_ALERT_EXTI_IsPending(void);
 void BSP_ALERT_EXTI_ClearPending(void);
 

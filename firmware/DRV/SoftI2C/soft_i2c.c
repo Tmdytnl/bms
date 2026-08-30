@@ -3,7 +3,7 @@
 /*
  * 软件 I2C 按 open-drain 时序实现 START/STOP、address/data ACK/NACK、read response
  * 与 clock-stretch timeout。驱动本身不持 RTOS mutex；完整 BQ transaction 的
- * 互斥边界由上层 xI2CMutex 统一包围，避免逐 byte 加锁后发生 transaction 交叉。
+ * 互斥边界由上层总线 owner 包围，避免逐 byte 加锁后发生 transaction 交叉。
  */
 
 #include <stddef.h>

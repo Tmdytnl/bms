@@ -372,7 +372,7 @@ uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
      * protection delay，禁止从 readback 传播；CC_ONESHOT 与 reserved bits 也清零。
      * 缺失 request 按 fail-safe 双关处理。
      */
-    next = (uint8_t)(current_ctrl2 & 0x40U);
+    next = (uint8_t)(current_ctrl2 & BQ76940_SYS_CTRL2_CC_EN_MASK);
     if (request == NULL)
     {
         return next;

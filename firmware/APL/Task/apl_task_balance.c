@@ -5,6 +5,7 @@
 #include "bms_health.h"
 #include "bms_policy.h"
 
+/* APL 只提供 1 s execution context；CELLBAL 选择、复核与 sole-writer 事务归 FML。 */
 void APL_TaskBalance(void *argument)
 {
     TickType_t period;

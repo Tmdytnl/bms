@@ -147,6 +147,17 @@ static uint32_t TestContinuation_Soc(void)
     snapshot = BMS_Soc_GetEngineSnapshot(&engine, &policy->soc);
     TEST_CONT_CHECK(failures, snapshot.valid &&
                                 (snapshot.soc_permille == 0U));
+
+    /* public RunOnce 对非法 count/pointer 组合必须 fail-closed，不能解引用 NULL。 */
+    TestContinuation_FreshMeasurement(
+        &measurement, 3700U, 0, 250, 2UL, 0UL);
+    TestP9_StubReset();
+    TestP9_SetMeasurement(&measurement);
+    BMS_Soc_Init(policy);
+    BMS_Soc_RunOnce(200000UL, NULL, 1U, false);
+    snapshot = BMS_Soc_GetSnapshot();
+    TEST_CONT_CHECK(failures, snapshot.queue_gap_latched &&
+                                (snapshot.queue_gap_count == 1UL));
     return failures;
 }
 

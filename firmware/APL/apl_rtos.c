@@ -1,8 +1,9 @@
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
 
 #include <stddef.h>
 
 #include "Task/apl_tasks.h"
+#include "bms_can.h"
 
 SemaphoreHandle_t xI2CMutex;
 SemaphoreHandle_t xDataMutex;
@@ -31,13 +32,41 @@ BaseType_t APL_Rtos_CreateObjects(void)
         (xCanRxQueue == NULL) || (xCcSampleQueue == NULL) ||
         (xSysEvents == NULL))
     {
-        if (xI2CMutex != NULL) { vSemaphoreDelete(xI2CMutex); xI2CMutex = NULL; }
-        if (xDataMutex != NULL) { vSemaphoreDelete(xDataMutex); xDataMutex = NULL; }
-        if (xAfeAlertSem != NULL) { vSemaphoreDelete(xAfeAlertSem); xAfeAlertSem = NULL; }
-        if (xCanTxQueue != NULL) { vQueueDelete(xCanTxQueue); xCanTxQueue = NULL; }
-        if (xCanRxQueue != NULL) { vQueueDelete(xCanRxQueue); xCanRxQueue = NULL; }
-        if (xCcSampleQueue != NULL) { vQueueDelete(xCcSampleQueue); xCcSampleQueue = NULL; }
-        if (xSysEvents != NULL) { vEventGroupDelete(xSysEvents); xSysEvents = NULL; }
+        if (xI2CMutex != NULL)
+        {
+            vSemaphoreDelete(xI2CMutex);
+            xI2CMutex = NULL;
+        }
+        if (xDataMutex != NULL)
+        {
+            vSemaphoreDelete(xDataMutex);
+            xDataMutex = NULL;
+        }
+        if (xAfeAlertSem != NULL)
+        {
+            vSemaphoreDelete(xAfeAlertSem);
+            xAfeAlertSem = NULL;
+        }
+        if (xCanTxQueue != NULL)
+        {
+            vQueueDelete(xCanTxQueue);
+            xCanTxQueue = NULL;
+        }
+        if (xCanRxQueue != NULL)
+        {
+            vQueueDelete(xCanRxQueue);
+            xCanRxQueue = NULL;
+        }
+        if (xCcSampleQueue != NULL)
+        {
+            vQueueDelete(xCcSampleQueue);
+            xCcSampleQueue = NULL;
+        }
+        if (xSysEvents != NULL)
+        {
+            vEventGroupDelete(xSysEvents);
+            xSysEvents = NULL;
+        }
         return pdFALSE;
     }
     return pdTRUE;
@@ -46,13 +75,15 @@ BaseType_t APL_Rtos_CreateObjects(void)
 static BaseType_t APL_Rtos_CreateOne(TaskFunction_t function,
                                      const char *name,
                                      uint16_t stack_words,
+                                     void *argument,
                                      UBaseType_t priority,
                                      TaskHandle_t *created_handle)
 {
     TaskHandle_t handle;
     BaseType_t result;
 
-    result = xTaskCreate(function, name, stack_words, NULL, priority, &handle);
+    result = xTaskCreate(function, name, stack_words, argument,
+                         priority, &handle);
     if ((result == pdPASS) && (created_handle != NULL))
     {
         *created_handle = handle;
@@ -60,30 +91,32 @@ static BaseType_t APL_Rtos_CreateOne(TaskFunction_t function,
     return result;
 }
 
-BaseType_t APL_Rtos_CreateTasks(void)
+BaseType_t APL_Rtos_CreateTasks(BQ76940_t *afe_device)
 {
-    if (APL_Rtos_CreateOne(APL_TaskProtect, "Protect",
+    if ((afe_device == NULL) ||
+        (APL_Rtos_CreateOne(APL_TaskProtect, "Protect",
                            APL_RTOS_STACK_PROTECT,
-                           APL_RTOS_PRIO_PROTECT, NULL) != pdPASS ||
+                           afe_device, APL_RTOS_PRIO_PROTECT,
+                           NULL) != pdPASS) ||
         APL_Rtos_CreateOne(APL_TaskSample, "Sample",
                            APL_RTOS_STACK_SAMPLE,
-                           APL_RTOS_PRIO_SAMPLE, NULL) != pdPASS ||
+                           NULL, APL_RTOS_PRIO_SAMPLE, NULL) != pdPASS ||
         APL_Rtos_CreateOne(APL_TaskState, "State",
                            APL_RTOS_STACK_STATE,
-                           APL_RTOS_PRIO_STATE,
+                           NULL, APL_RTOS_PRIO_STATE,
                            &s_state_task_handle) != pdPASS ||
         APL_Rtos_CreateOne(APL_TaskSoc, "SOC",
                            APL_RTOS_STACK_SOC,
-                           APL_RTOS_PRIO_SOC, NULL) != pdPASS ||
+                           NULL, APL_RTOS_PRIO_SOC, NULL) != pdPASS ||
         APL_Rtos_CreateOne(APL_TaskBalance, "Balance",
                            APL_RTOS_STACK_BALANCE,
-                           APL_RTOS_PRIO_BALANCE, NULL) != pdPASS ||
+                           NULL, APL_RTOS_PRIO_BALANCE, NULL) != pdPASS ||
         APL_Rtos_CreateOne(APL_TaskCanTx, "CANTx",
                            APL_RTOS_STACK_CAN_TX,
-                           APL_RTOS_PRIO_CAN_TX, NULL) != pdPASS ||
+                           NULL, APL_RTOS_PRIO_CAN_TX, NULL) != pdPASS ||
         APL_Rtos_CreateOne(APL_TaskCanRx, "CANRx",
                            APL_RTOS_STACK_CAN_RX,
-                           APL_RTOS_PRIO_CAN_RX, NULL) != pdPASS)
+                           NULL, APL_RTOS_PRIO_CAN_RX, NULL) != pdPASS)
     {
         return pdFALSE;
     }

@@ -1,13 +1,13 @@
 #include "apl_tasks.h"
 
-#include "apl_rtos.h"
-#include "apl_system.h"
+#include "apl_rtos_internal.h"
 #include "bms_health.h"
 #include "bms_protect.h"
 #include "bsp_exti.h"
 
 void APL_TaskProtect(void *argument)
 {
+    BQ76940_t *afe_device;
     BMS_CcSample_t sample;
     bool inserted;
     bool overflowed;
@@ -15,7 +15,8 @@ void APL_TaskProtect(void *argument)
     bool retry_pending;
     uint32_t now_ms;
 
-    (void)argument;
+    /* dependency 由 APL composition root 在建任务时注入，不通过全局 accessor 回取。 */
+    afe_device = (BQ76940_t *)argument;
     while (!BSP_ALERT_EXTI_Init())
     {
         vTaskDelay(pdMS_TO_TICKS(BMS_PROTECT_RETRY_DELAY_MS));
@@ -36,7 +37,7 @@ void APL_TaskProtect(void *argument)
 
         now_ms = APL_TimeMs();
         retry_pending =
-            (BMS_Protect_ServicePending(APL_SystemAfeDevice(), now_ms) ==
+            (BMS_Protect_ServicePending(afe_device, now_ms) ==
              BMS_PROTECT_SERVICE_RETRY_REQUIRED);
 
         if (BMS_Protect_GetPendingCcSample(&sample))
@@ -47,10 +48,14 @@ void APL_TaskProtect(void *argument)
                     sample.transport_id, inserted, overflowed,
                     oldest_was_dropped) && inserted)
             {
-                /* Queue commit precedes the sole-owner CC_READY W1C attempt. */
+                /*
+                 * 两阶段提交：领域 sample 先确定进入 APL queue，再把 transport
+                 * 结果回送 Protect。只有这一步已提交，下一次 service 才可尝试
+                 * CC_READY W1C；若先清事件，掉电/队列失败会永久丢失该次电流证据。
+                 */
                 retry_pending =
                     (BMS_Protect_ServicePending(
-                        APL_SystemAfeDevice(), now_ms) ==
+                        afe_device, now_ms) ==
                      BMS_PROTECT_SERVICE_RETRY_REQUIRED);
             }
             else

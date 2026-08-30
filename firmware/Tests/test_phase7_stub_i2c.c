@@ -346,7 +346,7 @@ static bool TestP7_RunProtectTaskScenario(bool seed_semaphore,
     if (escape_reason == 0)
     {
         /* 正式 task 完成 retry/drain 并回到下一次 blocking ALERT wait 时，fake semaphore 退出。 */
-        APL_TaskProtect(NULL);
+        APL_TaskProtect(&s_device);
         s_task_guard_failed = true;
     }
     s_task_escape_armed = false;
@@ -389,11 +389,6 @@ bool TestP7_ExerciseAlertIsr(void)
     EXTI1_IRQHandler();
     return !s_exti_pending && (s_exti_clear_count == 1U) &&
            (s_isr_give_count == 1U) && s_alert_sem_available;
-}
-
-BQ76940_t *APL_SystemAfeDevice(void)
-{
-    return &s_device;
 }
 
 uint32_t APL_TimeMs(void)

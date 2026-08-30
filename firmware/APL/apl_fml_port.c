@@ -1,6 +1,12 @@
 #include "bms_runtime_port.h"
 
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
+
+/*
+ * FML 只看见这些窄同步原语，不依赖 FreeRTOS 类型或 object 身份。总线锁与数据锁
+ * 不得嵌套：硬件 transaction 完成并释放总线后，才允许提交共享 snapshot，避免
+ * Protect/Sample 与数据读者形成锁顺序反转。Critical 仅用于短快照复制/修订号。
+ */
 
 bool BMS_Runtime_BusLock(uint32_t timeout_ms)
 {
@@ -27,6 +33,24 @@ void BMS_Runtime_DataUnlock(void)
     if (xDataMutex != NULL)
     {
         (void)xSemaphoreGive(xDataMutex);
+    }
+}
+
+bool BMS_Runtime_ConcurrencyGuardEnter(void)
+{
+    if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
+    {
+        return false;
+    }
+    vTaskSuspendAll();
+    return true;
+}
+
+void BMS_Runtime_ConcurrencyGuardExit(bool guard_entered)
+{
+    if (guard_entered)
+    {
+        (void)xTaskResumeAll();
     }
 }
 

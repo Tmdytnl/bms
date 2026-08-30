@@ -295,16 +295,12 @@ static bool BMS_Sample_TemperatureIsDue(void)
 
 static bool BMS_Sample_BeginConfigUpdate(void)
 {
-    BMS_Runtime_CriticalEnter();
-    return true;
+    return BMS_Runtime_ConcurrencyGuardEnter();
 }
 
-static void BMS_Sample_EndConfigUpdate(bool resume_scheduler)
+static void BMS_Sample_EndConfigUpdate(bool guard_entered)
 {
-    if (resume_scheduler)
-    {
-        BMS_Runtime_CriticalExit();
-    }
+    BMS_Runtime_ConcurrencyGuardExit(guard_entered);
 }
 
 void BMS_Sample_Init(void)
@@ -360,9 +356,9 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
 {
     BMS_ProtectLatestCc_t latest_cc;
     bool have_latest_cc;
-    bool resume_scheduler;
+    bool guard_entered;
 
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     have_latest_cc = BMS_Protect_GetLatestCc(&latest_cc);
     s_device = device;
     /* calibration 只属于一个 device/XREADY epoch；重绑 device 必须显式重装 calibration。 */
@@ -394,7 +390,7 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
     s_configuration_revision =
         BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(
             s_configuration_revision);
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
 }
 
 bool BMS_Sample_SetCalibration(
@@ -403,16 +399,16 @@ bool BMS_Sample_SetCalibration(
     BMS_ProtectXreadyState_t xready_state;
     bool valid;
     bool xready_available;
-    bool resume_scheduler;
+    bool guard_entered;
 
     valid = BMS_Sample_CalibrationIsValid(calibration) &&
         !s_recovery_provenance_required;
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     xready_available = false;
     if (valid)
     {
         /*
-         * 嵌套 scheduler suspension 是有意的：Protect snapshot 与 calibration
+         * 嵌套 runtime critical region 是有意的：Protect snapshot 与 calibration
          * binding 必须落在同一个外层 exclusion，内层 helper 不得提前恢复调度。
          */
         xready_available =
@@ -441,7 +437,7 @@ bool BMS_Sample_SetCalibration(
     s_configuration_revision =
         BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(
             s_configuration_revision);
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
     return valid;
 }
 
@@ -452,14 +448,14 @@ bool BMS_Sample_SetRecoveryCalibration(
 {
     BMS_ProtectXreadyState_t xready_state;
     bool valid;
-    bool resume_scheduler;
+    bool guard_entered;
 
     valid = (evidence != NULL) && handoff_permitted &&
         evidence->post_clear_verified &&
         (evidence->recovery_revision == current_recovery_revision) &&
         BMS_Sample_CalibrationIsValid(
             evidence == NULL ? NULL : &evidence->calibration);
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     if (valid)
     {
         valid = BMS_Protect_GetXreadyState(&xready_state) &&
@@ -487,16 +483,16 @@ bool BMS_Sample_SetRecoveryCalibration(
     }
     s_configuration_revision =
         BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(s_configuration_revision);
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
     return valid;
 }
 
 void BMS_Sample_InvalidateCalibrationForXready(
     uint32_t xready_generation)
 {
-    bool resume_scheduler;
+    bool guard_entered;
 
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     /*
      * legacy calibration setter 永不清除此 latch。观察到运行期 XREADY 后，
      * 只有绑定 generation 与 recovery revision 的 coordinator handoff 能恢复采样。
@@ -517,24 +513,24 @@ void BMS_Sample_InvalidateCalibrationForXready(
         s_configuration_revision =
             BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(s_configuration_revision);
     }
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
 }
 
 bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
                             uint16_t point_count)
 {
     bool valid;
-    bool resume_scheduler;
+    bool guard_entered;
 
     if ((points == NULL) && (point_count == 0U))
     {
-        resume_scheduler = BMS_Sample_BeginConfigUpdate();
+        guard_entered = BMS_Sample_BeginConfigUpdate();
         s_ntc_points = NULL;
         s_ntc_point_count = 0U;
         s_configuration_revision =
             BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(
                 s_configuration_revision);
-        BMS_Sample_EndConfigUpdate(resume_scheduler);
+        BMS_Sample_EndConfigUpdate(guard_entered);
         return true;
     }
 
@@ -544,24 +540,24 @@ bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
         return false;
     }
 
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     s_ntc_points = points;
     s_ntc_point_count = point_count;
     s_configuration_revision =
         BMS_SAMPLE_CONFIGURATION_REVISION_NEXT(
             s_configuration_revision);
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
     return true;
 }
 
 #if defined(TEST_PHASE8_SAMPLE_IMAGE)
 void BMS_Sample_TestSeedConfigurationRevision(uint32_t revision)
 {
-    bool resume_scheduler;
+    bool guard_entered;
 
-    resume_scheduler = BMS_Sample_BeginConfigUpdate();
+    guard_entered = BMS_Sample_BeginConfigUpdate();
     s_configuration_revision = revision;
-    BMS_Sample_EndConfigUpdate(resume_scheduler);
+    BMS_Sample_EndConfigUpdate(guard_entered);
 }
 #endif
 
@@ -623,7 +619,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     BMS_Sample_CheckStale(now_ms);
 
     /*
-     * 1. 捕获本轮 identity 与配置快照。scheduler exclusion 只保护多字段复制，
+     * 1. 捕获本轮 identity 与配置快照。critical region 只保护多字段复制，
      * 不包围 I2C；这样 Recovery 的配置更新不会被撕裂，也不会被慢总线长期阻塞。
      */
     BMS_Runtime_CriticalEnter();
@@ -860,8 +856,8 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     /*
      * 7/8. 发布前重新核对 identity，然后原子发布整帧。ProtectTask 优先级高于
      * SampleTask。最终 generation check 与 zero-wait
-     * publish 必须处在同一 scheduler exclusion 内，否则 ProtectTask 可能在两者
-     * 之间发布 XREADY 新代，使旧 staging frame 误进入新生命周期。
+     * publish 必须处在同一 critical region 内，否则 Protect execution context
+     * 可能在两者之间发布 XREADY 新代，使旧 staging frame 误进入新生命周期。
      * 注意这里没有持有 I2C mutex：共享数据发布不能反向阻塞 ALERT 总线事务。
      */
     publish_succeeded = false;

@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "apl_rtos.h"
+#include "bms_config.h"
 #include "bms_ntc.h"
 #include "bms_protect.h"
 #include "bms_types.h"

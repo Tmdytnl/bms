@@ -1,4 +1,4 @@
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
 
 #include <stddef.h>
 
@@ -18,6 +18,11 @@ bool APL_Rtos_TransportCcSample(const BMS_CcSample_t *sample,
     *oldest_was_dropped = false;
     inserted = false;
 
+    /*
+     * 发送、丢最旧项、再发送必须是一个不可被 SOC consumer 插入的短临界流程；
+     * 否则“满队列”观察与替换动作之间可能被消费，导致 newest-wins 结果失真。
+     * 临界区只操作内存队列，不包含 I2C、等待或领域判断。
+     */
     vTaskSuspendAll();
     if (xQueueSend(xCcSampleQueue, sample, 0U) == pdPASS)
     {

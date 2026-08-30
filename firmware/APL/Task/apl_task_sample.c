@@ -5,6 +5,7 @@
 #include "bms_health.h"
 #include "bms_sample.h"
 
+/* 250 ms periodic wake 只提供执行节拍；采样 transaction、identity 与发布均归 FML。 */
 void APL_TaskSample(void *argument)
 {
     const TickType_t period = pdMS_TO_TICKS(BMS_SAMPLE_PERIOD_MS);

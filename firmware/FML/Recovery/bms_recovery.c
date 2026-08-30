@@ -406,7 +406,8 @@ bool BMS_Recovery_Service(uint32_t now_ms)
                  s_recovery.snapshot.xready_generation) &&
                 fet.register_state_confirmed &&
                 !fet.observed.chg_on && !fet.observed.dsg_on &&
-                ((fet.observed_sys_ctrl2 & 0x40U) != 0U))
+                ((fet.observed_sys_ctrl2 &
+                  BQ76940_SYS_CTRL2_CC_EN_MASK) != 0U))
             {
                 BMS_Recovery_SetPhase(BMS_RECOVERY_PHASE_PRE_CLEAR_READY);
             }

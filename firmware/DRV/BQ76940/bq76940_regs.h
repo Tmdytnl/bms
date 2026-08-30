@@ -25,6 +25,14 @@
 #define BQ76940_REG_CC_CFG                (0x0BU)
 #define BQ76940_CC_CFG_REQUIRED_VALUE     (0x19U)
 
+/* SYS_CTRL2：FET compositor 只改 CHG/DSG，调度期 transaction 必须显式保留 CC_EN。 */
+#define BQ76940_SYS_CTRL2_CC_EN_MASK       ((uint8_t)0x40U)
+#define BQ76940_SYS_CTRL2_DSG_ON_MASK      ((uint8_t)0x02U)
+#define BQ76940_SYS_CTRL2_CHG_ON_MASK      ((uint8_t)0x01U)
+#define BQ76940_SYS_CTRL2_FET_MASK         \
+    ((uint8_t)(BQ76940_SYS_CTRL2_DSG_ON_MASK | \
+               BQ76940_SYS_CTRL2_CHG_ON_MASK))
+
 /* 0x0C..0x29：15 个物理 VC channel；13S 板跳过短接的 VC9 与 VC14。 */
 #define BQ76940_REG_VC1_HI                (0x0CU)
 #define BQ76940_REG_VC1_LO                (0x0DU)

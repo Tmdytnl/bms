@@ -5,12 +5,14 @@
 #include <stdint.h>
 
 #include "bq76940.h"
+#include "bq76940_regs.h"
 
 #define BMS_AFE_STARTUP_MAX_PROBE_ATTEMPTS       (3U)
 #define BMS_AFE_STARTUP_REGISTER_COUNT            (12U)
 #define BMS_AFE_STARTUP_SYS_CTRL1_REQUIRED        ((uint8_t)0x18U)
 #define BMS_AFE_STARTUP_SYS_CTRL2_FET_OFF         ((uint8_t)0x00U)
-#define BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF      ((uint8_t)0x40U)
+#define BMS_AFE_STARTUP_SYS_CTRL2_CC_FET_OFF      \
+    BQ76940_SYS_CTRL2_CC_EN_MASK
 
 /*
  * startup 对 SYS_STAT 的 ownership 刻意收窄：CC_READY 留给 ProtectTask；保护类

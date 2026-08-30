@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
+#include "bms_can.h"
 
 #define TEST_CHECK(expr_)          \
     do                             \

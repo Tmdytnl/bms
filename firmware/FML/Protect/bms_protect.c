@@ -42,7 +42,8 @@ static uint8_t s_ocd_event_count;
 static uint32_t s_ocd_window_started_ms;
 static bool s_ocd_window_active;
 
-BQ76940_FetRequest_t g_bms_fet_request;
+/* legacy lower-phase decision output 仅供本模块事件映射使用，不是 runtime FET authority。 */
+static BQ76940_FetRequest_t s_legacy_fet_request;
 
 static void BMS_Protect_AdvanceRevision(void)
 {
@@ -195,8 +196,8 @@ void BMS_Protect_Init(void)
     s_ocd_event_count = 0U;
     s_ocd_window_started_ms = 0UL;
     s_ocd_window_active = false;
-    g_bms_fet_request.chg = BQ76940_FET_DESIRE_DISABLE;
-    g_bms_fet_request.dsg = BQ76940_FET_DESIRE_DISABLE;
+    s_legacy_fet_request.chg = BQ76940_FET_DESIRE_DISABLE;
+    s_legacy_fet_request.dsg = BQ76940_FET_DESIRE_DISABLE;
 }
 
 void BMS_Protect_SetDevice(BQ76940_t *device)
@@ -1330,7 +1331,8 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
         BMS_Runtime_CriticalEnter();
         previous_fault = s_fault;
         xready_was_active = s_xready_state.active;
-        BMS_Protect_Decide(stat, &s_fault, &g_bms_fet_request, &clear_mask);
+        BMS_Protect_Decide(stat, &s_fault, &s_legacy_fet_request,
+                           &clear_mask);
         if ((stat & BMS_PROTECT_STAT_DEVICE_XREADY) != 0U)
         {
             if (!s_xready_state.active)
@@ -1401,7 +1403,10 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
         }
         if (s_pending_cc_valid)
         {
-            /* APL must commit the staged domain sample before another status read. */
+            /*
+             * 暂存 sample 后必须先返回 APL 完成 queue commit；在 transport ack 前
+             * 不能继续读状态或清 CC_READY，否则硬件事件可能先于软件证据退休。
+             */
             return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
         }
         /* H-05：重新读取 SYS_STAT，捕获 drain 期间新到达的事件。 */

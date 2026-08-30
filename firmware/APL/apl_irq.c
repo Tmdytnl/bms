@@ -1,4 +1,4 @@
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
 #include "apl_can.h"
 
 #include <string.h>
@@ -11,6 +11,7 @@ void EXTI1_IRQHandler(void)
 {
     BaseType_t higher_priority_task_woken;
 
+    /* ISR 只把 STM32 pending 转成 APL semaphore；BQ/W1C/故障生命周期留给 Protect。 */
     higher_priority_task_woken = pdFALSE;
     if (BSP_ALERT_EXTI_IsPending())
     {
@@ -31,6 +32,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
     BSP_CanFrame_t target;
     BMS_CanFrame_t frame;
 
+    /* ISR 只复制 wire frame 与接收时刻；service command 校验和安全请求留在 CANRxTask。 */
     higher_priority_task_woken = pdFALSE;
     if (BSP_CAN_IsRxFifoOverrun())
     {

@@ -58,7 +58,7 @@ static bool BMS_AfeStartup_HasBlockingStatus(uint8_t sys_stat)
 
 static bool BMS_AfeStartup_HasFetsOff(uint8_t sys_ctrl2)
 {
-    return ((sys_ctrl2 & 0x03U) == 0U);
+    return ((sys_ctrl2 & BQ76940_SYS_CTRL2_FET_MASK) == 0U);
 }
 
 static bool BMS_AfeStartup_ValidateConfig(

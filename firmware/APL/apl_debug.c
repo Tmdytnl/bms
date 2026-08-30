@@ -12,6 +12,7 @@ void APL_Debug_Service(uint32_t now_ms)
     uint8_t value;
     uint8_t index;
 
+    /* FML 负责稳定格式，APL 只补充 RTOS heap 指标并执行 bounded UART drain。 */
     (void)BMS_Debug_PrepareSnapshot(now_ms,
                                     xPortGetFreeHeapSize(),
                                     xPortGetMinimumEverFreeHeapSize());

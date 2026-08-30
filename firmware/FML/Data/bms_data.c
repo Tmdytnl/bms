@@ -3,7 +3,17 @@
 
 #include <limits.h>
 
-BMS_DataSnapshot_t g_bms_data;
+/* backing store 只在本 translation unit 可写；跨模块读写必须经过一致性 API。 */
+static BMS_DataSnapshot_t s_data;
+
+#define BMS_DATA_STORE                         (s_data)
+
+#if defined(TEST_PHASE8_DATA_IMAGE) || defined(BMS_PHASE8_HOST_TEST)
+BMS_DataSnapshot_t *BMS_Data_TestMutableStorage(void)
+{
+    return &s_data;
+}
+#endif
 
 /*
  * 本模块把多个 owner 的诊断投影汇成一致快照，但不承担安全仲裁。
@@ -30,39 +40,40 @@ void BMS_Data_Init(void)
          cell_index < (uint32_t)BMS_CELL_COUNT;
          cell_index++)
     {
-        g_bms_data.cell_voltage_mv[cell_index] = (BMS_CellVoltageMv_t)0U;
-        g_bms_data.cell_metadata.timestamp_ms[cell_index] =
+        BMS_DATA_STORE.cell_voltage_mv[cell_index] =
+            (BMS_CellVoltageMv_t)0U;
+        BMS_DATA_STORE.cell_metadata.timestamp_ms[cell_index] =
             (BMS_TimestampMs_t)0U;
-        g_bms_data.cell_metadata.age_ms[cell_index] =
+        BMS_DATA_STORE.cell_metadata.age_ms[cell_index] =
             BMS_DATA_AGE_UNKNOWN_MS;
     }
 
-    g_bms_data.cell_metadata.valid_bitmap = (uint16_t)0U;
-    g_bms_data.cell_metadata.in_range_bitmap = (uint16_t)0U;
-    g_bms_data.cell_metadata.stale_bitmap = (uint16_t)0U;
+    BMS_DATA_STORE.cell_metadata.valid_bitmap = (uint16_t)0U;
+    BMS_DATA_STORE.cell_metadata.in_range_bitmap = (uint16_t)0U;
+    BMS_DATA_STORE.cell_metadata.stale_bitmap = (uint16_t)0U;
 
-    g_bms_data.pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
-    g_bms_data.bq_pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
-    g_bms_data.current_ma = (BMS_CurrentMa_t)0;
-    g_bms_data.ts1_raw14 = (uint16_t)0U;
-    g_bms_data.ts1_resistance_ohm = (uint32_t)0U;
-    g_bms_data.temperature_decic = (BMS_TemperatureDeciC_t)0;
-    g_bms_data.remaining_capacity_mah = (BMS_CapacityMah_t)0U;
-    g_bms_data.soc_permille = BMS_SOC_UNKNOWN_PERMILLE;
+    BMS_DATA_STORE.pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
+    BMS_DATA_STORE.bq_pack_voltage_mv = (BMS_PackVoltageMv_t)0U;
+    BMS_DATA_STORE.current_ma = (BMS_CurrentMa_t)0;
+    BMS_DATA_STORE.ts1_raw14 = (uint16_t)0U;
+    BMS_DATA_STORE.ts1_resistance_ohm = (uint32_t)0U;
+    BMS_DATA_STORE.temperature_decic = (BMS_TemperatureDeciC_t)0;
+    BMS_DATA_STORE.remaining_capacity_mah = (BMS_CapacityMah_t)0U;
+    BMS_DATA_STORE.soc_permille = BMS_SOC_UNKNOWN_PERMILLE;
 
-    g_bms_data.state = BMS_STATE_INIT;
-    BMS_Fault_Init(&g_bms_data.faults);
+    BMS_DATA_STORE.state = BMS_STATE_INIT;
+    BMS_Fault_Init(&BMS_DATA_STORE.faults);
 
-    BMS_Data_InitMeasurement(&g_bms_data.pack_metadata);
-    BMS_Data_InitMeasurement(&g_bms_data.bq_pack_metadata);
-    BMS_Data_InitMeasurement(&g_bms_data.current_metadata);
-    BMS_Data_InitMeasurement(&g_bms_data.ts1_metadata);
-    BMS_Data_InitMeasurement(&g_bms_data.temperature_metadata);
-    BMS_Data_InitMeasurement(&g_bms_data.soc_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.pack_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.bq_pack_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.current_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.ts1_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.temperature_metadata);
+    BMS_Data_InitMeasurement(&BMS_DATA_STORE.soc_metadata);
 
-    g_bms_data.snapshot_timestamp_ms = (BMS_TimestampMs_t)0U;
-    g_bms_data.sample_sequence = (uint32_t)0U;
-    g_bms_data.afe_generation = (uint32_t)0U;
+    BMS_DATA_STORE.snapshot_timestamp_ms = (BMS_TimestampMs_t)0U;
+    BMS_DATA_STORE.sample_sequence = (uint32_t)0U;
+    BMS_DATA_STORE.afe_generation = (uint32_t)0U;
 }
 
 static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
@@ -140,7 +151,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
 
     /*
      * 先在 mutex 外完成校验与 cell sum，缩短共享数据锁的持有时间；只有 staging
-     * 完整合法且能立即取得 xDataMutex，才一次替换 measurement-owned 字段。
+     * 完整合法且能立即取得 runtime data port，才一次替换 measurement-owned 字段。
      * 任一失败都保留上一帧，绝不把“新电芯+旧包压”之类半帧暴露给读者。
      */
     if (!BMS_Data_FrameIsValid(frame))
@@ -177,38 +188,38 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
         cell_mask = (uint16_t)((uint16_t)1U << cell_index);
         cell_valid =
             (frame->cell_valid_bitmap & cell_mask) != (uint16_t)0U;
-        g_bms_data.cell_voltage_mv[cell_index] =
+        BMS_DATA_STORE.cell_voltage_mv[cell_index] =
             frame->cell_voltage_mv[cell_index];
-        g_bms_data.cell_metadata.timestamp_ms[cell_index] =
+        BMS_DATA_STORE.cell_metadata.timestamp_ms[cell_index] =
             frame->timestamp_ms;
-        g_bms_data.cell_metadata.age_ms[cell_index] =
+        BMS_DATA_STORE.cell_metadata.age_ms[cell_index] =
             BMS_Data_AgeAtPublication(cell_valid);
     }
-    g_bms_data.cell_metadata.valid_bitmap = frame->cell_valid_bitmap;
-    g_bms_data.cell_metadata.in_range_bitmap =
+    BMS_DATA_STORE.cell_metadata.valid_bitmap = frame->cell_valid_bitmap;
+    BMS_DATA_STORE.cell_metadata.in_range_bitmap =
         frame->cell_in_range_bitmap;
-    g_bms_data.cell_metadata.stale_bitmap = (uint16_t)0U;
+    BMS_DATA_STORE.cell_metadata.stale_bitmap = (uint16_t)0U;
 
     pack_valid =
         frame->cell_valid_bitmap == BMS_CELL_DEFINED_MASK;
     pack_in_range = pack_valid &&
         (frame->cell_in_range_bitmap == BMS_CELL_DEFINED_MASK);
-    g_bms_data.pack_voltage_mv = pack_sum_mv;
-    BMS_Data_PublishMetadata(&g_bms_data.pack_metadata,
+    BMS_DATA_STORE.pack_voltage_mv = pack_sum_mv;
+    BMS_Data_PublishMetadata(&BMS_DATA_STORE.pack_metadata,
                              frame->timestamp_ms,
                              pack_valid,
                              pack_in_range);
 
-    g_bms_data.bq_pack_voltage_mv = frame->bq_pack_voltage_mv;
-    BMS_Data_PublishMetadata(&g_bms_data.bq_pack_metadata,
+    BMS_DATA_STORE.bq_pack_voltage_mv = frame->bq_pack_voltage_mv;
+    BMS_Data_PublishMetadata(&BMS_DATA_STORE.bq_pack_metadata,
                              frame->timestamp_ms,
                              frame->bq_pack_valid,
                              frame->bq_pack_in_range);
 
     if (frame->update_current)
     {
-        g_bms_data.current_ma = frame->current_ma;
-        BMS_Data_PublishMetadata(&g_bms_data.current_metadata,
+        BMS_DATA_STORE.current_ma = frame->current_ma;
+        BMS_Data_PublishMetadata(&BMS_DATA_STORE.current_metadata,
                                  frame->current_timestamp_ms,
                                  frame->current_valid,
                                  frame->current_in_range);
@@ -216,23 +227,23 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
 
     if (frame->update_temperature)
     {
-        g_bms_data.ts1_raw14 = frame->ts1_raw14;
-        g_bms_data.ts1_resistance_ohm = frame->ts1_resistance_ohm;
-        BMS_Data_PublishMetadata(&g_bms_data.ts1_metadata,
+        BMS_DATA_STORE.ts1_raw14 = frame->ts1_raw14;
+        BMS_DATA_STORE.ts1_resistance_ohm = frame->ts1_resistance_ohm;
+        BMS_Data_PublishMetadata(&BMS_DATA_STORE.ts1_metadata,
                                  frame->temperature_timestamp_ms,
                                  frame->ts1_valid,
                                  frame->ts1_valid);
-        g_bms_data.temperature_decic = frame->temperature_decic;
-        BMS_Data_PublishMetadata(&g_bms_data.temperature_metadata,
+        BMS_DATA_STORE.temperature_decic = frame->temperature_decic;
+        BMS_Data_PublishMetadata(&BMS_DATA_STORE.temperature_metadata,
                                  frame->temperature_timestamp_ms,
                                  frame->temperature_valid,
                                  frame->temperature_in_range);
     }
 
     /* sequence 最后推进，表示前面的 mandatory core 已全部写入同一 generation。 */
-    g_bms_data.snapshot_timestamp_ms = frame->timestamp_ms;
-    g_bms_data.afe_generation = frame->afe_generation;
-    ++g_bms_data.sample_sequence;
+    BMS_DATA_STORE.snapshot_timestamp_ms = frame->timestamp_ms;
+    BMS_DATA_STORE.afe_generation = frame->afe_generation;
+    ++BMS_DATA_STORE.sample_sequence;
 
     BMS_Runtime_DataUnlock();
     return true;
@@ -272,7 +283,7 @@ static void BMS_Data_LatchMetadataStale(
 }
 
 /*
- * 只能在持有 xDataMutex 时调用。周期读者把第一次 freshness 门限跨越变成
+ * 只能在持有 runtime data port 时调用。周期读者把第一次 freshness 门限跨越变成
  * sticky 状态，阻止后续 uint32_t 时间戳回绕让旧数据重新显得新鲜。
  * 若读者停顿整整一个时间戳周期，32-bit clock 本身无法区分，由 watchdog 覆盖。
  */
@@ -288,31 +299,31 @@ static void BMS_Data_LatchStale(BMS_TimestampMs_t now_ms)
         BMS_DataAgeMs_t cell_age_ms;
 
         cell_mask = (uint16_t)((uint16_t)1U << cell_index);
-        if (((g_bms_data.cell_metadata.valid_bitmap & cell_mask) !=
+        if (((BMS_DATA_STORE.cell_metadata.valid_bitmap & cell_mask) !=
              (uint16_t)0U) &&
-            ((g_bms_data.cell_metadata.stale_bitmap & cell_mask) ==
+            ((BMS_DATA_STORE.cell_metadata.stale_bitmap & cell_mask) ==
              (uint16_t)0U))
         {
             cell_age_ms = BMS_Data_DeriveAge(
                 true,
-                g_bms_data.cell_metadata.timestamp_ms[cell_index],
+                BMS_DATA_STORE.cell_metadata.timestamp_ms[cell_index],
                 now_ms);
             if (cell_age_ms > BMS_DATA_VOLTAGE_FRESH_MAX_MS)
             {
-                g_bms_data.cell_metadata.stale_bitmap |= cell_mask;
+                BMS_DATA_STORE.cell_metadata.stale_bitmap |= cell_mask;
             }
         }
     }
 
-    BMS_Data_LatchMetadataStale(&g_bms_data.pack_metadata, now_ms,
+    BMS_Data_LatchMetadataStale(&BMS_DATA_STORE.pack_metadata, now_ms,
                                 BMS_DATA_VOLTAGE_FRESH_MAX_MS);
-    BMS_Data_LatchMetadataStale(&g_bms_data.bq_pack_metadata, now_ms,
+    BMS_Data_LatchMetadataStale(&BMS_DATA_STORE.bq_pack_metadata, now_ms,
                                 BMS_DATA_VOLTAGE_FRESH_MAX_MS);
-    BMS_Data_LatchMetadataStale(&g_bms_data.current_metadata, now_ms,
+    BMS_Data_LatchMetadataStale(&BMS_DATA_STORE.current_metadata, now_ms,
                                 BMS_DATA_CURRENT_FRESH_MAX_MS);
-    BMS_Data_LatchMetadataStale(&g_bms_data.ts1_metadata, now_ms,
+    BMS_Data_LatchMetadataStale(&BMS_DATA_STORE.ts1_metadata, now_ms,
                                 BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
-    BMS_Data_LatchMetadataStale(&g_bms_data.temperature_metadata, now_ms,
+    BMS_Data_LatchMetadataStale(&BMS_DATA_STORE.temperature_metadata, now_ms,
                                 BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
 }
 
@@ -331,7 +342,7 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
         return false;
     }
     BMS_Data_LatchStale(now_ms);
-    *snapshot = g_bms_data;
+    *snapshot = BMS_DATA_STORE;
     BMS_Runtime_DataUnlock();
 
     for (cell_index = 0U;
@@ -370,11 +381,11 @@ bool BMS_Data_GetFreshnessSnapshot(
     }
 
     BMS_Data_LatchStale(now_ms);
-    snapshot->pack_metadata = g_bms_data.pack_metadata;
-    snapshot->current_metadata = g_bms_data.current_metadata;
-    snapshot->temperature_metadata = g_bms_data.temperature_metadata;
-    snapshot->sample_sequence = g_bms_data.sample_sequence;
-    snapshot->afe_generation = g_bms_data.afe_generation;
+    snapshot->pack_metadata = BMS_DATA_STORE.pack_metadata;
+    snapshot->current_metadata = BMS_DATA_STORE.current_metadata;
+    snapshot->temperature_metadata = BMS_DATA_STORE.temperature_metadata;
+    snapshot->sample_sequence = BMS_DATA_STORE.sample_sequence;
+    snapshot->afe_generation = BMS_DATA_STORE.afe_generation;
     BMS_Runtime_DataUnlock();
 
     BMS_Data_DeriveMetadataAge(&snapshot->pack_metadata, now_ms);
@@ -389,8 +400,8 @@ bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
     {
         return false;
     }
-    identity->sample_sequence = g_bms_data.sample_sequence;
-    identity->afe_generation = g_bms_data.afe_generation;
+    identity->sample_sequence = BMS_DATA_STORE.sample_sequence;
+    identity->afe_generation = BMS_DATA_STORE.afe_generation;
     BMS_Runtime_DataUnlock();
     return true;
 }
@@ -403,8 +414,8 @@ bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
     {
         return false;
     }
-    g_bms_data.state = state;
-    g_bms_data.faults = *faults;
+    BMS_DATA_STORE.state = state;
+    BMS_DATA_STORE.faults = *faults;
     BMS_Runtime_DataUnlock();
     return true;
 }
@@ -419,10 +430,10 @@ bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
     {
         return false;
     }
-    g_bms_data.remaining_capacity_mah = capacity_mah;
-    g_bms_data.soc_permille = valid ? soc_permille :
+    BMS_DATA_STORE.remaining_capacity_mah = capacity_mah;
+    BMS_DATA_STORE.soc_permille = valid ? soc_permille :
         BMS_SOC_UNKNOWN_PERMILLE;
-    BMS_Data_PublishMetadata(&g_bms_data.soc_metadata,
+    BMS_Data_PublishMetadata(&BMS_DATA_STORE.soc_metadata,
                              now_ms,
                              valid,
                              valid);

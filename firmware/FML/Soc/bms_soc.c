@@ -438,6 +438,11 @@ void BMS_Soc_RunOnce(uint32_t now_ms,
     {
         sample_count = BMS_SOC_MAX_CC_SAMPLES_PER_RUN;
     }
+    if (samples == NULL)
+    {
+        /* 非零 count 配 NULL 已在上方锁存 queue gap；清零防止无效输入被解引用。 */
+        sample_count = 0U;
+    }
     for (index = 0U; index < sample_count; ++index)
     {
         sample = &samples[index];

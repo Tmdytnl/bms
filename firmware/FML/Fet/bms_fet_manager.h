@@ -44,12 +44,12 @@ void BMS_FetManager_Init(BQ76940_t *device);
 /*
  * StateTask 是唯一正式调用者，FET Manager 是调度器启动后 SYS_CTRL2 CHG/DSG
  * sole writer。任何 Task 都只能发布 request/inhibit，不能直接打开 MOS。函数
- * 内部获取 xI2CMutex，并在读/写前后复核三个 owner revision 与 measurement
+ * 内部获取 runtime bus port，并在读/写前后复核三个 owner revision 与 measurement
  * identity；无返回值，事务结果通过一致诊断快照发布。
  */
 void BMS_FetManager_Service(void);
 
-/* 任务上下文只读 API；scheduler exclusion 防止 transaction 字段被撕裂。 */
+/* 执行上下文只读 API；短 critical region 防止 transaction 字段被撕裂。 */
 BMS_FetManagerSnapshot_t BMS_FetManager_GetSnapshot(void);
 
 #if defined(TEST_PHASE9_IMAGE)

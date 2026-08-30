@@ -13,6 +13,9 @@
 #include "bms_ntc.h"
 #include "test_phase8_data.h"
 
+/* production backing store 已私有化；本 test image 只通过显式 fault-injection 入口。 */
+#define g_bms_data                  (*BMS_Data_TestMutableStorage())
+
 struct QueueDefinition
 {
     uint8_t marker;

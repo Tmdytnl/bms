@@ -66,7 +66,7 @@ struct BMS_DataSnapshot
 };
 
 /*
- * 只需要 freshness 的消费者使用这个有界栈投影。所有字段在持有 xDataMutex
+ * 只需要 freshness 的消费者使用这个有界栈投影。所有字段在持有 runtime data port
  * 时一次复制，因此三组元数据与 identity 必然来自同一发布代；刻意省略电芯
  * 数组，避免 SampleTask 为一次 stale 判断占用完整 snapshot 栈空间。
  */
@@ -144,24 +144,26 @@ BMS_BUILD_ASSERT(sizeof(BMS_DataFreshnessSnapshot_t) <=
                      BMS_DATA_FRESHNESS_SNAPSHOT_MAX_BYTES,
                  freshness_snapshot_stack_bound);
 
-/*
- * 该全局存储只为启动兼容保留。运行期消费者必须读取 snapshot；写者只能调用
- * 自己的窄 API 并由模块持有 xDataMutex，禁止跨 owner 直接改字段。
- */
-extern BMS_DataSnapshot_t g_bms_data;
-
 /* 仅启动期初始化；调用时 RTOS 对象与任务尚未创建。 */
 void BMS_Data_Init(void);
 
+#if defined(TEST_PHASE8_DATA_IMAGE) || defined(BMS_PHASE8_HOST_TEST)
 /*
- * 使用 zero-wait xDataMutex 尝试发布完整 staging frame。NULL、frame 不合法或
+ * Phase 8 data-image fault injection 专用入口。production build 不声明也不编译
+ * 该接口；正式 writer 只能使用下列窄 publish API，不能直接修改 backing store。
+ */
+BMS_DataSnapshot_t *BMS_Data_TestMutableStorage(void);
+#endif
+
+/*
+ * 使用 zero-wait data port 尝试发布完整 staging frame。NULL、frame 不合法或
  * mutex 忙都返回 false，并保持旧快照逐字不变；只改 measurement-owned 字段，
  * State/fault/SOC/capacity 等其他 owner 的诊断投影保持不变。
  */
 bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame);
 
 /*
- * 调用者：State、FET、Balance、CAN/Debug 等任务上下文；API 内部获取 xDataMutex，
+ * 调用者：State、FET、Balance、CAN/Debug 等执行上下文；API 内部获取 data port，
  * 调用者不得预先持有它。持锁时把同一 generation 直接复制到调用者，释放后再用无符号减法
  * 计算 wrap-safe age；不在栈上再放第二个完整 snapshot。valid 表示采样/换算成功，
  * fresh 表示尚在时效窗口，in_range 表示数值位于配置域，三者不能互相代替。
@@ -184,7 +186,7 @@ bool BMS_Data_GetFreshnessSnapshot(
     BMS_TimestampMs_t now_ms);
 
 /*
- * 在 xDataMutex 内只复制测量 identity，供轻量 compare-and-publish 检查。
+ * 在 data port 内只复制测量 identity，供轻量 compare-and-publish 检查。
  * 调用者只读，返回 false 表示参数/handle 无效或 mutex 当下忙；API 不等待，
  * 因为身份检查宁可稍后重试，也不能阻塞高优先级测量发布。
  */

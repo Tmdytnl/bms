@@ -16,7 +16,6 @@
 #include "bq76940_regs.h"
 
 #define BMS_FET_MANAGER_I2C_TIMEOUT_MS          (20U)
-#define BMS_FET_MANAGER_CC_EN                   ((uint8_t)0x40U)
 
 static BQ76940_t *s_device;
 static BMS_FetManagerSnapshot_t s_snapshot;
@@ -127,7 +126,7 @@ static bool BMS_FetManager_AttemptSafeOffLocked(void)
     uint8_t actual;
 
     /*
-     * 调用者已持有 xI2CMutex。safe-off 仍执行 read -> compose -> write -> readback，
+     * 调用者已持有 runtime bus port。safe-off 仍执行 read -> compose -> write -> readback，
      * 而不是盲写常量，因为 SYS_CTRL2 中 CC_EN 等非 FET 位也属于完整寄存器契约。
      * 只有 readback 全字节一致，manager 才能声称“已确认安全关断”。
      */
@@ -143,7 +142,7 @@ static bool BMS_FetManager_AttemptSafeOffLocked(void)
     }
     expected = BQ76940_Control_SysCtrl2WithFets(current, &safe_off);
     /* manager 持有调度期完整 SYS_CTRL2 composition；safe-off 与运行态都保留 CC_EN。 */
-    expected |= BMS_FET_MANAGER_CC_EN;
+    expected |= BQ76940_SYS_CTRL2_CC_EN_MASK;
     status = BQ76940_WriteByte(s_device, BQ76940_REG_SYS_CTRL2, expected);
     if (status != BQ76940_STATUS_OK)
     {
@@ -285,7 +284,7 @@ void BMS_FetManager_Service(void)
     }
 #endif
     if (enabling &&
-        (((current & BMS_FET_MANAGER_CC_EN) == 0U) ||
+        (((current & BQ76940_SYS_CTRL2_CC_EN_MASK) == 0U) ||
          !BMS_FetManager_SnapshotsStillCurrent(&protect, &state, &recovery)))
     {
         (void)BMS_FetManager_AttemptSafeOffLocked();
@@ -303,7 +302,7 @@ void BMS_FetManager_Service(void)
 
     /* 仅替换 owner 管理的 CHG/DSG 位，并显式保持 CC_EN。 */
     expected = BQ76940_Control_SysCtrl2WithFets(current, &effective);
-    expected |= BMS_FET_MANAGER_CC_EN;
+    expected |= BQ76940_SYS_CTRL2_CC_EN_MASK;
     s_snapshot.expected_sys_ctrl2 = expected;
     if (current != expected)
     {

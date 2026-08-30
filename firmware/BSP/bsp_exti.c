@@ -48,8 +48,8 @@ bool BSP_ALERT_EXTI_Init(void)
 
     /*
      * C-02：logical priority 6（raw 0x60）满足 max-syscall 5 的 FromISR 约束。
-     * main 已设置 PriorityGroup_4；本函数从首个 ProtectTask context 调用，此时
-     * FreeRTOS port 的 ISR validator 已完成初始化。
+     * APL startup/composition 已在创建运行时前设置 PriorityGroup_4；APL 在
+     * scheduler 启动后的任务上下文调用本函数，因此 ISR handoff 基础已就绪。
      */
     nvic_config.NVIC_IRQChannel = EXTI1_IRQn;
     nvic_config.NVIC_IRQChannelPreemptionPriority =

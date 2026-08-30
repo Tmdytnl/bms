@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "apl_rtos.h"
+#include "apl_rtos_internal.h"
 
 #define TEST_CHECK(expr_)          \
     do                             \
@@ -19,6 +19,7 @@
  */
 uint32_t Test_Phase6_Tasks(void)
 {
+    BQ76940_t afe_device;
     uint32_t failures;
     BaseType_t result;
 
@@ -34,7 +35,7 @@ uint32_t Test_Phase6_Tasks(void)
     g_p6_probe = 21UL;
     TEST_CHECK(result == pdTRUE);
 
-    result = APL_Rtos_CreateTasks();
+    result = APL_Rtos_CreateTasks(&afe_device);
     g_p6_probe = 22UL;
     TEST_CHECK(result == pdTRUE);
 

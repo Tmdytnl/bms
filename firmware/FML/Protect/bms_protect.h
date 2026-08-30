@@ -229,9 +229,6 @@ typedef struct
  */
 typedef bool (*BMS_ProtectXreadyRecoveryHook_t)(BQ76940_t *device);
 
-/* FET request helper：Protect 只提交安全输入，不直接写 SYS_CTRL2。 */
-extern BQ76940_FetRequest_t g_bms_fet_request;
-
 /* 调度器启动前初始化 fault、双向 inhibit、mailbox 与 recovery identity。 */
 void BMS_Protect_Init(void);
 
@@ -244,7 +241,7 @@ void BMS_Protect_SetXreadyRecoveryHook(
 
 /*
  * 返回同一 publication generation 的 active+latched 快照。任务上下文通过
- * scheduler exclusion 防止 torn read，ISR 不得调用；返回值只读，不能由
+ * runtime critical region 防止 torn read，ISR 不得调用；返回值只读，不能由
  * SYS_STAT=0 推导恢复授权。
  */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void);
@@ -300,7 +297,7 @@ bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
                                      bool oldest_was_dropped);
 
 /*
- * 在 scheduler exclusion 内复制 current-epoch latest CC。NULL、XREADY active、
+ * 在 runtime critical region 内复制 current-epoch latest CC。NULL、XREADY active、
  * 尚无本代 mailbox 或 epoch 不匹配时返回 false；非 NULL 输出会明确 valid=false。
  */
 bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot);
