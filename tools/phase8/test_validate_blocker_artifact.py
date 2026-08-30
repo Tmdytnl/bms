@@ -895,7 +895,13 @@ class ApprovalAndManifestTests(unittest.TestCase):
 
 class SourceTableRegressionTests(unittest.TestCase):
     def test_preflight_tables_match_current_control_source(self) -> None:
-        source_path = validator.REPO_ROOT / "firmware" / "Driver" / "bq76940_control.c"
+        source_path = (
+            validator.REPO_ROOT
+            / "firmware"
+            / "DRV"
+            / "BQ76940"
+            / "bq76940_control.c"
+        )
         compact = re.sub(r"\s+", "", source_path.read_text(encoding="utf-8"))
         sequences = [
             validator.OCD_THRESHOLD_MV[1],

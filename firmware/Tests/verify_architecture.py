@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -58,6 +59,7 @@ fml = production_files("FML")
 drv = production_files("DRV")
 bsp = production_files("BSP")
 apl = production_files("APL")
+user = production_files("User")
 
 rtos_patterns = {
     "RTOS include": re.compile(
@@ -117,8 +119,10 @@ expected_tasks = {
     "APL_TaskCanRx": "apl_task_can_rx.c",
 }
 task_defs: dict[str, list[Path]] = {name: [] for name in expected_tasks}
-all_firmware_c = sorted((ROOT / "firmware").rglob("*.c"))
-all_firmware_c = [path for path in all_firmware_c if "Tests" not in path.parts]
+all_firmware_c = sorted(
+    path for layer in ("APL", "FML", "DRV", "BSP", "User")
+    for path in (ROOT / "firmware" / layer).rglob("*.c")
+)
 for path in all_firmware_c:
     source = text(path)
     for name in expected_tasks:
@@ -139,6 +143,43 @@ check(
     all(name in rtos_c for name in expected_tasks) and
     all(f"({value})" in rtos_h for value in set(priority_values)),
     "seven-task creation topology and frozen priorities remain in APL",
+)
+
+apl_public = text(ROOT / "firmware/APL/apl_rtos.h")
+apl_internal_path = ROOT / "firmware/APL/apl_rtos_internal.h"
+apl_internal = text(apl_internal_path) if apl_internal_path.is_file() else ""
+raw_handles = (
+    "xI2CMutex", "xDataMutex", "xAfeAlertSem", "xCanTxQueue",
+    "xCanRxQueue", "xCcSampleQueue", "xSysEvents",
+)
+check(
+    not re.search(r"^extern\s+.*Handle_t", apl_public, re.M) and
+    all(handle in apl_internal for handle in raw_handles),
+    "raw RTOS handles are confined to the APL-private registry",
+)
+internal_header_users = [
+    relative(path) for path in (*fml, *drv, *bsp, *user)
+    if 'apl_rtos_internal.h' in text(path)
+]
+check(
+    not internal_header_users,
+    "non-APL production code cannot include the private RTOS registry",
+)
+
+mutable_fml_externs = [
+    relative(path) for path in fml
+    if path.suffix.lower() == ".h" and
+    re.search(r"^\s*extern\s+(?!const\b)", text(path), re.M)
+]
+check(
+    not mutable_fml_externs,
+    "FML public headers expose no mutable backing-store globals",
+)
+production_text = "\n".join(text(path) for path in (*apl, *fml, *drv,
+                                                      *bsp, *user))
+check(
+    "APL_SystemAfeDevice" not in production_text,
+    "APL task dependencies are injected without a composition backchannel",
 )
 
 irq_definitions: dict[str, list[str]] = {
@@ -193,13 +234,6 @@ check(
     "SYS_STAT writers remain startup plus Protect sole runtime owner",
 )
 
-old_production = [
-    path for directory in ("App", "Driver")
-    for path in (ROOT / "firmware" / directory).rglob("*")
-    if path.is_file() and path.suffix.lower() in {".c", ".h"}
-]
-check(not old_production, "legacy mixed App/Driver production sources are retired")
-
 project = ROOT / "firmware/Project/Keil/BMS_V1.uvprojx"
 project_paths: set[str] = set()
 try:
@@ -209,6 +243,31 @@ try:
     }
 except (ET.ParseError, OSError) as exc:
     fail(f"Keil project is not readable XML: {exc}")
+
+tracked_legacy: list[str] = []
+try:
+    git_result = subprocess.run(
+        ["git", "ls-files", "--", "firmware/App", "firmware/Driver"],
+        cwd=ROOT, check=False, capture_output=True, text=True,
+    )
+    if git_result.returncode == 0:
+        tracked_legacy = [
+            line for line in git_result.stdout.splitlines()
+            if Path(line).suffix.lower() in {".c", ".h"}
+        ]
+except OSError:
+    # Source archives may omit .git; Keil membership remains the production truth.
+    pass
+project_legacy = [
+    path for path in project_paths
+    if re.match(r"^\.\.\\\.\.\\(?:App|Driver)\\.*\.[ch]$",
+                path, re.I)
+]
+check(
+    not tracked_legacy and not project_legacy,
+    "legacy mixed App/Driver production sources are retired",
+)
+
 required_project_paths = {
     "..\\..\\APL\\apl_system.c",
     "..\\..\\APL\\apl_rtos.c",

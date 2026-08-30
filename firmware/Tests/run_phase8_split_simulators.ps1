@@ -102,7 +102,8 @@ foreach ($suite in $suites) {
     }
     $text = Get-Content -LiteralPath $logPath -Raw
     foreach ($marker in $suite.Markers) {
-        if ($text -notmatch [regex]::Escape($marker)) {
+        $exactLine = '(?m)^' + [regex]::Escape($marker) + '\r?$'
+        if ($text -notmatch $exactLine) {
             throw "Missing $marker in $($suite.Name)"
         }
         $summary.Add($marker)

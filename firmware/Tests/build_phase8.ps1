@@ -106,6 +106,35 @@ function Save-BuildLog {
     $script:logLines | Set-Content -LiteralPath $buildLog -Encoding UTF8
 }
 
+function Assert-SimulatorRegressionMarkers {
+    $requiredMarkers = @(
+        'PHASE4_REGRESSION_COMPLETED=1',
+        'PHASE4_REGRESSION_FAILURES=0',
+        'PHASE6_REGRESSION_COMPLETED=1',
+        'PHASE6_REGRESSION_FAILURES=0',
+        'PHASE7_REGRESSION_COMPLETED=1',
+        'PHASE7_REGRESSION_FAILURES=0',
+        'P7_SIM_COMM_FAILURES=0',
+        'PHASE8_DATA_TEST_COMPLETED=1',
+        'PHASE8_DATA_TEST_FAILURES=0',
+        'PHASE8_SAMPLE_TEST_COMPLETED=1',
+        'PHASE8_SAMPLE_TEST_FAILURES=0',
+        'P8_SAMPLE_PROVENANCE_GUARD_COMPLETED=1',
+        'PHASE8_AFE_TEST_COMPLETED=1',
+        'PHASE8_AFE_TEST_FAILURES=0'
+    )
+    $simulatorText = Get-Content -LiteralPath $simLog -Raw
+
+    foreach ($marker in $requiredMarkers) {
+        $exactLine = '(?m)^' + [regex]::Escape($marker) + '\r?$'
+        if ($simulatorText -notmatch $exactLine) {
+            Save-BuildLog
+            throw "Phase 8 Simulator missing exact PASS marker: $marker"
+        }
+        $script:logLines.Add('SIMULATOR_PASS_MARKER ' + $marker)
+    }
+}
+
 function Invoke-Checked {
     param(
         [Parameter(Mandatory = $true)][string]$FilePath,
@@ -596,6 +625,7 @@ if (-not $SkipSimulator) {
         $simulatorStartedUtc) {
         throw 'Phase 8 Simulator log predates the current run'
     }
+    Assert-SimulatorRegressionMarkers
 }
 
 if ($SkipSimulator -or $SkipProductionBuild) {

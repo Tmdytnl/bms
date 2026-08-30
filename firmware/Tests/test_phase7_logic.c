@@ -140,7 +140,7 @@ uint32_t Test_Phase7_CcQueue(void)
 {
     uint32_t failures;
     uint8_t index;
-    uint8_t stat_values[6];
+    uint8_t stat_values[7];
     int16_t cc_values[2];
     BMS_CcSample_t sample;
     BMS_ProtectDiagnostics_t diagnostics;
@@ -265,7 +265,8 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(diagnostics.cc_queue_overflow_count == 1UL);
     TEST_CHECK(diagnostics.cc_sample_missed_count == 1UL);
     TEST_CHECK(diagnostics.cc_enqueue_failure_count == 1UL);
-    TEST_CHECK(TestP7_CcReadCount() == 2U);
+    /* transport replacement 重试同一 staged sample，不得重复读取 CC。 */
+    TEST_CHECK(TestP7_CcReadCount() == 1U);
     TEST_CHECK(TestP7_WriteCount() == 1U);
     TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_CC_READY);
     TEST_CHECK(TestP7_QueueCount() == APL_RTOS_CC_SAMPLE_QUEUE_DEPTH);
@@ -277,7 +278,10 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_QueuePop(&sample));
     TEST_CHECK(sample.raw == 900);
 
-    /* CC_READY+OV 同一 snapshot 各处理一次，并合并到一次 W1C。 */
+    /*
+     * CC_READY+OV 同一 snapshot 分别提交：OV 可立即 W1C；CC 必须先完成 APL
+     * queue handoff。若下一次 status 已观察为 low，不得为凑合并写而重放 W1C。
+     */
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY | BMS_PROTECT_STAT_OV;
     stat_values[1] = 0U;
@@ -287,8 +291,7 @@ uint32_t Test_Phase7_CcQueue(void)
     TEST_CHECK(TestP7_ProtectDrain() ==
                BMS_PROTECT_DRAIN_COMPLETE);
     TEST_CHECK(TestP7_WriteCount() == 1U);
-    TEST_CHECK(TestP7_WriteValue(0U) ==
-               (BMS_PROTECT_STAT_CC_READY | BMS_PROTECT_STAT_OV));
+    TEST_CHECK(TestP7_WriteValue(0U) == BMS_PROTECT_STAT_OV);
     TEST_CHECK(TestP7_CcReadCount() == 1U);
     TEST_CHECK(TestP7_QueueCount() == 1U);
     TEST_CHECK(TestP7_QueuePop(&sample));
@@ -298,9 +301,10 @@ uint32_t Test_Phase7_CcQueue(void)
     TestP7_StubReset();
     stat_values[0] = BMS_PROTECT_STAT_CC_READY;
     stat_values[1] = BMS_PROTECT_STAT_CC_READY;
-    stat_values[2] = 0U;
+    stat_values[2] = BMS_PROTECT_STAT_CC_READY;
+    stat_values[3] = 0U;
     cc_values[0] = 400;
-    TestP7_SetStatScript(stat_values, NULL, 3U);
+    TestP7_SetStatScript(stat_values, NULL, 4U);
     TestP7_SetCcScript(cc_values, NULL, 1U);
     TestP7_SetWriteFailure(BQ76940_STATUS_I2C_NACK, 1U);
     TEST_CHECK(TestP7_ProtectDrain() ==
@@ -322,10 +326,11 @@ uint32_t Test_Phase7_CcQueue(void)
     stat_values[2] = BMS_PROTECT_STAT_CC_READY;
     stat_values[3] = BMS_PROTECT_STAT_CC_READY;
     stat_values[4] = BMS_PROTECT_STAT_CC_READY;
-    stat_values[5] = 0U;
+    stat_values[5] = BMS_PROTECT_STAT_CC_READY;
+    stat_values[6] = 0U;
     cc_values[0] = 500;
     cc_values[1] = 501;
-    TestP7_SetStatScript(stat_values, NULL, 6U);
+    TestP7_SetStatScript(stat_values, NULL, 7U);
     TestP7_SetCcScript(cc_values, NULL, 2U);
     TestP7_SetWriteFailure(
         BQ76940_STATUS_WRITE_FINALIZATION_AMBIGUOUS, 1U);
@@ -415,9 +420,10 @@ uint32_t Test_Phase7_AlertRetry(void)
     TEST_CHECK(TestP7_StatReadCount() == BMS_PROTECT_DRAIN_MAX_ITER);
     TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_IDLE);
+    /* pin level 属于 APL task retry policy；FML service 只依据 SYS_STAT transaction。 */
     TestP7_SetAlertActive(true);
     TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
-               BMS_PROTECT_SERVICE_RETRY_REQUIRED);
+               BMS_PROTECT_SERVICE_IDLE);
     TestP7_SetAlertActive(false);
     TEST_CHECK(BMS_Protect_ServicePending(TestP7_Device(), 0UL) ==
                BMS_PROTECT_SERVICE_IDLE);
@@ -447,7 +453,8 @@ uint32_t Test_Phase7_AlertRetry(void)
                BMS_PROTECT_SERVICE_RETRY_REQUIRED);
     faults = BMS_Protect_GetFaultSummary();
     TEST_CHECK(BMS_Fault_Contains(faults.active, BMS_FAULT_ID_AFE_COMM));
-    TEST_CHECK((TestP7_EventBits() & EVT_FAULT_PRESENT) != 0U);
+    /* FML 发布 fault state，不直接写 APL event group。 */
+    TEST_CHECK((TestP7_EventBits() & EVT_FAULT_PRESENT) == 0U);
     TEST_CHECK(TestP7_WriteCount() == 0U);
     TEST_CHECK(TestP7_MutexAvailable());
 
@@ -514,8 +521,10 @@ uint32_t Test_Phase7_Xready(void)
     xready_state.active = true;
     TEST_CHECK(!BMS_Protect_XreadyBindingIsCurrent(&xready_state, 0UL));
 
-    /* XREADY+CC_READY 可把 CC 入 SOC queue，但 Sample mailbox 既不暴露它也不暴露
-     * 未消费旧代；只有随后 inactive-epoch CC 恢复 latest。 */
+    /*
+     * XREADY+CC_READY 同一 snapshot 中，生命周期中断优先：边界 CC 不读取、
+     * 不入 SOC queue，也不暴露到 Sample mailbox；只有恢复后的新 CC 可被接纳。
+     */
     TEST_CHECK(TestP7_PushCcSample((int16_t)111));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.xready_generation == 0UL);
@@ -534,12 +543,11 @@ uint32_t Test_Phase7_Xready(void)
     TEST_CHECK(BMS_Protect_GetXreadyState(&xready_state));
     TEST_CHECK(xready_state.xready_generation == 1UL);
     TEST_CHECK(!xready_state.active);
-    TEST_CHECK(TestP7_CcReadCount() == 1U);
-    TEST_CHECK(TestP7_QueueCount() == 2U);
+    TEST_CHECK(TestP7_CcReadCount() == 0U);
+    TEST_CHECK(TestP7_QueueCount() == 1U);
     TEST_CHECK(TestP7_QueuePop(&cc_sample));
     TEST_CHECK(cc_sample.raw == (int16_t)111);
-    TEST_CHECK(TestP7_QueuePop(&cc_sample));
-    TEST_CHECK(cc_sample.raw == (int16_t)222);
+    TEST_CHECK(!TestP7_QueuePop(&cc_sample));
     TEST_CHECK(TestP7_PushCcSample((int16_t)333));
     TEST_CHECK(BMS_Protect_GetLatestCc(&latest_cc));
     TEST_CHECK(latest_cc.raw == (int16_t)333);

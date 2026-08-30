@@ -239,8 +239,9 @@ static void TestSample_StartupAndSignedCurrent(void)
     TEST_SAMPLE_CHECK(g_phase8_sample_stub_observation.i2c_data_nesting_count ==
                       0UL);
     TEST_SAMPLE_CHECK(TestPhase8SampleStub_LocksBalanced());
+    /* FML 只发布 coherent data；APL event group 不属于该层的写权限。 */
     TEST_SAMPLE_CHECK((g_phase8_sample_stub_observation.event_bits &
-                       EVT_SAMPLE_READY) != (EventBits_t)0U);
+                       EVT_SAMPLE_READY) == (EventBits_t)0U);
     TEST_SAMPLE_CHECK(TestSample_Snapshot(&snapshot, 5500UL));
     TEST_SAMPLE_CHECK(snapshot.sample_sequence == 1UL);
     TEST_SAMPLE_CHECK(snapshot.snapshot_timestamp_ms == 5500UL);
