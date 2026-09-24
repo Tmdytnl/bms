@@ -18,10 +18,11 @@
 #define BMS_SOC_OCV_POINT_COUNT                 (10U)
 typedef struct
 {
-    uint16_t cell_mv;
-    uint16_t soc_permille;
+    uint16_t cell_mv; /* OCV 插值节点的单体电压，单位 mV。 */
+    uint16_t soc_permille; /* 对应的初始 SOC，单位千分比。 */
 } BMS_SocOcvPoint_t;
 
+/* 启动 OCV 估算使用的固定单体电压与 SOC 对照表。 */
 static const BMS_SocOcvPoint_t
     s_ocv_table[BMS_SOC_OCV_POINT_COUNT] =
 {
@@ -31,15 +32,20 @@ static const BMS_SocOcvPoint_t
     {4200U, 1000U}
 };
 
+/* SOC owner 独占的高分辨率积分与端点资格状态。 */
 static BMS_SocEngine_t s_engine;
+/* 对其它模块发布的 SOC 只读估计快照。 */
 static BMS_SocSnapshot_t s_snapshot;
+/* 启动期绑定的不可变 SOC 策略。 */
 static const BMS_Policy_t *s_policy;
 
+/* 根据容量策略计算内部 mA·ms 积分上限。 */
 static int64_t BMS_Soc_MaxMams(const BMS_SocPolicy_t *policy)
 {
     return (int64_t)policy->capacity_mah * BMS_SOC_MAMS_PER_MAH;
 }
 
+/* 在相邻 OCV 节点间插值初始 SOC，范围外取端点值。 */
 static uint16_t BMS_Soc_InterpolateOcv(uint16_t cell_mv)
 {
     uint8_t index;
@@ -69,6 +75,7 @@ static uint16_t BMS_Soc_InterpolateOcv(uint16_t cell_mv)
     return s_ocv_table[BMS_SOC_OCV_POINT_COUNT - 1U].soc_permille;
 }
 
+/* 确认 OCV 与端点修正所需的电芯测量仍新鲜。 */
 static bool BMS_Soc_HaveFreshCells(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -77,6 +84,7 @@ static bool BMS_Soc_HaveFreshCells(
         (measurement->cell_metadata.stale_bitmap == 0U);
 }
 
+/* 从有效电芯测量计算平均单体电压，供 OCV 初始化。 */
 static uint16_t BMS_Soc_AverageCellMv(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -91,6 +99,7 @@ static uint16_t BMS_Soc_AverageCellMv(
     return (uint16_t)(sum / BMS_CELL_COUNT);
 }
 
+/* 从有效电芯测量取得最低单体电压，供端点修正。 */
 static uint16_t BMS_Soc_MinCellMv(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -108,6 +117,7 @@ static uint16_t BMS_Soc_MinCellMv(
     return minimum;
 }
 
+/* 按回绕安全的毫秒差判断 SOC 时间窗口结束。 */
 static bool BMS_Soc_TimeElapsed(uint32_t now_ms,
                                 uint32_t started_ms,
                                 uint32_t duration_ms)
@@ -115,6 +125,7 @@ static bool BMS_Soc_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) >= duration_ms);
 }
 
+/* 把容量积分结果限制到千分比范围后发布。 */
 static void BMS_Soc_SetPermille(BMS_SocEngine_t *engine,
                                 const BMS_SocPolicy_t *policy,
                                 uint16_t soc_permille)
@@ -123,6 +134,7 @@ static void BMS_Soc_SetPermille(BMS_SocEngine_t *engine,
         (BMS_Soc_MaxMams(policy) * (int64_t)soc_permille) / 1000LL;
 }
 
+/* 用有效 Flash/OCV 证据建立 SOC 积分器初始容量。 */
 bool BMS_Soc_EngineInit(BMS_SocEngine_t *engine,
                         const BMS_SocPolicy_t *policy,
                         const BMS_DataSnapshot_t *measurement,
@@ -151,6 +163,7 @@ bool BMS_Soc_EngineInit(BMS_SocEngine_t *engine,
     return true;
 }
 
+/* 标记 CC 样本序列断档，避免跨缺口积分。 */
 void BMS_Soc_MarkQueueGap(BMS_SocEngine_t *engine)
 {
     if (engine != NULL)
@@ -165,6 +178,7 @@ void BMS_Soc_MarkQueueGap(BMS_SocEngine_t *engine)
     }
 }
 
+/* 按样本时间差积分电流，并维护同代 CC 连续性。 */
 bool BMS_Soc_IntegrateCurrent(BMS_SocEngine_t *engine,
                               const BMS_SocPolicy_t *policy,
                               int32_t current_ma,
@@ -238,6 +252,7 @@ bool BMS_Soc_IntegrateCurrent(BMS_SocEngine_t *engine,
     return true;
 }
 
+/* 按静置或端点资格修正积分估计，并保留证据窗口。 */
 void BMS_Soc_ObserveCorrection(BMS_SocEngine_t *engine,
                                const BMS_SocPolicy_t *policy,
                                const BMS_DataSnapshot_t *measurement,
@@ -331,6 +346,7 @@ void BMS_Soc_ObserveCorrection(BMS_SocEngine_t *engine,
     }
 }
 
+/* 复制积分器内部证据供测试与诊断，不修改估计。 */
 BMS_SocSnapshot_t BMS_Soc_GetEngineSnapshot(
     const BMS_SocEngine_t *engine,
     const BMS_SocPolicy_t *policy)
@@ -365,6 +381,7 @@ BMS_SocSnapshot_t BMS_Soc_GetEngineSnapshot(
     return snapshot;
 }
 
+/* 绑定 SOC 策略并建立尚未取得有效容量证据的初始估计。 */
 void BMS_Soc_Init(const BMS_Policy_t *policy)
 {
     BMS_DataSnapshot_t measurement;
@@ -381,6 +398,7 @@ void BMS_Soc_Init(const BMS_Policy_t *policy)
     }
 }
 
+/* 用合法持久化值恢复 SOC 估计，非法记录不覆盖现有状态。 */
 bool BMS_Soc_Restore(uint16_t soc_permille,
                      uint32_t remaining_capacity_mah)
 {
@@ -408,6 +426,7 @@ bool BMS_Soc_Restore(uint16_t soc_permille,
     return true;
 }
 
+/* 消费本轮 CC 样本、更新 SOC 估计并发布只读诊断。 */
 void BMS_Soc_RunOnce(uint32_t now_ms,
                      const BMS_CcSample_t *samples,
                      uint8_t sample_count,
@@ -468,6 +487,7 @@ void BMS_Soc_RunOnce(uint32_t now_ms,
         s_snapshot.soc_permille, now_ms, s_snapshot.valid);
 }
 
+/* 复制 SOC owner 已发布的容量和证据状态。 */
 BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void)
 {
     BMS_SocSnapshot_t snapshot;

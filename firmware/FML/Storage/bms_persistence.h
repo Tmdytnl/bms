@@ -35,12 +35,15 @@ typedef enum
  */
 typedef struct
 {
+    /* 从目标 Flash 读取指定范围；失败时输出不作有效记录。 */
     bool (*read)(void *context, uint32_t address,
                  uint8_t *destination, uint16_t length);
+    /* 擦除指定持久化页，成功后该页不再含已提交记录。 */
     bool (*erase_page)(void *context, uint32_t page_address);
+    /* 按目标 Flash 半字粒度编程，遵守 1→0 约束。 */
     bool (*program_halfword)(void *context, uint32_t address,
                              uint16_t value);
-    void *context;
+    void *context; /* 传给每个存储回调的目标端上下文。 */
 } BMS_PersistenceStorageOps_t;
 
 typedef struct
@@ -76,12 +79,15 @@ typedef struct
 
 /* 记录格式工具无全局状态，可由单元测试直接验证 CRC、编码和损坏拒绝语义。 */
 uint32_t BMS_Persistence_Crc32(const uint8_t *data, uint16_t length);
+/* 按固定版本与字节序编码持久化记录及 CRC。 */
 bool BMS_Persistence_Encode(
     const BMS_PersistencePayload_t *payload,
     uint8_t record[BMS_PERSISTENCE_RECORD_BYTES]);
+/* 校验记录版本、提交标记与 CRC 后解码载荷。 */
 bool BMS_Persistence_Decode(
     const uint8_t record[BMS_PERSISTENCE_RECORD_BYTES],
     BMS_PersistencePayload_t *payload);
+/* 按提交标记与回绕序号选出 A/B 页中的最新有效记录。 */
 BMS_PersistenceSlot_t BMS_Persistence_SelectNewest(
     const uint8_t slot_a[BMS_PERSISTENCE_RECORD_BYTES],
     const uint8_t slot_b[BMS_PERSISTENCE_RECORD_BYTES],
@@ -96,9 +102,11 @@ bool BMS_Persistence_StoreInit(
     BMS_PersistenceStore_t *store,
     const BMS_FlashPolicy_t *policy,
     const BMS_PersistenceStorageOps_t *storage);
+/* 从两个页中选择最新有效记录，不把损坏页当作新状态。 */
 bool BMS_Persistence_StoreGetLatest(
     const BMS_PersistenceStore_t *store,
     BMS_PersistencePayload_t *payload);
+/* 按时间与变化门限决定是否提交 SOC，避免无意义的 Flash 擦写。 */
 BMS_PersistenceStoreResult_t BMS_Persistence_StoreSocIfDue(
     BMS_PersistenceStore_t *store,
     uint16_t soc_permille,
@@ -107,6 +115,7 @@ BMS_PersistenceStoreResult_t BMS_Persistence_StoreSocIfDue(
     uint32_t persistent_counter1,
     bool valid,
     uint32_t now_ms);
+/* 复制 A/B 页存储算法的诊断计数。 */
 BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
     const BMS_PersistenceStore_t *store);
 
@@ -119,7 +128,9 @@ BMS_PersistenceDiagnostics_t BMS_Persistence_StoreGetDiagnostics(
 bool BMS_Persistence_TargetInit(
     const BMS_FlashPolicy_t *policy,
     const BMS_PersistenceStorageOps_t *storage);
+/* 从目标 Flash 的 A/B 页读取最新有效载荷。 */
 bool BMS_Persistence_TargetGetLatest(BMS_PersistencePayload_t *payload);
+/* 用当前 SOC 快照服务受节流约束的目标 Flash 写入。 */
 BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
     uint16_t soc_permille,
     uint32_t remaining_capacity_mah,
@@ -127,6 +138,7 @@ BMS_PersistenceStoreResult_t BMS_Persistence_TargetServiceSoc(
     uint32_t persistent_counter1,
     bool valid,
     uint32_t now_ms);
+/* 复制目标持久化服务的诊断状态。 */
 BMS_PersistenceDiagnostics_t BMS_Persistence_TargetGetDiagnostics(void);
 
 #endif /* BMS_PERSISTENCE_H：头文件防重复包含 */

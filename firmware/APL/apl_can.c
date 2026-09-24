@@ -9,13 +9,20 @@
 
 #define APL_CAN_TARGET_RETRY_MS                  (1000UL)
 
+/* 启动期绑定的 CAN 策略；决定过滤器和重试时序。 */
 static const BMS_Policy_t *s_policy;
+/* 上次 CAN 外设初始化尝试的毫秒时刻。 */
 static uint32_t s_last_init_attempt_ms;
+/* 至少尝试过一次目标 CAN 初始化的标志。 */
 static bool s_init_attempted;
+/* APL 已完成接收队列准备并允许 RX 中断的标志。 */
 static bool s_rx_enabled;
+/* ISR 累积、待任务层汇总的 RX FIFO 溢出次数。 */
 static volatile uint32_t s_rx_fifo_overrun_pending;
+/* ISR 累积、待任务层汇总的 RX 队列丢帧次数。 */
 static volatile uint32_t s_rx_queue_drop_pending;
 
+/* 把 ISR 累积的丢帧与溢出计数转入 FML 诊断后清零。 */
 static void APL_Can_FlushIsrDiagnostics(void)
 {
     uint32_t overrun_count;
@@ -34,6 +41,7 @@ static void APL_Can_FlushIsrDiagnostics(void)
         BMS_CAN_DIAG_TARGET_RX_QUEUE_DROP, drop_count);
 }
 
+/* 在中断上下文累计一次 CAN RX FIFO 溢出。 */
 void APL_Can_RecordRxFifoOverrunFromISR(void)
 {
     /* 饱和而非回绕，避免长时间故障后诊断计数伪装成较小值。 */
@@ -43,6 +51,7 @@ void APL_Can_RecordRxFifoOverrunFromISR(void)
     }
 }
 
+/* 在中断上下文累计一次 CAN RX 队列丢帧。 */
 void APL_Can_RecordRxQueueDropFromISR(void)
 {
     if (s_rx_queue_drop_pending < UINT32_MAX)
@@ -51,6 +60,7 @@ void APL_Can_RecordRxQueueDropFromISR(void)
     }
 }
 
+/* 绑定 CAN 硬件配置与过滤器，不把硬件状态交给 FML。 */
 bool APL_Can_BindTarget(const BMS_Policy_t *policy)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
@@ -68,6 +78,7 @@ bool APL_Can_BindTarget(const BMS_Policy_t *policy)
     return true;
 }
 
+/* 在队列准备完成后开启 bxCAN 接收中断。 */
 bool APL_Can_EnableRx(void)
 {
     if (!BSP_CAN_EnableRxInterrupt())
@@ -79,6 +90,7 @@ bool APL_Can_EnableRx(void)
     return true;
 }
 
+/* 把 FML 编码的周期诊断帧投递到 APL 发送队列。 */
 void APL_Can_QueuePeriodic(uint32_t now_ms)
 {
     BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT];
@@ -100,6 +112,7 @@ void APL_Can_QueuePeriodic(uint32_t now_ms)
     }
 }
 
+/* 有界处理发送队列、邮箱与 bus-off 硬件恢复。 */
 void APL_Can_TxHardwareService(uint32_t now_ms)
 {
     BMS_CanFrame_t queued;
@@ -144,7 +157,7 @@ void APL_Can_TxHardwareService(uint32_t now_ms)
     while ((xCanTxQueue != NULL) &&
            (xQueueReceive(xCanTxQueue, &queued, 0U) == pdPASS))
     {
-        target.id = queued.ext_id;
+        target.id = queued.standard_id;
         target.extended = s_policy != NULL &&
             !s_policy->can.standard_11_bit_ids;
         target.dlc = queued.dlc;

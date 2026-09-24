@@ -9,8 +9,8 @@
 /* calibration-owned NTC point；模块不硬编码曲线，实际 table 由配置层注入。 */
 typedef struct
 {
-    uint32_t resistance_ohm;
-    BMS_TemperatureDeciC_t temperature_decic;
+    uint32_t resistance_ohm; /* 插值表节点电阻，单位 Ω。 */
+    BMS_TemperatureDeciC_t temperature_decic; /* 对应节点温度，单位 0.1 °C。 */
 } BMS_NtcPoint_t;
 
 /*

@@ -47,8 +47,8 @@ typedef struct
 
     /* 即使 exact code 为 0 也必须显式 present，防止缺失 PROTECT3 被零初始化伪装。 */
     bool protect3_present;
-    uint8_t protect3_uv_delay_code;
-    uint8_t protect3_ov_delay_code;
+    uint8_t protect3_uv_delay_code; /* 欠压延时的 PROTECT3 编码。 */
+    uint8_t protect3_ov_delay_code; /* 过压延时的 PROTECT3 编码。 */
 } BMS_AfeStartupConfig_t;
 
 typedef enum
@@ -113,17 +113,17 @@ typedef struct
     uint8_t attempt_count;             /* 唤醒/探测共享的有界尝试次数 */
     uint8_t register_index;            /* 当前 write-readback 计划位置 */
     uint8_t register_count;            /* 当前 epoch 需要执行的计划长度 */
-    uint8_t register_addresses[BMS_AFE_STARTUP_REGISTER_COUNT];
-    uint8_t register_values[BMS_AFE_STARTUP_REGISTER_COUNT];
-    uint8_t adc_gain1;
-    uint8_t adc_offset;
-    uint8_t adc_gain2;
+    uint8_t register_addresses[BMS_AFE_STARTUP_REGISTER_COUNT]; /* 按顺序执行的寄存器地址计划。 */
+    uint8_t register_values[BMS_AFE_STARTUP_REGISTER_COUNT]; /* 待逐项写入并回读的配置计划。 */
+    uint8_t adc_gain1;  /* 校准寄存器 ADCGAIN1 的原始字节。 */
+    uint8_t adc_offset; /* 校准寄存器 ADCOFFSET 的原始字节。 */
+    uint8_t adc_gain2;  /* 校准寄存器 ADCGAIN2 的原始字节。 */
     uint8_t initial_sys_stat;          /* probe 时的历史观察，仅用于阻断 */
     uint8_t final_sys_stat;            /* settle 后的当前 W1C 授权观察 */
     uint8_t unsafe_sys_stat;           /* 供诊断保留的阻断位证据 */
-    uint8_t failed_register_address;
-    uint8_t failed_readback_value;
-    uint8_t safe_off_readback_value;
+    uint8_t failed_register_address; /* 首次写入或回读失败的寄存器地址。 */
+    uint8_t failed_readback_value;   /* 首个配置回读不符时观察到的字节。 */
+    uint8_t safe_off_readback_value; /* 安全关断回读的 SYS_CTRL2 完整字节。 */
     bool fet_off_confirmed;            /* 最新 SYS_CTRL2 实读证明 CHG/DSG=0 */
     bool safe_outputs_confirmed;       /* FET 与三组均衡输出均已确认安全 */
     bool abort_after_safe_outputs;     /* 先做安全关断，再发布 unsafe 失败 */
@@ -157,10 +157,13 @@ bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
 BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
                                            uint32_t now_ms);
 
+/* 复制启动状态机当前阶段及已确认的证据。 */
 BMS_AfeStartupState_t BMS_AfeStartup_GetState(
     const BMS_AfeStartup_t *startup);
+/* 返回启动状态机保留的首个失败原因。 */
 BMS_AfeStartupFailure_t BMS_AfeStartup_GetFailure(
     const BMS_AfeStartup_t *startup);
+/* 仅在校准已验证后复制增益与偏移供 Sample 绑定。 */
 bool BMS_AfeStartup_GetCalibration(
     const BMS_AfeStartup_t *startup,
     BQ76940_Calibration_t *calibration);

@@ -44,6 +44,7 @@ typedef struct
 
 /* Init 只绑定 transport，不写 AFE；配置完成身份由上层 startup 状态机持有。 */
 BQ76940_Status_t BQ76940_Init(BQ76940_t *device, SoftI2C_t *bus);
+/* 确认器件句柄和底层软件 I2C 均已初始化。 */
 bool BQ76940_IsInitialized(const BQ76940_t *device);
 
 /*
@@ -54,17 +55,21 @@ bool BQ76940_IsInitialized(const BQ76940_t *device);
 BQ76940_Status_t BQ76940_WriteByte(BQ76940_t *device,
                                     uint8_t register_address,
                                     uint8_t value);
+/* 按器件 CRC 规则连续写寄存器数据并报告传输状态。 */
 BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
                                      uint8_t start_register,
                                      const uint8_t *data,
                                      size_t length);
+/* 读取一个 AFE 寄存器，失败时不把输出当作有效证据。 */
 BQ76940_Status_t BQ76940_ReadByte(BQ76940_t *device,
                                    uint8_t register_address,
                                    uint8_t *value);
+/* 连续读取 AFE 寄存器并校验每组 CRC。 */
 BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
                                     uint8_t start_register,
                                     uint8_t *data,
                                     size_t length);
+/* 连续读取相邻的两个寄存器并按器件字节序组合 16 位原始值。 */
 BQ76940_Status_t BQ76940_ReadAdjacentU16(BQ76940_t *device,
                                          uint8_t high_register,
                                          uint16_t *value);
@@ -74,11 +79,14 @@ BQ76940_Status_t BQ76940_DecodeCalibration(uint8_t adc_gain1,
                                             uint8_t adc_offset,
                                             uint8_t adc_gain2,
                                             BQ76940_Calibration_t *calibration);
+/* 读取并解码器件 ADC 校准寄存器，非法取值不发布。 */
 BQ76940_Status_t BQ76940_ReadCalibration(
     BQ76940_t *device,
     BQ76940_Calibration_t *calibration);
 
+/* 解码原始值14。 */
 uint16_t BQ76940_DecodeRaw14(uint8_t high_byte, uint8_t low_byte);
+/* 把两个器件字节按补码解释为有符号原始值。 */
 int16_t BQ76940_DecodeSigned16(uint8_t high_byte, uint8_t low_byte);
 /* cell 换算采用 GAIN×ADC+OFFSET 与 half-up mV 取整；失败不改写 cell_mv。 */
 BQ76940_Status_t BQ76940_ConvertCellRawToMv(

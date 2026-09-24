@@ -18,34 +18,71 @@
 
 typedef enum
 {
-    BMS_SAMPLE_GROUP_NONE = 0,
-    BMS_SAMPLE_GROUP_CELL,
-    BMS_SAMPLE_GROUP_PACK,
-    BMS_SAMPLE_GROUP_CURRENT,
-    BMS_SAMPLE_GROUP_TEMPERATURE
+    BMS_SAMPLE_GROUP_NONE = 0, /* 尚未进入任一测量组。 */
+    BMS_SAMPLE_GROUP_CELL, /* 13 节电芯电压组。 */
+    BMS_SAMPLE_GROUP_PACK, /* 电池包 BAT 电压组。 */
+    BMS_SAMPLE_GROUP_CURRENT, /* Protect CC 样本关联组。 */
+    BMS_SAMPLE_GROUP_TEMPERATURE /* TS1 与 NTC 温度组。 */
 } BMS_SampleGroup_t;
 
+/* 一次采样捕获的配置及身份；读总线期间不持配置临界区。 */
+typedef struct
+{
+    BQ76940_t *device; /* 本轮使用的 AFE 句柄。 */
+    BQ76940_Calibration_t calibration; /* 本轮 ADC 换算的校准副本。 */
+    const BMS_NtcPoint_t *ntc_points; /* 本轮温度插值表指针。 */
+    uint16_t ntc_point_count; /* 插值表中的有效节点数。 */
+    uint32_t xready_generation; /* 校准绑定的 XREADY 世代。 */
+    uint32_t recovery_revision; /* 校准绑定的恢复事务修订号。 */
+    uint32_t revision; /* 本轮配置快照的发布前复核版本。 */
+    bool generation_bound; /* 校准已绑定本轮 XREADY 世代。 */
+    bool post_clear_verified; /* 恢复后配置复核证据已成立。 */
+    bool current_epoch_invalidation_pending; /* 旧电流等待完整新帧淘汰。 */
+    bool current_invalidation_required; /* 本轮发布须使旧电流失效。 */
+} BMS_SampleConfiguration_t;
+
+/* 启动期绑定的 AFE 句柄，Sample 是测量发布唯一写者。 */
 static BQ76940_t *s_device;
+/* 当前可用于 ADC 换算的校准值，需与 AFE 世代一起核验。 */
 static BQ76940_Calibration_t s_calibration;
+/* 当前校准绑定的 XREADY 世代。 */
 static uint32_t s_calibration_xready_generation;
+/* 当前校准已绑定具体 XREADY 世代的标志。 */
 static bool s_calibration_generation_bound;
+/* 恢复后校准对应的 Recovery 修订号；零表示启动期来源。 */
 static uint32_t s_calibration_recovery_revision;
+/* 恢复后校准已具备清除后配置复核证据的标志。 */
 static bool s_calibration_post_clear_verified;
+/* 当前生命周期要求恢复交接证据才能使用校准的标志。 */
 static bool s_recovery_provenance_required;
+/* 启动期绑定的只读 NTC 插值表。 */
 static const BMS_NtcPoint_t *s_ntc_points;
+/* NTC 插值表中的有效节点数。 */
 static uint16_t s_ntc_point_count;
+/* Sample owner 私有的分组失败与过期诊断。 */
 static BMS_SampleDiagnostics_t s_diagnostics;
+/* 距离下一次 TS1 读取还剩多少个采样周期。 */
 static uint16_t s_temperature_cycles_remaining;
+/* 本周期需要读取 TS1 的标志。 */
 static bool s_temperature_due;
+/* 上次已并入 Data 帧的 Protect CC mailbox 序号。 */
 static uint32_t s_last_published_cc_sequence;
+/* 该已发布 CC 样本所属 AFE 世代。 */
 static uint32_t s_last_published_cc_xready_generation;
+/* 当前至少发布过一条 CC 样本的标志。 */
 static bool s_cc_sequence_published;
+/* 上次成功发布完整电芯核心帧的 AFE 世代。 */
 static uint32_t s_last_published_core_xready_generation;
+/* 已有完整核心帧世代基线的标志。 */
 static bool s_core_xready_generation_published;
+/* 新 AFE 世代尚未随完整帧淘汰旧电流的待决标志。 */
 static bool s_current_epoch_invalidation_pending;
+/* 设备、校准或 NTC 配置变化时推进的发布前复核版本。 */
 static uint32_t s_configuration_revision;
+/* 已观察过旧数据并锁存过期诊断的标志。 */
 static bool s_stale_observed;
 
+/* 饱和递增采样诊断计数，防止回绕掩盖持续失败。 */
 static void BMS_Sample_SaturatingIncrement(uint32_t *value)
 {
     if (*value < UINT32_MAX)
@@ -54,6 +91,7 @@ static void BMS_Sample_SaturatingIncrement(uint32_t *value)
     }
 }
 
+/* 校验增益、偏移及有效位，拒绝不可用于换算的校准。 */
 static bool BMS_Sample_CalibrationIsValid(
     const BQ76940_Calibration_t *calibration)
 {
@@ -66,6 +104,7 @@ static bool BMS_Sample_CalibrationIsValid(
            (calibration->offset_mv <= 127);
 }
 
+/* 把驱动状态区分为总线传输故障与其他采样失败。 */
 static bool BMS_Sample_StatusIsTransportFailure(BQ76940_Status_t status)
 {
     switch (status)
@@ -82,6 +121,7 @@ static bool BMS_Sample_StatusIsTransportFailure(BQ76940_Status_t status)
     }
 }
 
+/* 按失败测量组累计对应诊断，保留失败来源。 */
 static void BMS_Sample_IncrementGroupFailure(BMS_SampleGroup_t group)
 {
     switch (group)
@@ -107,6 +147,7 @@ static void BMS_Sample_IncrementGroupFailure(BMS_SampleGroup_t group)
     }
 }
 
+/* 统一累计整帧拒绝、连续失败和具体传输或配置原因。 */
 static void BMS_Sample_RecordFailure(BMS_SampleGroup_t group,
                                      BQ76940_Status_t status,
                                      bool mutex_timeout,
@@ -154,6 +195,7 @@ static void BMS_Sample_RecordFailure(BMS_SampleGroup_t group,
     BMS_Runtime_CriticalExit();
 }
 
+/* 完整帧发布后清零连续失败并推进成功诊断。 */
 static void BMS_Sample_RecordSuccess(bool ntc_curve_unavailable,
                                      bool temperature_unavailable)
 {
@@ -173,6 +215,7 @@ static void BMS_Sample_RecordSuccess(bool ntc_curve_unavailable,
     BMS_Runtime_CriticalExit();
 }
 
+/* 记录本轮 CC 样本缺席，核心电压帧仍可完整发布。 */
 static void BMS_Sample_RecordCcUnavailable(void)
 {
     BMS_Runtime_CriticalEnter();
@@ -181,6 +224,7 @@ static void BMS_Sample_RecordCcUnavailable(void)
     BMS_Runtime_CriticalExit();
 }
 
+/* 记录 XREADY 身份不匹配导致的本轮发布拒绝。 */
 static void BMS_Sample_RecordXreadyReject(bool postcheck)
 {
     BMS_Runtime_CriticalEnter();
@@ -197,6 +241,7 @@ static void BMS_Sample_RecordXreadyReject(bool postcheck)
     BMS_Runtime_CriticalExit();
 }
 
+/* 根据现有快照时效更新采样诊断，不发布半帧。 */
 static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
 {
     BMS_DataFreshnessSnapshot_t snapshot;
@@ -245,6 +290,7 @@ static void BMS_Sample_CheckStale(BMS_TimestampMs_t now_ms)
     BMS_Runtime_CriticalExit();
 }
 
+/* 为本轮采样建立局部 staging 帧，所有字段先取不可用初值。 */
 static void BMS_Sample_InitFrame(BMS_MeasurementFrame_t *frame,
                                  BMS_TimestampMs_t now_ms)
 {
@@ -276,6 +322,7 @@ static void BMS_Sample_InitFrame(BMS_MeasurementFrame_t *frame,
     frame->temperature_in_range = false;
 }
 
+/* 判断本周期是否达到 TS1 分频采样节拍。 */
 static bool BMS_Sample_TemperatureIsDue(void)
 {
     if (!s_temperature_due)
@@ -293,16 +340,19 @@ static bool BMS_Sample_TemperatureIsDue(void)
     return s_temperature_due;
 }
 
+/* 仅在存在并发任务时取得配置更新保护，并返回其 ownership。 */
 static bool BMS_Sample_BeginConfigUpdate(void)
 {
     return BMS_Runtime_ConcurrencyGuardEnter();
 }
 
+/* 按 Begin 返回的 ownership 释放配置更新保护。 */
 static void BMS_Sample_EndConfigUpdate(bool guard_entered)
 {
     BMS_Runtime_ConcurrencyGuardExit(guard_entered);
 }
 
+/* 建立未绑定设备、校准无效的采样初始状态。 */
 void BMS_Sample_Init(void)
 {
     s_device = NULL;
@@ -352,6 +402,7 @@ void BMS_Sample_Init(void)
     s_stale_observed = false;
 }
 
+/* 更换 AFE 句柄并推进配置修订号，禁止旧采样跨设备发布。 */
 void BMS_Sample_SetDevice(BQ76940_t *device)
 {
     BMS_ProtectLatestCc_t latest_cc;
@@ -393,6 +444,7 @@ void BMS_Sample_SetDevice(BQ76940_t *device)
     BMS_Sample_EndConfigUpdate(guard_entered);
 }
 
+/* 绑定启动期 ADC 校准及当前世代，失败时保持校准不可用。 */
 bool BMS_Sample_SetCalibration(
     const BQ76940_Calibration_t *calibration)
 {
@@ -441,6 +493,7 @@ bool BMS_Sample_SetCalibration(
     return valid;
 }
 
+/* 仅接纳带当前 XREADY 世代和恢复修订号的校准交接。 */
 bool BMS_Sample_SetRecoveryCalibration(
     const BMS_SampleCalibrationEvidence_t *evidence,
     uint32_t current_recovery_revision,
@@ -487,6 +540,7 @@ bool BMS_Sample_SetRecoveryCalibration(
     return valid;
 }
 
+/* 在新 XREADY 世代出现时使旧校准和电流证据失效。 */
 void BMS_Sample_InvalidateCalibrationForXready(
     uint32_t xready_generation)
 {
@@ -516,6 +570,7 @@ void BMS_Sample_InvalidateCalibrationForXready(
     BMS_Sample_EndConfigUpdate(guard_entered);
 }
 
+/* 绑定已验证 NTC 表并推进配置修订号，供下轮采样使用。 */
 bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
                             uint16_t point_count)
 {
@@ -551,6 +606,7 @@ bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
 }
 
 #if defined(TEST_PHASE8_SAMPLE_IMAGE)
+/* 测试镜像设置配置修订号以覆盖回绕边界。 */
 void BMS_Sample_TestSeedConfigurationRevision(uint32_t revision)
 {
     bool guard_entered;
@@ -561,6 +617,7 @@ void BMS_Sample_TestSeedConfigurationRevision(uint32_t revision)
 }
 #endif
 
+/* 在短临界区复制分组失败和发布结果计数。 */
 BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void)
 {
     BMS_SampleDiagnostics_t snapshot;
@@ -571,32 +628,50 @@ BMS_SampleDiagnostics_t BMS_Sample_GetDiagnostics(void)
     return snapshot;
 }
 
+/* 在短临界区一次捕获配置和 XREADY 身份；离开后才进行慢速总线读取。 */
+static void BMS_Sample_CaptureConfiguration(
+    BMS_SampleConfiguration_t *config,
+    BMS_ProtectXreadyState_t *xready_state,
+    bool *xready_available)
+{
+    BMS_Runtime_CriticalEnter();
+    config->device = s_device;
+    config->calibration = s_calibration;
+    config->xready_generation = s_calibration_xready_generation;
+    config->generation_bound = s_calibration_generation_bound;
+    config->recovery_revision = s_calibration_recovery_revision;
+    config->post_clear_verified = s_calibration_post_clear_verified;
+    config->ntc_points = s_ntc_points;
+    config->ntc_point_count = s_ntc_point_count;
+    config->current_epoch_invalidation_pending =
+        s_current_epoch_invalidation_pending;
+    config->current_invalidation_required =
+        config->current_epoch_invalidation_pending ||
+        (s_core_xready_generation_published &&
+         (s_last_published_core_xready_generation !=
+          config->xready_generation));
+    config->revision = s_configuration_revision;
+    *xready_available = BMS_Protect_GetXreadyState(xready_state);
+    BMS_Runtime_CriticalExit();
+}
+
+/* 完成一次采样、证据复核和整帧发布；任一步失败保留旧快照。 */
 bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
 {
     BMS_MeasurementFrame_t frame;
-    BQ76940_t *device;
-    BQ76940_Calibration_t calibration;
-    const BMS_NtcPoint_t *ntc_points;
-    uint16_t ntc_point_count;
+    BMS_SampleConfiguration_t config; /* 本轮一致捕获的 AFE/校准/NTC 身份。 */
     BMS_ProtectLatestCc_t latest_cc;
     BMS_ProtectXreadyState_t xready_state;
     BQ76940_Status_t status;
     uint32_t cell_index;
-    uint32_t calibration_xready_generation;
-    uint32_t calibration_recovery_revision;
-    uint32_t configuration_revision;
     uint16_t cell_mask;
     BMS_PackVoltageMv_t pack_min_mv;
     BMS_PackVoltageMv_t pack_max_mv;
     bool temperature_due;
     bool have_latest_cc;
     bool new_cc;
-    bool current_epoch_invalidation_pending;
-    bool current_invalidation_required;
     bool ntc_curve_unavailable;
     bool temperature_unavailable;
-    bool calibration_generation_bound;
-    bool calibration_post_clear_verified;
     bool xready_available;
     bool xready_guard_current;
     bool configuration_current;
@@ -605,7 +680,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
 
     /*
      * 采样流水线：
-     *   捕获 AFE/calibration/XREADY identity
+     *   捕获 AFE、校准与 XREADY 的同轮 identity
      *     -> 分段取得 I2C ownership，读取 13S 与 BAT
      *     -> 绑定 ProtectTask 已接纳的同代 CC
      *     -> 到期时读取 TS1 并换算温度
@@ -622,39 +697,18 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
      * 1. 捕获本轮 identity 与配置快照。critical region 只保护多字段复制，
      * 不包围 I2C；这样 Recovery 的配置更新不会被撕裂，也不会被慢总线长期阻塞。
      */
-    BMS_Runtime_CriticalEnter();
-    device = s_device;
-    calibration = s_calibration;
-    calibration_xready_generation =
-        s_calibration_xready_generation;
-    calibration_generation_bound =
-        s_calibration_generation_bound;
-    calibration_recovery_revision =
-        s_calibration_recovery_revision;
-    calibration_post_clear_verified =
-        s_calibration_post_clear_verified;
-    ntc_points = s_ntc_points;
-    ntc_point_count = s_ntc_point_count;
-    current_epoch_invalidation_pending =
-        s_current_epoch_invalidation_pending;
-    current_invalidation_required =
-        current_epoch_invalidation_pending ||
-        (s_core_xready_generation_published &&
-         (s_last_published_core_xready_generation !=
-          calibration_xready_generation));
-    configuration_revision = s_configuration_revision;
-    xready_available = BMS_Protect_GetXreadyState(&xready_state);
-    BMS_Runtime_CriticalExit();
+    BMS_Sample_CaptureConfiguration(&config, &xready_state,
+                                    &xready_available);
 
-    /* 首次访问 AFE 前先证明 calibration provenance 仍绑定当前非 active generation。 */
-    if (device == NULL)
+    /* 首次访问 AFE 前证明本轮校准来源仍绑定当前非 active generation。 */
+    if (config.device == NULL)
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_NONE,
                                  BQ76940_STATUS_NOT_INITIALIZED,
                                  false, true, false);
         return false;
     }
-    if (!BMS_Sample_CalibrationIsValid(&calibration))
+    if (!BMS_Sample_CalibrationIsValid(&config.calibration))
     {
         BMS_Sample_RecordFailure(BMS_SAMPLE_GROUP_NONE,
                                  BQ76940_STATUS_CALIBRATION_INVALID,
@@ -662,13 +716,13 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         return false;
     }
     xready_guard_current = xready_available &&
-        calibration_generation_bound &&
-        (((calibration_recovery_revision == 0UL) &&
-          !calibration_post_clear_verified) ||
-         ((calibration_recovery_revision != 0UL) &&
-          calibration_post_clear_verified)) &&
+        config.generation_bound &&
+        (((config.recovery_revision == 0UL) &&
+          !config.post_clear_verified) ||
+         ((config.recovery_revision != 0UL) &&
+          config.post_clear_verified)) &&
         BMS_Protect_XreadyBindingIsCurrent(
-            &xready_state, calibration_xready_generation);
+            &xready_state, config.xready_generation);
     if (!xready_guard_current)
     {
         BMS_Sample_RecordXreadyReject(false);
@@ -677,7 +731,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                                  false, true, false);
         return false;
     }
-    frame.afe_generation = calibration_xready_generation;
+    frame.afe_generation = config.xready_generation;
     temperature_due = BMS_Sample_TemperatureIsDue();
 
     /*
@@ -692,8 +746,8 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                                  true, false, false);
         return false;
     }
-    status = BQ76940_ReadCellVoltages13(device,
-                                        &calibration,
+    status = BQ76940_ReadCellVoltages13(config.device,
+                                        &config.calibration,
                                         frame.cell_voltage_mv);
     BMS_Runtime_BusUnlock();
     if (status != BQ76940_STATUS_OK)
@@ -730,8 +784,8 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                                  true, false, false);
         return false;
     }
-    status = BQ76940_ReadPackVoltageMv(device,
-                                       &calibration,
+    status = BQ76940_ReadPackVoltageMv(config.device,
+                                       &config.calibration,
                                        &frame.bq_pack_voltage_mv);
     BMS_Runtime_BusUnlock();
     if (status != BQ76940_STATUS_OK)
@@ -757,7 +811,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     have_latest_cc = BMS_Protect_GetLatestCc(&latest_cc);
     have_latest_cc = have_latest_cc && latest_cc.valid &&
         (latest_cc.xready_generation ==
-         calibration_xready_generation);
+         config.xready_generation);
     new_cc = have_latest_cc &&
         (!s_cc_sequence_published ||
          (latest_cc.sequence != s_last_published_cc_sequence) ||
@@ -781,7 +835,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         frame.current_valid = true;
         frame.current_in_range = true;
     }
-    else if (current_invalidation_required)
+    else if (config.current_invalidation_required)
     {
         /*
          * 新 AFE epoch 的首个成功 core publication 若没有同代 CC，会原子淘汰
@@ -810,7 +864,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                                      true, false, false);
             return false;
         }
-        status = BQ76940_ReadTs1Raw(device, &frame.ts1_raw14);
+        status = BQ76940_ReadTs1Raw(config.device, &frame.ts1_raw14);
         BMS_Runtime_BusUnlock();
         if (status != BQ76940_STATUS_OK)
         {
@@ -831,10 +885,10 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
         frame.update_temperature = true;
         frame.temperature_timestamp_ms = now_ms;
         frame.ts1_valid = true;
-        if ((ntc_points != NULL) && (ntc_point_count != 0U))
+        if ((config.ntc_points != NULL) && (config.ntc_point_count != 0U))
         {
-            if (BMS_Ntc_Interpolate(ntc_points,
-                                    ntc_point_count,
+            if (BMS_Ntc_Interpolate(config.ntc_points,
+                                    config.ntc_point_count,
                                     frame.ts1_resistance_ohm,
                                     &frame.temperature_decic))
             {
@@ -866,25 +920,25 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
     xready_guard_current = xready_available &&
         s_calibration_generation_bound &&
         (s_calibration_xready_generation ==
-         calibration_xready_generation) &&
-        (s_device == device) &&
-        (s_calibration.valid == calibration.valid) &&
+         config.xready_generation) &&
+        (s_device == config.device) &&
+        (s_calibration.valid == config.calibration.valid) &&
         (s_calibration.gain_uv_per_lsb ==
-         calibration.gain_uv_per_lsb) &&
-        (s_calibration.offset_mv == calibration.offset_mv) &&
+         config.calibration.gain_uv_per_lsb) &&
+        (s_calibration.offset_mv == config.calibration.offset_mv) &&
         (s_calibration_recovery_revision ==
-         calibration_recovery_revision) &&
+         config.recovery_revision) &&
         (s_calibration_post_clear_verified ==
-         calibration_post_clear_verified) &&
+         config.post_clear_verified) &&
         BMS_Protect_XreadyBindingIsCurrent(
-            &xready_state, calibration_xready_generation);
+            &xready_state, config.xready_generation);
     configuration_current =
-        (s_configuration_revision == configuration_revision) &&
+        (s_configuration_revision == config.revision) &&
         (s_current_epoch_invalidation_pending ==
-         current_epoch_invalidation_pending);
+         config.current_epoch_invalidation_pending);
     ntc_config_current = !frame.update_temperature ||
-        ((s_ntc_points == ntc_points) &&
-         (s_ntc_point_count == ntc_point_count));
+        ((s_ntc_points == config.ntc_points) &&
+         (s_ntc_point_count == config.ntc_point_count));
     if (xready_guard_current && configuration_current &&
         ntc_config_current)
     {
@@ -899,7 +953,7 @@ bool BMS_Sample_RunOnce(BMS_TimestampMs_t now_ms)
                 s_cc_sequence_published = true;
             }
             s_last_published_core_xready_generation =
-                calibration_xready_generation;
+                config.xready_generation;
             s_core_xready_generation_published = true;
             s_current_epoch_invalidation_pending = false;
         }

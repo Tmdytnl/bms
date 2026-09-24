@@ -1,4 +1,5 @@
 #include "bms_balance.h"
+#include "bms_balance_evaluate.h"
 #include "bms_runtime_port.h"
 
 /*
@@ -16,11 +17,16 @@
 
 #define BMS_BALANCE_I2C_TIMEOUT_MS               (20U)
 
+/* 仅 Balance owner 更新的选择、滞回及轮换状态。 */
 static BMS_BalanceEngine_t s_engine;
+/* 均衡写入与 readback 的权威诊断结果。 */
 static BMS_BalanceSnapshot_t s_snapshot;
+/* 启动期绑定的 AFE 句柄，仅用于 CELLBAL 事务。 */
 static BQ76940_t *s_device;
+/* 启动期绑定并经验证的不可变均衡策略。 */
 static const BMS_Policy_t *s_policy;
 
+/* 在短临界区发布一次均衡事务结果并推进修订号。 */
 static void BMS_Balance_Publish(BMS_BalanceSnapshot_t *snapshot)
 {
     BMS_Runtime_CriticalEnter();
@@ -30,6 +36,7 @@ static void BMS_Balance_Publish(BMS_BalanceSnapshot_t *snapshot)
     BMS_Runtime_CriticalExit();
 }
 
+/* 按无符号毫秒差判断当前均衡轮换窗口是否结束。 */
 static bool BMS_Balance_TimeElapsed(uint32_t now_ms,
                                     uint32_t started_ms,
                                     uint32_t duration_ms)
@@ -37,6 +44,7 @@ static bool BMS_Balance_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) >= duration_ms);
 }
 
+/* 检查用于均衡选择的测量质量、时效和范围。 */
 static bool BMS_Balance_MeasurementEligible(
     const BMS_BalancePolicy_t *policy,
     const BMS_DataSnapshot_t *measurement)
@@ -75,6 +83,7 @@ static bool BMS_Balance_MeasurementEligible(
     return true;
 }
 
+/* 找出有效测量中的最低电芯及电压，供压差判断。 */
 static uint16_t BMS_Balance_MinCell(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -92,6 +101,7 @@ static uint16_t BMS_Balance_MinCell(
     return minimum;
 }
 
+/* 检查上轮均衡选择是否仍符合当前测量和策略。 */
 static bool BMS_Balance_SelectionCompatible(uint16_t selected,
                                              uint8_t cell,
                                              bool adjacent_permitted)
@@ -108,6 +118,7 @@ static bool BMS_Balance_SelectionCompatible(uint16_t selected,
              ((selected & (uint16_t)(bit << 1U)) == 0U)));
 }
 
+/* 仅在测量与安全条件满足时选择均衡电芯，否则请求全关。 */
 uint16_t BMS_Balance_Evaluate(
     BMS_BalanceEngine_t *engine,
     const BMS_BalancePolicy_t *policy,
@@ -198,6 +209,7 @@ uint16_t BMS_Balance_Evaluate(
     return selected;
 }
 
+/* 在总线锁内写入三个 CELLBAL 字节并全量回读确认。 */
 static BQ76940_Status_t BMS_Balance_WriteAndVerifyLocked(
     uint8_t bal1, uint8_t bal2, uint8_t bal3,
     uint16_t *confirmed_bitmap)
@@ -245,6 +257,7 @@ static BQ76940_Status_t BMS_Balance_WriteAndVerifyLocked(
     return status;
 }
 
+/* 在失败路径尽力写入并回读均衡全关状态。 */
 static void BMS_Balance_AttemptAllOffLocked(void)
 {
     uint16_t ignored;
@@ -252,6 +265,7 @@ static void BMS_Balance_AttemptAllOffLocked(void)
     (void)BMS_Balance_WriteAndVerifyLocked(0U, 0U, 0U, &ignored);
 }
 
+/* 绑定 AFE 与策略，建立均衡全关的启动证据。 */
 void BMS_Balance_Init(BQ76940_t *device,
                       const BMS_Policy_t *policy,
                       bool startup_all_off_confirmed)
@@ -265,6 +279,7 @@ void BMS_Balance_Init(BQ76940_t *device,
     s_snapshot.confirmed_all_off = startup_all_off_confirmed;
 }
 
+/* 用当前测量与安全快照选择均衡位，写入并回读 CELLBAL 后发布结果。 */
 void BMS_Balance_RunOnce(uint32_t now_ms)
 {
     BMS_DataSnapshot_t measurement;
@@ -369,6 +384,7 @@ void BMS_Balance_RunOnce(uint32_t now_ms)
     BMS_Balance_Publish(&next);
 }
 
+/* 在短临界区复制均衡目标和 CELLBAL 回读结果。 */
 BMS_BalanceSnapshot_t BMS_Balance_GetSnapshot(void)
 {
     BMS_BalanceSnapshot_t snapshot;

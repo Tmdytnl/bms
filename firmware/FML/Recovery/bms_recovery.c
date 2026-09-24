@@ -33,19 +33,22 @@ typedef struct
     uint8_t config_index;           /* 当前正在 write/readback 的配置项。 */
     uint8_t calibration_index;      /* ADCGAIN1/OFFSET/ADCGAIN2 分步读取进度。 */
     uint8_t adc_gain1;              /* calibration staging，三字节齐备后才 decode。 */
-    uint8_t adc_offset;
-    uint8_t adc_gain2;
+    uint8_t adc_offset; /* ADCOFFSET 原始字节。 */
+    uint8_t adc_gain2; /* ADCGAIN2 原始字节；三段齐备后才解码。 */
     uint32_t settle_started_ms;     /* 锁外 settle 计时起点。 */
     uint32_t handoff_baseline_sequence; /* 用于证明 handoff 后确有新帧。 */
     bool verify_register;           /* false=下一步 write，true=下一步 readback。 */
 } BMS_RecoveryContext_t;
 
+/* 唯一恢复状态机上下文，持有阶段、身份和配置重建证据。 */
 static BMS_RecoveryContext_t s_recovery;
 
 #if defined(TEST_PHASE9_IMAGE)
+/* 测试镜像在校准交接前注入并发变化的回调。 */
 static BMS_RecoveryTestHook_t s_pre_handoff_hook;
 #endif
 
+/* 按回绕安全的毫秒差判断当前恢复阶段等待时间结束。 */
 static bool BMS_Recovery_TimeElapsed(uint32_t now_ms,
                                      uint32_t started_ms,
                                      uint32_t duration_ms)
@@ -53,12 +56,14 @@ static bool BMS_Recovery_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) >= duration_ms);
 }
 
+/* 恢复阶段或证据变化时推进发布修订号。 */
 static void BMS_Recovery_PublishChange(void)
 {
     s_recovery.snapshot.publication_revision =
         (uint32_t)(s_recovery.snapshot.publication_revision + 1UL);
 }
 
+/* 切换恢复阶段并发布新修订号供消费者复核。 */
 static void BMS_Recovery_SetPhase(BMS_RecoveryPhase_t phase)
 {
     if (s_recovery.snapshot.phase != phase)
@@ -68,6 +73,7 @@ static void BMS_Recovery_SetPhase(BMS_RecoveryPhase_t phase)
     }
 }
 
+/* 记录当前阶段的传输失败并保持双向禁止。 */
 static void BMS_Recovery_Fail(BQ76940_Status_t status)
 {
     s_recovery.snapshot.last_transport_status = status;
@@ -76,6 +82,7 @@ static void BMS_Recovery_Fail(BQ76940_Status_t status)
     BMS_Recovery_SetPhase(BMS_RECOVERY_PHASE_FAILED);
 }
 
+/* 新 XREADY 世代出现时清空旧恢复证据并重新开始阶段状态机。 */
 static void BMS_Recovery_ResetEvidence(uint32_t generation)
 {
     /*
@@ -108,6 +115,7 @@ static void BMS_Recovery_ResetEvidence(uint32_t generation)
     BMS_Recovery_PublishChange();
 }
 
+/* 复核恢复阶段绑定的 XREADY 世代尚未被新事件取代。 */
 static bool BMS_Recovery_GenerationStillCurrent(void)
 {
     BMS_ProtectXreadyState_t state;
@@ -117,6 +125,7 @@ static bool BMS_Recovery_GenerationStillCurrent(void)
          s_recovery.snapshot.xready_generation);
 }
 
+/* 在短总线事务内读取一个 AFE 寄存器并保留传输状态。 */
 static BQ76940_Status_t BMS_Recovery_OneRead(uint8_t address,
                                              uint8_t *value)
 {
@@ -135,6 +144,7 @@ static BQ76940_Status_t BMS_Recovery_OneRead(uint8_t address,
     return status;
 }
 
+/* 在短总线事务内写入一个 AFE 寄存器并保留传输状态。 */
 static BQ76940_Status_t BMS_Recovery_OneWrite(uint8_t address,
                                               uint8_t value)
 {
@@ -153,6 +163,7 @@ static BQ76940_Status_t BMS_Recovery_OneWrite(uint8_t address,
     return status;
 }
 
+/* 依据当前策略准备恢复期寄存器重建与回读计划。 */
 static bool BMS_Recovery_StageRegisterPlan(void)
 {
     const BMS_AfeStartupConfig_t *config;
@@ -220,6 +231,7 @@ static bool BMS_Recovery_StageRegisterPlan(void)
     return true;
 }
 
+/* 逐步取得恢复后校准寄存器，不在总线锁内等待。 */
 static void BMS_Recovery_ServiceCalibrationRead(void)
 {
     BQ76940_Status_t status;
@@ -259,6 +271,7 @@ static void BMS_Recovery_ServiceCalibrationRead(void)
     }
 }
 
+/* 逐步重建并回读 AFE 运行配置，每轮最多推进一个硬件操作。 */
 static void BMS_Recovery_ServiceConfiguration(uint32_t now_ms)
 {
     BQ76940_Status_t status;
@@ -310,6 +323,7 @@ static void BMS_Recovery_ServiceConfiguration(uint32_t now_ms)
     ++s_recovery.config_index;
 }
 
+/* 绑定 AFE 与策略，按当前 XREADY 世代建立恢复初始状态。 */
 void BMS_Recovery_Init(BQ76940_t *device,
                        const BMS_Policy_t *policy)
 {
@@ -353,6 +367,7 @@ void BMS_Recovery_Init(BQ76940_t *device,
 #endif
 }
 
+/* 按 XREADY 恢复阶段推进一个有界步骤，完成证据链前保持双向禁止。 */
 bool BMS_Recovery_Service(uint32_t now_ms)
 {
     BMS_BalanceSnapshot_t balance;
@@ -578,6 +593,7 @@ bool BMS_Recovery_Service(uint32_t now_ms)
     return false;
 }
 
+/* 复制恢复阶段、XREADY 身份与配置复核证据。 */
 BMS_RecoverySnapshot_t BMS_Recovery_GetSnapshot(void)
 {
     BMS_RecoverySnapshot_t snapshot;
@@ -589,6 +605,7 @@ BMS_RecoverySnapshot_t BMS_Recovery_GetSnapshot(void)
 }
 
 #if defined(TEST_PHASE9_IMAGE)
+/* 测试镜像设置校准交接前的竞态注入点。 */
 void BMS_Recovery_TestSetPreHandoffHook(BMS_RecoveryTestHook_t hook)
 {
     s_pre_handoff_hook = hook;

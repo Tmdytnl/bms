@@ -48,17 +48,17 @@ struct BMS_DataSnapshot
     BMS_CapacityMah_t remaining_capacity_mah; /* SOC owner 发布的诊断容量。 */
     BMS_SocPermille_t soc_permille;           /* 0..1000 对应 0%..100%，无效时为哨兵。 */
 
-    BMS_State_t state;
-    BMS_FaultSummary_t faults;
+    BMS_State_t state; /* State owner 发布的运行分类，仅作诊断投影。 */
+    BMS_FaultSummary_t faults; /* Protect/State 汇总的诊断故障，不是 FET authority。 */
 
-    BMS_CellMetadata_t cell_metadata;
-    BMS_MeasurementMetadata_t pack_metadata;
-    BMS_MeasurementMetadata_t bq_pack_metadata;
-    BMS_MeasurementMetadata_t current_metadata;
+    BMS_CellMetadata_t cell_metadata; /* 各电芯的逐节质量和年龄信息。 */
+    BMS_MeasurementMetadata_t pack_metadata; /* 13S 求和电压的质量信息。 */
+    BMS_MeasurementMetadata_t bq_pack_metadata; /* BAT 诊断电压的质量信息。 */
+    BMS_MeasurementMetadata_t current_metadata; /* CC 电流的质量信息。 */
     /* TS1 raw/resistance 有效不代表校准温度有效，两层证据必须分别保存。 */
     BMS_MeasurementMetadata_t ts1_metadata;
-    BMS_MeasurementMetadata_t temperature_metadata;
-    BMS_MeasurementMetadata_t soc_metadata;
+    BMS_MeasurementMetadata_t temperature_metadata; /* 校准温度的质量信息。 */
+    BMS_MeasurementMetadata_t soc_metadata; /* SOC 估计的有效性和时效。 */
 
     BMS_TimestampMs_t snapshot_timestamp_ms; /* 本帧 mandatory core 的统一采样时刻。 */
     uint32_t sample_sequence;   /* 每次完整 core 成功发布递增，用于区分相邻快照。 */
@@ -72,9 +72,9 @@ struct BMS_DataSnapshot
  */
 typedef struct
 {
-    BMS_MeasurementMetadata_t pack_metadata;
-    BMS_MeasurementMetadata_t current_metadata;
-    BMS_MeasurementMetadata_t temperature_metadata;
+    BMS_MeasurementMetadata_t pack_metadata; /* 电压组的时效投影。 */
+    BMS_MeasurementMetadata_t current_metadata; /* 电流组的时效投影。 */
+    BMS_MeasurementMetadata_t temperature_metadata; /* 温度组的时效投影。 */
     uint32_t sample_sequence;   /* 投影所绑定的完整采样序号 */
     uint32_t afe_generation;    /* 投影所绑定的 AFE 生命周期 */
 } BMS_DataFreshnessSnapshot_t;
@@ -101,24 +101,24 @@ typedef struct
     uint16_t cell_valid_bitmap;                      /* 所有定义位都必须有效才能发布。 */
     uint16_t cell_in_range_bitmap;                   /* 越界可随有效帧发布供保护判断。 */
 
-    BMS_PackVoltageMv_t bq_pack_voltage_mv;
-    bool bq_pack_valid;
-    bool bq_pack_in_range;
+    BMS_PackVoltageMv_t bq_pack_voltage_mv; /* 同轮 BAT 独立诊断值，单位 mV。 */
+    bool bq_pack_valid; /* BAT 通道读取和换算成功。 */
+    bool bq_pack_in_range; /* BAT 值落在合法范围；不代表数据足够新。 */
 
     bool update_current;                 /* 本周期是否用新 CC 更新电流组。 */
-    BMS_CurrentMa_t current_ma;
-    BMS_TimestampMs_t current_timestamp_ms;
-    bool current_valid;
-    bool current_in_range;
+    BMS_CurrentMa_t current_ma; /* 与当前 AFE 世代绑定的 CC 电流，单位 mA。 */
+    BMS_TimestampMs_t current_timestamp_ms; /* CC 样本接纳的毫秒时刻。 */
+    bool current_valid; /* 当前帧携带可用的同代 CC 电流。 */
+    bool current_in_range; /* 可用 CC 电流落在数据模型允许范围。 */
 
     bool update_temperature;             /* 本周期是否达到温度分频节拍。 */
-    uint16_t ts1_raw14;
-    uint32_t ts1_resistance_ohm;
-    BMS_TimestampMs_t temperature_timestamp_ms;
-    bool ts1_valid;
-    BMS_TemperatureDeciC_t temperature_decic;
-    bool temperature_valid;
-    bool temperature_in_range;
+    uint16_t ts1_raw14; /* 本轮 TS1 ADC 的 14 位原始码。 */
+    uint32_t ts1_resistance_ohm; /* TS1 原始码换算的 NTC 电阻，单位 Ω。 */
+    BMS_TimestampMs_t temperature_timestamp_ms; /* 本次 TS1 读取的毫秒时刻。 */
+    bool ts1_valid; /* TS1 原始码和电阻换算成功。 */
+    BMS_TemperatureDeciC_t temperature_decic; /* NTC 插值得到的 0.1 °C 温度。 */
+    bool temperature_valid; /* 插值链成功，区别于 ts1_valid。 */
+    bool temperature_in_range; /* 有效温度落在数据模型允许范围。 */
 } BMS_MeasurementFrame_t;
 
 #define BMS_DATA_MODEL_VERSION                    (1U)
@@ -195,6 +195,7 @@ bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity);
 /* 仅更新诊断投影；两个 API 都不会生成或转移 FET safety authority。 */
 bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
                                      const BMS_FaultSummary_t *faults);
+/* 把 SOC owner 的容量和千分比写入只读诊断投影。 */
 bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
                                    BMS_SocPermille_t soc_permille,
                                    BMS_TimestampMs_t now_ms,

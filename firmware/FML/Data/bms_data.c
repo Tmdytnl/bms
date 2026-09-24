@@ -23,6 +23,7 @@ BMS_DataSnapshot_t *BMS_Data_TestMutableStorage(void)
 
 #define BMS_DATA_TS1_RAW14_MAX              ((uint16_t)0x3FFFU)
 
+/* 把每组测量质量、时效和原始值设置为不可用初值。 */
 static void BMS_Data_InitMeasurement(BMS_MeasurementMetadata_t *metadata)
 {
     metadata->timestamp_ms = (BMS_TimestampMs_t)0U;
@@ -32,6 +33,7 @@ static void BMS_Data_InitMeasurement(BMS_MeasurementMetadata_t *metadata)
     metadata->stale_latched = false;
 }
 
+/* 建立所有测量组无效、状态为 INIT 的诊断快照初值。 */
 void BMS_Data_Init(void)
 {
     uint32_t cell_index;
@@ -76,6 +78,7 @@ void BMS_Data_Init(void)
     BMS_DATA_STORE.afe_generation = (uint32_t)0U;
 }
 
+/* 校验 staging 帧各有效位、范围位和可选温度字段的内部关系。 */
 static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
 {
     uint16_t undefined_valid_bits;
@@ -125,11 +128,13 @@ static bool BMS_Data_FrameIsValid(const BMS_MeasurementFrame_t *frame)
     return true;
 }
 
+/* 计算发布时刻的测量年龄，保留回绕安全的时间语义。 */
 static BMS_DataAgeMs_t BMS_Data_AgeAtPublication(bool valid)
 {
     return valid ? (BMS_DataAgeMs_t)0U : BMS_DATA_AGE_UNKNOWN_MS;
 }
 
+/* 仅在帧身份仍一致时发布一组测量元数据。 */
 static void BMS_Data_PublishMetadata(BMS_MeasurementMetadata_t *metadata,
                                      BMS_TimestampMs_t timestamp_ms,
                                      bool valid,
@@ -142,6 +147,7 @@ static void BMS_Data_PublishMetadata(BMS_MeasurementMetadata_t *metadata,
     metadata->stale_latched = false;
 }
 
+/* 原子发布完整测量帧；输入无效或数据锁忙时保持旧快照不变。 */
 bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
 {
     BMS_PackVoltageMv_t pack_sum_mv;
@@ -249,6 +255,7 @@ bool BMS_Data_PublishMeasurement(const BMS_MeasurementFrame_t *frame)
     return true;
 }
 
+/* 依据当前时刻和发布时间推导读取时年龄。 */
 static BMS_DataAgeMs_t BMS_Data_DeriveAge(bool valid,
                                          BMS_TimestampMs_t timestamp_ms,
                                          BMS_TimestampMs_t now_ms)
@@ -260,6 +267,7 @@ static BMS_DataAgeMs_t BMS_Data_DeriveAge(bool valid,
     return (BMS_DataAgeMs_t)(now_ms - timestamp_ms);
 }
 
+/* 为一个测量组更新读取时年龄及相关质量标志。 */
 static void BMS_Data_DeriveMetadataAge(
     BMS_MeasurementMetadata_t *metadata,
     BMS_TimestampMs_t now_ms)
@@ -269,6 +277,7 @@ static void BMS_Data_DeriveMetadataAge(
                                           now_ms);
 }
 
+/* 当测量组超过时效门限时锁存 stale，不靠时钟回绕自动清除。 */
 static void BMS_Data_LatchMetadataStale(
     BMS_MeasurementMetadata_t *metadata,
     BMS_TimestampMs_t now_ms,
@@ -327,6 +336,7 @@ static void BMS_Data_LatchStale(BMS_TimestampMs_t now_ms)
                                 BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
 }
 
+/* 在数据锁内复制同代完整快照，并在锁外计算读取时年龄。 */
 bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
                           BMS_TimestampMs_t now_ms)
 {
@@ -371,6 +381,7 @@ bool BMS_Data_GetSnapshot(BMS_DataSnapshot_t *snapshot,
     return true;
 }
 
+/* 按当前时刻推导各测量组年龄并复制只读新鲜度快照。 */
 bool BMS_Data_GetFreshnessSnapshot(
     BMS_DataFreshnessSnapshot_t *snapshot,
     BMS_TimestampMs_t now_ms)
@@ -394,6 +405,7 @@ bool BMS_Data_GetFreshnessSnapshot(
     return true;
 }
 
+/* 只复制当前 sample sequence 与 AFE generation，供提交前轻量复核。 */
 bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
 {
     if ((identity == NULL) || !BMS_Runtime_DataLock())
@@ -406,6 +418,7 @@ bool BMS_Data_GetIdentity(BMS_DataIdentity_t *identity)
     return true;
 }
 
+/* 把 State owner 的运行状态与故障摘要写入只读诊断投影。 */
 bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
                                      const BMS_FaultSummary_t *faults)
 {
@@ -420,6 +433,7 @@ bool BMS_Data_PublishStateDiagnostic(BMS_State_t state,
     return true;
 }
 
+/* 把 SOC owner 的容量和千分比写入只读诊断投影。 */
 bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
                                    BMS_SocPermille_t soc_permille,
                                    BMS_TimestampMs_t now_ms,
@@ -441,6 +455,7 @@ bool BMS_Data_PublishSocDiagnostic(BMS_CapacityMah_t capacity_mah,
     return true;
 }
 
+/* 同时检查有效位、过期锁存和年龄门限。 */
 bool BMS_Data_IsFresh(bool valid,
                       bool stale_latched,
                       uint32_t age_ms,

@@ -31,6 +31,7 @@ bool BSP_ALERT_PinActive(void);
 
 /* RTOS-aware ISR handoff 留在 APL；BSP 只暴露 peripheral primitive。 */
 bool BSP_ALERT_EXTI_IsPending(void);
+/* 清除 EXTI1 的中断挂起位，避免重复投递同一次边沿。 */
 void BSP_ALERT_EXTI_ClearPending(void);
 
 #endif /* BSP_EXTI_H：头文件防重复包含 */

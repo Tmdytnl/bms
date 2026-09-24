@@ -12,14 +12,19 @@
 
 #include "bms_data.h"
 
+/* State owner 独占的软件保护与分类资格状态。 */
 static BMS_StateEngine_t s_engine;
+/* State 发布的方向性禁止与运行状态权威快照。 */
 static BMS_StateSafetySnapshot_t s_snapshot;
+/* 启动期绑定的不可变状态和保护策略。 */
 static const BMS_Policy_t *s_policy;
 
 #if defined(TEST_PHASE9_IMAGE)
+/* 测试镜像在 State 发布前注入测量竞态的回调。 */
 static BMS_StatePrePublishHook_t s_pre_publish_hook;
 #endif
 
+/* 按回绕安全的毫秒差判断状态资格窗口到期。 */
 static bool BMS_State_TimeElapsed(uint32_t now_ms,
                                   uint32_t started_ms,
                                   uint32_t duration_ms)
@@ -27,12 +32,14 @@ static bool BMS_State_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) >= duration_ms);
 }
 
+/* 清空候选条件的连续资格计时与锁存证据。 */
 static void BMS_State_ResetTracking(BMS_StateCondition_t *condition)
 {
     condition->assert_tracking = false;
     condition->recovery_tracking = false;
 }
 
+/* 按当前条件更新连续资格计时并报告是否达标。 */
 static void BMS_State_UpdateCondition(BMS_StateCondition_t *condition,
                                       bool assert_condition,
                                       bool recovery_condition,
@@ -92,6 +99,7 @@ static void BMS_State_UpdateCondition(BMS_StateCondition_t *condition,
     }
 }
 
+/* 确认全部必需电芯测量在当前时效窗口内。 */
 static bool BMS_State_CellCoreIsFresh(const BMS_DataSnapshot_t *measurement)
 {
     uint32_t index;
@@ -117,6 +125,7 @@ static bool BMS_State_CellCoreIsFresh(const BMS_DataSnapshot_t *measurement)
     return true;
 }
 
+/* 确认软件保护所需的电压、电流和温度证据均新鲜。 */
 static bool BMS_State_AllSafetyMeasurementsFresh(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -131,6 +140,7 @@ static bool BMS_State_AllSafetyMeasurementsFresh(
                          BMS_DATA_TEMPERATURE_FRESH_MAX_MS);
 }
 
+/* 把测量年龄和有效位映射为过期故障状态。 */
 static void BMS_State_UpdateDataStale(BMS_StateEngine_t *engine,
                                       const BMS_Policy_t *policy,
                                       const BMS_DataSnapshot_t *measurement)
@@ -165,6 +175,7 @@ static void BMS_State_UpdateDataStale(BMS_StateEngine_t *engine,
     }
 }
 
+/* 按电压、电流与温度条件维护软件保护故障。 */
 static void BMS_State_UpdateSoftwareProtection(
     BMS_StateEngine_t *engine,
     const BMS_Policy_t *policy,
@@ -241,6 +252,7 @@ static void BMS_State_UpdateSoftwareProtection(
         policy->discharge_temperature.recovery_qualify_ms, now_ms);
 }
 
+/* 按条件切换软件故障活动位并保留锁存规则。 */
 static void BMS_State_SetFault(BMS_StateSafetySnapshot_t *decision,
                                BMS_FaultId_t fault_id,
                                bool active)
@@ -251,6 +263,7 @@ static void BMS_State_SetFault(BMS_StateSafetySnapshot_t *decision,
     }
 }
 
+/* 把软件故障条件映射为两个方向的禁止原因。 */
 static void BMS_State_BuildSoftwareActions(
     const BMS_StateEngine_t *engine,
     BMS_StateSafetySnapshot_t *decision,
@@ -331,6 +344,7 @@ static void BMS_State_BuildSoftwareActions(
     }
 }
 
+/* 依据当前测量和故障条件提出候选运行状态。 */
 static BMS_State_t BMS_State_CurrentCandidate(const BMS_Policy_t *policy,
                                                int32_t current_ma)
 {
@@ -345,6 +359,7 @@ static BMS_State_t BMS_State_CurrentCandidate(const BMS_Policy_t *policy,
     return BMS_STATE_STANDBY;
 }
 
+/* 读取候选状态需要连续满足的资格时长。 */
 static uint32_t BMS_State_CandidateQualifyMs(const BMS_Policy_t *policy,
                                              BMS_State_t candidate)
 {
@@ -359,6 +374,7 @@ static uint32_t BMS_State_CandidateQualifyMs(const BMS_Policy_t *policy,
     return policy->state.standby_enter_qualify_ms;
 }
 
+/* 对候选运行状态累计资格时间后发布分类。 */
 static void BMS_State_UpdateClassification(BMS_StateEngine_t *engine,
                                            const BMS_Policy_t *policy,
                                            const BMS_DataSnapshot_t *measurement,
@@ -431,6 +447,7 @@ static void BMS_State_UpdateClassification(BMS_StateEngine_t *engine,
     }
 }
 
+/* 绑定策略并建立初始状态、软件保护与方向性禁止。 */
 void BMS_State_Init(const BMS_Policy_t *policy, uint32_t now_ms)
 {
     BMS_StateCondition_t empty_condition;
@@ -473,6 +490,7 @@ void BMS_State_Init(const BMS_Policy_t *policy, uint32_t now_ms)
 #endif
 }
 
+/* 基于一致测量快照计算软件保护、状态分类和方向性禁止。 */
 bool BMS_State_Evaluate(BMS_StateEngine_t *engine,
                         const BMS_Policy_t *policy,
                         const BMS_DataSnapshot_t *measurement,
@@ -528,6 +546,7 @@ bool BMS_State_Evaluate(BMS_StateEngine_t *engine,
     return true;
 }
 
+/* 只有测量身份与捕获时一致才发布软件保护和运行状态。 */
 bool BMS_State_PublishIfCurrent(BMS_StateSafetySnapshot_t *decision)
 {
     BMS_DataIdentity_t identity;
@@ -561,6 +580,7 @@ bool BMS_State_PublishIfCurrent(BMS_StateSafetySnapshot_t *decision)
     return true;
 }
 
+/* 基于当前测量和安全输入计算状态，按测量身份比较后发布决策。 */
 bool BMS_State_RunOnce(uint32_t now_ms,
                        bool technical_ready,
                        bool rtos_health_fault,
@@ -584,6 +604,7 @@ bool BMS_State_RunOnce(uint32_t now_ms,
     return true;
 }
 
+/* 复制 State 发布的运行意图、禁止原因与测量身份。 */
 BMS_StateSafetySnapshot_t BMS_State_GetSafetySnapshot(void)
 {
     BMS_StateSafetySnapshot_t snapshot;
@@ -595,6 +616,7 @@ BMS_StateSafetySnapshot_t BMS_State_GetSafetySnapshot(void)
 }
 
 #if defined(TEST_PHASE9_IMAGE)
+/* 测试镜像设置发布前竞态注入点。 */
 void BMS_State_TestSetPrePublishHook(BMS_StatePrePublishHook_t hook)
 {
     s_pre_publish_hook = hook;

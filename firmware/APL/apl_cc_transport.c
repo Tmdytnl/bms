@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+/* 按 newest-wins 规则把 Protect 样本提交 SOC 队列并返回交接结果。 */
 bool APL_Rtos_TransportCcSample(const BMS_CcSample_t *sample,
                                 bool *overflowed,
                                 bool *oldest_was_dropped)

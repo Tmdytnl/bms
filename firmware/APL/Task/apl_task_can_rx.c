@@ -5,6 +5,7 @@
 #include "bms_can.h"
 #include "bms_health.h"
 
+/* 消费 CAN 接收队列并把服务请求交给领域 owner。 */
 void APL_TaskCanRx(void *argument)
 {
     BMS_CanFrame_t frame;

@@ -6,6 +6,7 @@
 #include "bms_config.h"
 #include "bq76940_control.h"
 
+/* 仿真 V1 的固定 NTC 电阻与温度插值节点，仅供策略只读引用。 */
 static const BMS_NtcPoint_t s_sim_ntc_points[BMS_POLICY_NTC_POINT_COUNT] =
 {
     {200204UL, -300}, {105385UL, -200}, {58246UL, -100},
@@ -15,6 +16,7 @@ static const BMS_NtcPoint_t s_sim_ntc_points[BMS_POLICY_NTC_POINT_COUNT] =
     {1270UL, 800},    {934UL, 900},     {698UL, 1000}
 };
 
+/* 七个必需任务的 heartbeat 时效窗口，供 StateTask 看门狗判定。 */
 static const BMS_TaskHealthPolicy_t
     s_required_task_roster[BMS_POLICY_REQUIRED_TASK_COUNT] =
 {
@@ -27,11 +29,13 @@ static const BMS_TaskHealthPolicy_t
     {BMS_HEALTH_TASK_CAN_RX, 500UL}
 };
 
+/* 六帧周期诊断所用的标准 CAN ID，编码顺序与帧格式一致。 */
 static const uint16_t s_can_tx_ids[BMS_POLICY_CAN_TX_ID_COUNT] =
 {
     0x180U, 0x181U, 0x182U, 0x183U, 0x184U, 0x185U
 };
 
+/* 启动期验证后绑定的完整 V1 不可变策略。 */
 static const BMS_Policy_t s_sim_policy =
 {
     BMS_POLICY_PROFILE_ID_SIM_V1,
@@ -88,6 +92,7 @@ const BMS_Policy_t *BMS_Policy_Get(void)
     return &s_sim_policy;
 }
 
+/* 核对 AFE 保护阈值、延时和采样电阻的可编码范围。 */
 static bool BMS_Policy_ValidateAfe(const BMS_AfeStartupConfig_t *afe)
 {
     BQ76940_Status_t status;
@@ -126,6 +131,7 @@ static bool BMS_Policy_ValidateAfe(const BMS_AfeStartupConfig_t *afe)
     return (status == BQ76940_STATUS_OK) && (protect3 == 0x50U);
 }
 
+/* 核对任务健康窗口和看门狗策略的时序约束。 */
 static bool BMS_Policy_ValidateHealth(const BMS_HealthPolicy_t *health)
 {
     uint8_t index;
@@ -150,6 +156,7 @@ static bool BMS_Policy_ValidateHealth(const BMS_HealthPolicy_t *health)
     return true;
 }
 
+/* 核对整份不可变策略的数值范围及字段间约束。 */
 bool BMS_Policy_Validate(const BMS_Policy_t *policy)
 {
     if ((policy == NULL) || (policy->profile_id == NULL) ||

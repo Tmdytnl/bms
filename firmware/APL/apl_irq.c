@@ -7,6 +7,7 @@
 #include "bsp_can.h"
 #include "bsp_exti.h"
 
+/* 清除 ALERT 中断挂起并把唤醒交给 ProtectTask，不在 ISR 执行业务。 */
 void EXTI1_IRQHandler(void)
 {
     BaseType_t higher_priority_task_woken;
@@ -26,6 +27,7 @@ void EXTI1_IRQHandler(void)
 }
 
 #if !defined(TEST_PHASE7_IMAGE)
+/* 从 CAN RX FIFO0 搬运报文到 APL 队列，保留 ISR 的有界执行。 */
 void USB_LP_CAN1_RX0_IRQHandler(void)
 {
     BaseType_t higher_priority_task_woken;
@@ -43,7 +45,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
     {
         if (BSP_CAN_Receive(&target))
         {
-            frame.ext_id = target.id;
+            frame.standard_id = target.id;
             frame.dlc = target.dlc;
             (void)memcpy(frame.data, target.data, sizeof(frame.data));
             frame.received_ms = APL_TimeMsFromISR();

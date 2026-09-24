@@ -11,7 +11,7 @@ typedef enum
 {
     /* 已回读确认 CHG/DSG 均为 off。 */
     BMS_FET_TRANSACTION_CONFIRMED_SAFE = 0,
-    /* 已回读且输入 revision 仍一致，requested enable 正式生效。 */
+    /* 已回读且输入 revision 仍一致；只确认 SYS_CTRL2 命令位，不证明外部 MOS 物理状态。 */
     BMS_FET_TRANSACTION_CONFIRMED_APPLIED,
     /* transport/readback 无法证明寄存器状态。 */
     BMS_FET_TRANSACTION_UNVERIFIED,
@@ -54,7 +54,9 @@ BMS_FetManagerSnapshot_t BMS_FetManager_GetSnapshot(void);
 
 #if defined(TEST_PHASE9_IMAGE)
 typedef void (*BMS_FetManagerTestHook_t)(void);
+/* 测试镜像设置寄存器读取后的竞态注入点。 */
 void BMS_FetManager_TestSetAfterReadHook(BMS_FetManagerTestHook_t hook);
+/* 测试镜像设置寄存器写入后的竞态注入点。 */
 void BMS_FetManager_TestSetAfterWriteHook(BMS_FetManagerTestHook_t hook);
 #endif
 

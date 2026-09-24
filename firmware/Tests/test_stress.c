@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "bms_balance.h"
+#include "bms_balance_evaluate.h"
 #include "bms_persistence.h"
 #include "bms_policy.h"
 #include "bms_recovery.h"

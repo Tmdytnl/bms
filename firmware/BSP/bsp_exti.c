@@ -12,8 +12,10 @@
 BSP_BUILD_ASSERT(BSP_BOARD_ALERT_PIN == 1U,
                  alert_pin_is_pb1);
 
+/* PB1、EXTI1 和 NVIC 全部配置完成的标志。 */
 static bool s_exti_initialized;
 
+/* 配置 PB1 上升沿 EXTI 与 NVIC，并在完成后发布初始化状态。 */
 bool BSP_ALERT_EXTI_Init(void)
 {
     EXTI_InitTypeDef exti_config;
@@ -63,22 +65,26 @@ bool BSP_ALERT_EXTI_Init(void)
     return true;
 }
 
+/* 报告 ALERT EXTI 的板级配置是否完成。 */
 bool BSP_ALERT_EXTI_IsInitialized(void)
 {
     return s_exti_initialized;
 }
 
+/* 读取 PB1 的 ALERT 实际电平，不依赖中断挂起位。 */
 bool BSP_ALERT_PinActive(void)
 {
     /* 直接 PB1 level readback。 */
     return (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) != Bit_RESET);
 }
 
+/* 读取 EXTI1 的中断挂起状态。 */
 bool BSP_ALERT_EXTI_IsPending(void)
 {
     return EXTI_GetITStatus(EXTI_Line1) != RESET;
 }
 
+/* 清除 EXTI1 的中断挂起位，避免重复投递同一次边沿。 */
 void BSP_ALERT_EXTI_ClearPending(void)
 {
     EXTI_ClearITPendingBit(EXTI_Line1);

@@ -32,6 +32,7 @@ static void APL_State_PublishDiagnostics(void)
                                            &diagnostic_faults);
 }
 
+/* 仅在七任务健康证据满足时由 StateTask 喂 IWDG。 */
 static void APL_State_ServiceWatchdog(
     const BMS_HealthPolicy_t *health_policy,
     const BMS_HealthDecision_t *health,
@@ -53,6 +54,7 @@ static void APL_State_ServiceWatchdog(
     }
 }
 
+/* 按安全依赖顺序编排 Health、Recovery、State、FET 和 IWDG 服务。 */
 void APL_TaskState(void *argument)
 {
     const BMS_Policy_t *policy;

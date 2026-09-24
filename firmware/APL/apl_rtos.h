@@ -47,9 +47,13 @@ BaseType_t APL_Rtos_CreateObjects(void);
  * NULL 会 fail-closed，避免任务启动后再通过全局 accessor 反向获取组装内部状态。
  */
 BaseType_t APL_Rtos_CreateTasks(BQ76940_t *afe_device);
+/* 唤醒 StateTask 尽快处理新增安全状态。 */
 void APL_Rtos_NotifyStateUrgent(void);
+/* 通过任务通知要求 ProtectTask 尽快处理待决硬件事件。 */
 void APL_Rtos_RequestProtectService(void);
+/* 把当前 RTOS tick 转换为领域模块使用的毫秒时间。 */
 uint32_t APL_TimeMs(void);
+/* 在 ISR 上下文读取 tick 并转换为毫秒时间。 */
 uint32_t APL_TimeMsFromISR(void);
 
 /* ProtectTask 唯一生产者使用 newest-wins；结果回送 FML 完成两阶段确认。 */

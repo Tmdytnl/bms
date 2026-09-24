@@ -175,6 +175,20 @@ check(
     not mutable_fml_externs,
     "FML public headers expose no mutable backing-store globals",
 )
+runtime_header_dependencies = {
+    "bms_can.h": ("bms_data.h", "bms_fet_manager.h", "bms_protect.h",
+                  "bms_recovery.h", "bms_state.h"),
+    "bms_balance.h": ("bms_data.h", "bms_protect.h",
+                      "bms_recovery.h", "bms_state.h"),
+}
+for header_name, forbidden_includes in runtime_header_dependencies.items():
+    header_path = next(path for path in fml if path.name == header_name)
+    header_source = text(header_path)
+    check(
+        all(f'#include "{include}"' not in header_source
+            for include in forbidden_includes),
+        f"{header_name} keeps pure calculation owner dependencies out of its runtime interface",
+    )
 production_text = "\n".join(text(path) for path in (*apl, *fml, *drv,
                                                       *bsp, *user))
 check(

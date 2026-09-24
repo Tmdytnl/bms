@@ -70,7 +70,7 @@ typedef enum
 
 typedef struct
 {
-    uint32_t cc_queue_overflow_count;
+    uint32_t cc_queue_overflow_count; /* CC 队列曾满且触发 newest-wins 的次数。 */
     /* queue 满时为 newest sample 腾位而不可恢复丢弃的 oldest sample 数。 */
     uint32_t cc_sample_missed_count;
     /* overflow recovery 后 newest enqueue 仍失败的次数；此时保留 CC_READY 供重试。 */
@@ -180,12 +180,12 @@ typedef struct
 
 typedef struct
 {
-    BMS_FaultId_t fault_id;
-    uint32_t request_id;
-    uint32_t source_generation;
-    uint32_t qualification_revision;
-    uint32_t protect_revision;
-    bool accepted;
+    BMS_FaultId_t fault_id; /* 本次确认针对的硬件故障类型。 */
+    uint32_t request_id; /* 与提交请求精确匹配的身份。 */
+    uint32_t source_generation; /* 被释放的硬件事件世代。 */
+    uint32_t qualification_revision; /* State 形成的恢复资格版本。 */
+    uint32_t protect_revision; /* 接纳结果发布后的 Protect 版本。 */
+    bool accepted; /* 请求身份与当前证据均匹配且已由 owner 接纳。 */
 } BMS_ProtectHwRecoveryAck_t;
 
 typedef enum
@@ -198,21 +198,21 @@ typedef enum
 
 typedef struct
 {
-    BMS_ServiceResetSource_t source;
-    uint32_t request_id;
-    uint32_t evaluated_sample_sequence;
-    uint32_t evaluated_afe_generation;
-    uint32_t qualification_revision;
-    uint32_t expiry_ms;
-    bool valid;
+    BMS_ServiceResetSource_t source; /* 仅允许指定受限服务源。 */
+    uint32_t request_id; /* 本次服务请求的单调身份。 */
+    uint32_t evaluated_sample_sequence; /* 请求资格对应的完整测量序号。 */
+    uint32_t evaluated_afe_generation; /* 请求资格对应的 AFE 世代。 */
+    uint32_t qualification_revision; /* 连续资格窗口的修订号。 */
+    uint32_t expiry_ms; /* 超过此时刻的请求不得接纳。 */
+    bool valid; /* false 表示没有可消费的请求。 */
 } BMS_ServiceResetRequest_t;
 
 typedef struct
 {
-    BMS_ServiceResetSource_t source;
-    uint32_t request_id;
-    uint32_t protect_revision;
-    bool accepted;
+    BMS_ServiceResetSource_t source; /* 被处理的受限服务源。 */
+    uint32_t request_id; /* 与提交请求精确匹配的身份。 */
+    uint32_t protect_revision; /* 应答发布后的 Protect 快照版本。 */
+    bool accepted; /* owner 已接纳并处理请求。 */
 } BMS_ServiceResetAck_t;
 
 /* 正式代码与 production-C wrap regression 共用的模加 generation 推进。 */
@@ -234,8 +234,10 @@ void BMS_Protect_Init(void);
 
 /* 绑定 ALERT drain 共用的 BQ transport handle；指向对象必须覆盖任务生命周期。 */
 void BMS_Protect_SetDevice(BQ76940_t *device);
+/* 绑定已验证的不可变硬件保护策略。 */
 void BMS_Protect_SetPolicy(const BMS_Policy_t *policy, uint32_t now_ms);
 
+/* 绑定 XREADY 恢复通知回调，不交出 W1C 所有权。 */
 void BMS_Protect_SetXreadyRecoveryHook(
     BMS_ProtectXreadyRecoveryHook_t recovery_hook);
 
@@ -283,6 +285,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
  */
 BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device,
                                                       uint32_t now_ms);
+/* 在 ALERT 之外继续推进待决 W1C、通信资格和请求应答。 */
 void BMS_Protect_ServiceMaintenance(uint32_t now_ms);
 
 /*
@@ -291,6 +294,7 @@ void BMS_Protect_ServiceMaintenance(uint32_t now_ms);
  * 已进入 APL queue，Protect 才授权后续 W1C CC_READY，保持 H-02 提交顺序。
  */
 bool BMS_Protect_GetPendingCcSample(BMS_CcSample_t *sample);
+/* 接纳 APL 的队列交接结果，成功后才允许清除当前 CC_READY。 */
 bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
                                      bool inserted,
                                      bool overflowed,
@@ -320,6 +324,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device, uint32_t now_ms);
 /* Recovery Coordinator 只发 request；Protect 仍是运行期 W1C sole owner。 */
 bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
                                      uint32_t recovery_revision);
+/* 读取 Protect 对指定 XREADY 清除请求的身份绑定应答。 */
 bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack);
 
 /* 按当前策略执行 source-specific XREADY action-latch release。 */
@@ -330,17 +335,21 @@ bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
 bool BMS_Protect_SubmitHwRecoveryRequest(
     const BMS_ProtectHwRecoveryRequest_t *request,
     uint32_t now_ms);
+/* 读取 Protect 对硬件故障释放请求的身份绑定应答。 */
 bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack);
 
 /* source-specific service reset request；不存在通用 bitmap clear command。 */
 bool BMS_Protect_SubmitServiceResetRequest(
     const BMS_ServiceResetRequest_t *request);
+/* 读取 Protect 对服务重置请求的身份绑定应答。 */
 bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack);
 
 #if defined(TEST_PHASE7_IMAGE) || defined(TEST_PHASE9_IMAGE)
+/* 测试镜像直接推进 AFE 通信故障策略窗口。 */
 void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms);
 #endif
 #if defined(TEST_PHASE7_IMAGE)
+/* 测试镜像暂存一条 CC 样本以覆盖交接边界。 */
 bool BMS_Protect_TestStageCcSample(int16_t raw, uint32_t sample_ms);
 #endif
 

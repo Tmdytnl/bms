@@ -14,6 +14,7 @@ static const uint8_t s_logical_cell_to_vc[BQ76940_MEASUREMENT_CELL_COUNT] =
     10U, 11U, 12U, 13U, 15U
 };
 
+/* 把 13S 逻辑电芯序号映射到 BQ 的 VC 通道。 */
 uint8_t BQ76940_Measurement_VcChannelOfLogicalCell(uint8_t logical_cell_index)
 {
     if (logical_cell_index >= BQ76940_MEASUREMENT_CELL_COUNT)
@@ -23,6 +24,7 @@ uint8_t BQ76940_Measurement_VcChannelOfLogicalCell(uint8_t logical_cell_index)
     return s_logical_cell_to_vc[logical_cell_index];
 }
 
+/* 检查 ADC 校准增益、偏移和有效标记后才允许换算。 */
 static BQ76940_Status_t BQ76940_Measurement_RequireCalibration(
     const BQ76940_Calibration_t *calibration)
 {
@@ -36,6 +38,7 @@ static BQ76940_Status_t BQ76940_Measurement_RequireCalibration(
     return BQ76940_STATUS_OK;
 }
 
+/* 按逻辑电芯映射读取 13 节电压，任一通道失败即拒绝整组。 */
 BQ76940_Status_t BQ76940_ReadCellVoltages13(
     BQ76940_t *device,
     const BQ76940_Calibration_t *calibration,
@@ -91,6 +94,7 @@ BQ76940_Status_t BQ76940_ReadCellVoltages13(
     return BQ76940_STATUS_OK;
 }
 
+/* 读取 BAT 通道并按校准换算为电池包诊断电压。 */
 BQ76940_Status_t BQ76940_ReadPackVoltageMv(
     BQ76940_t *device,
     const BQ76940_Calibration_t *calibration,
@@ -139,6 +143,7 @@ BQ76940_Status_t BQ76940_ReadPackVoltageMv(
     return BQ76940_STATUS_OK;
 }
 
+/* 读取库仑计的有符号原始值，不在驱动层管理事件生命周期。 */
 BQ76940_Status_t BQ76940_ReadCcRaw(BQ76940_t *device, int16_t *cc_raw)
 {
     uint16_t raw;
@@ -159,6 +164,7 @@ BQ76940_Status_t BQ76940_ReadCcRaw(BQ76940_t *device, int16_t *cc_raw)
     return BQ76940_STATUS_OK;
 }
 
+/* 按采样电阻和电流极性把 CC 原始码换算为 mA。 */
 BQ76940_Status_t BQ76940_ConvertCcRawToCurrentMa(
     int16_t cc_raw,
     uint32_t rsense_uohm,
@@ -193,6 +199,7 @@ BQ76940_Status_t BQ76940_ConvertCcRawToCurrentMa(
     return BQ76940_STATUS_OK;
 }
 
+/* 读取 TS1 的 14 位原始码供温度链使用。 */
 BQ76940_Status_t BQ76940_ReadTs1Raw(BQ76940_t *device,
                                     uint16_t *ts1_raw14)
 {
@@ -214,6 +221,7 @@ BQ76940_Status_t BQ76940_ReadTs1Raw(BQ76940_t *device,
     return BQ76940_STATUS_OK;
 }
 
+/* 把 TS1 原始码换算为 NTC 电阻，拒绝非法分母或范围。 */
 BQ76940_Status_t BQ76940_ConvertTs1RawToResistanceOhm(
     uint16_t ts1_raw14,
     uint32_t *resistance_ohm)

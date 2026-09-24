@@ -7,6 +7,7 @@
 
 #define APL_DEBUG_MAX_BYTES_PER_SERVICE          (8U)
 
+/* 按发送预算从只读诊断缓冲区向 UART 非阻塞输出。 */
 void APL_Debug_Service(uint32_t now_ms)
 {
     uint8_t value;

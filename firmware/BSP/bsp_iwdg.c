@@ -15,6 +15,7 @@
 #define BSP_IWDG_RELOAD_MAX                     (0x0FFFUL)
 #define BSP_IWDG_UPDATE_LIMIT                   (100000UL)
 
+/* 按标称超时配置并启动 IWDG，返回硬件启动是否成功。 */
 bool BSP_IWDG_StartNominal(uint32_t timeout_ms)
 {
     uint32_t reload;
@@ -51,6 +52,7 @@ bool BSP_IWDG_StartNominal(uint32_t timeout_ms)
     return true;
 }
 
+/* 刷新已启动的 IWDG 硬件计数器，不作上层健康判断。 */
 void BSP_IWDG_Feed(void)
 {
     /* 单一 magic write 刷新计数器；BSP 不判断本次刷新是否被上层授权。 */

@@ -56,6 +56,7 @@ uint16_t BQ76940_Control_DecodeOvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration);
 
+/* 解码欠压跳闸阈值mV。 */
 uint16_t BQ76940_Control_DecodeUvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration);
@@ -84,23 +85,28 @@ BQ76940_Status_t BQ76940_Control_SelectOcdThreshold(
     bool rsns,
     uint8_t *code);
 
+/* 从 OCD 离散延时表选出可编码毫秒值。 */
 BQ76940_Status_t BQ76940_Control_SelectOcdDelayMs(
     uint16_t requested_ms,
     uint8_t *code);
 
+/* 从 SCD 离散阈值表选出可编码值并返回寄存器码。 */
 BQ76940_Status_t BQ76940_Control_SelectScdThreshold(
     uint16_t requested_mv,
     bool rsns,
     uint8_t *code);
 
+/* 从 SCD 离散延时表选出可编码微秒值。 */
 BQ76940_Status_t BQ76940_Control_SelectScdDelayUs(
     uint16_t requested_us,
     uint8_t *code);
 
+/* 把秒单位过压延时映射到器件离散编码。 */
 BQ76940_Status_t BQ76940_Control_SelectOvDelayS(
     uint8_t requested_s,
     uint8_t *code);
 
+/* 把秒单位欠压延时映射到器件离散编码。 */
 BQ76940_Status_t BQ76940_Control_SelectUvDelayS(
     uint8_t requested_s,
     uint8_t *code);

@@ -6,6 +6,7 @@
 #include "bms_policy.h"
 #include "bms_soc.h"
 
+/* 消费独占 CC 队列、推进 SOC 积分并服务持久化。 */
 void APL_TaskSoc(void *argument)
 {
     BMS_CcSample_t samples[BMS_SOC_MAX_CC_SAMPLES_PER_RUN];

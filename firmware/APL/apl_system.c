@@ -27,15 +27,19 @@
 
 #define APL_AFE_STARTUP_LIMIT_MS                 (5000UL)
 
+/* 启动期创建且覆盖任务生命周期的软件 I2C 总线实例。 */
 static SoftI2C_t s_afe_bus;
+/* 在同一总线上绑定的 BQ76940 句柄，由 APL 注入各 owner。 */
 static BQ76940_t s_afe_device;
 
+/* 把 AFE 启动状态机的唤醒请求转接到板级脉冲原语。 */
 static bool APL_AfeWake(void *context)
 {
     (void)context;
     return BSP_AFE_WakePulse();
 }
 
+/* 在有限时窗内逐步完成 AFE 启动并取得校准，失败则不启动任务。 */
 static bool APL_RunAfeStartup(BQ76940_t *device,
                               const BMS_Policy_t *policy,
                               BQ76940_Calibration_t *calibration)
@@ -66,6 +70,7 @@ static bool APL_RunAfeStartup(BQ76940_t *device,
     return false;
 }
 
+/* 把持久化算法的读取请求转接到受限 Flash BSP。 */
 static bool APL_FlashRead(void *context, uint32_t address,
                           uint8_t *destination, uint16_t length)
 {
@@ -73,18 +78,21 @@ static bool APL_FlashRead(void *context, uint32_t address,
     return BSP_Flash_Read(address, destination, length);
 }
 
+/* 把持久化算法的擦页请求转接到受限 Flash BSP。 */
 static bool APL_FlashErase(void *context, uint32_t page_address)
 {
     (void)context;
     return BSP_Flash_ErasePersistencePage(page_address);
 }
 
+/* 把持久化算法的 halfword 写请求转接到受限 Flash BSP。 */
 static bool APL_FlashProgram(void *context, uint32_t address, uint16_t value)
 {
     (void)context;
     return BSP_Flash_ProgramPersistenceHalfWord(address, value);
 }
 
+/* 按 GPIO、Timer、UART 的依赖顺序建立板级基础能力。 */
 static bool APL_InitBoardPrimitives(void)
 {
     /* GPIO/TIM3 先建立引脚与微秒时基，UART readback 成功后才声明板级初始化完成。 */
@@ -93,6 +101,7 @@ static bool APL_InitBoardPrimitives(void)
     return BSP_UART1_Init115200();
 }
 
+/* 建立软件 I2C 回调与 BQ76940 句柄，供启动和运行期 owner 使用。 */
 static bool APL_InitAfeTransport(void)
 {
     SoftI2C_LineOps_t line_ops;
@@ -121,6 +130,7 @@ static bool APL_InitAfeTransport(void)
             BQ76940_STATUS_OK);
 }
 
+/* 完成 AFE 启动校准后再初始化保护、状态和 FET owner。 */
 static bool APL_InitSafetyAndControl(const BMS_Policy_t *policy)
 {
     BQ76940_Calibration_t calibration;
@@ -145,6 +155,7 @@ static bool APL_InitSafetyAndControl(const BMS_Policy_t *policy)
     return true;
 }
 
+/* 若 A/B 页存在有效记录则恢复 SOC，否则沿用安全初始化值。 */
 static void APL_RestorePersistedSoc(const BMS_Policy_t *policy)
 {
     BMS_PersistencePayload_t persisted;
@@ -162,6 +173,7 @@ static void APL_RestorePersistedSoc(const BMS_Policy_t *policy)
     }
 }
 
+/* 初始化均衡、CAN 协议及调试快照功能。 */
 static void APL_InitRuntimeFeatures(const BMS_Policy_t *policy)
 {
     BMS_Balance_Init(&s_afe_device, policy, true);
@@ -169,6 +181,7 @@ static void APL_InitRuntimeFeatures(const BMS_Policy_t *policy)
     BMS_Debug_Init();
 }
 
+/* 配置 RTOS 队列与七任务，全部就绪后才启动调度器。 */
 static bool APL_CreateRuntime(const BMS_Policy_t *policy)
 {
     /* IRQ priority grouping 属于 APL composition；对象/任务任一步失败都阻止 scheduler。 */
@@ -181,6 +194,7 @@ static bool APL_CreateRuntime(const BMS_Policy_t *policy)
     return APL_Rtos_CreateTasks(&s_afe_device) == pdTRUE;
 }
 
+/* 按 fail-safe 顺序初始化板级原语、AFE、功能模块和 RTOS 对象。 */
 bool APL_SystemInit(void)
 {
     const BMS_Policy_t *policy;
@@ -206,15 +220,18 @@ bool APL_SystemInit(void)
     return APL_CreateRuntime(policy);
 }
 
+/* 在全部必需模块创建成功后启动 FreeRTOS 调度器。 */
 void APL_SystemStart(void)
 {
     vTaskStartScheduler();
 }
 
+/* 关闭中断并停留在不可运行状态，防止初始化失败后启动任务。 */
 void APL_SafeIdle(void)
 {
     __disable_irq();
     for (;;)
     {
+
     }
 }

@@ -5,6 +5,7 @@
 #include "bms_protect.h"
 #include "bsp_exti.h"
 
+/* 处理 ALERT 通知、CC 两阶段队列交接和 Protect 有界重试。 */
 void APL_TaskProtect(void *argument)
 {
     BQ76940_t *afe_device;

@@ -12,45 +12,76 @@
 /* ProtectTask 私有状态；其他模块只能通过一致快照或 identity request 访问。 */
 /* ------------------------------------------------------------------ */
 static BMS_FaultSummary_t s_fault;
+/* ALERT、CC、W1C 和通信故障的私有诊断计数。 */
 static BMS_ProtectDiagnostics_t s_diagnostics;
+/* 已完成 APL 队列交接、供 Sample 只读的最新同代 CC 镜像。 */
 static BMS_ProtectLatestCc_t s_latest_cc;
+/* 已从 AFE 读取但尚未得到队列提交确认的 CC 样本。 */
 static BMS_CcSample_t s_pending_cc;
+/* 上述样本是否仍等待 APL 两阶段交接。 */
 static bool s_pending_cc_valid;
+/* 每次 CC 样本交接推进的单调 transport identity。 */
 static uint32_t s_cc_transport_sequence;
+/* Protect 权威 XREADY active 状态与 generation。 */
 static BMS_ProtectXreadyState_t s_xready_state;
+/* 已观察 XREADY 且需继续协调运行期恢复的标志。 */
 static bool s_xready_recovery_pending;
+/* CC_READY 已可清除但 W1C 尚未确认的待决状态。 */
 static bool s_cc_clear_pending;
+/* STOP 提交点不明、禁止盲目重放的 SYS_STAT 位图。 */
 static uint8_t s_w1c_finalization_ambiguous_mask;
+/* 启动期绑定且覆盖任务生命周期的 AFE 句柄。 */
 static BQ76940_t *s_afe_device;
+/* 兼容接口的恢复回调；运行期授权仍由 Protect 校验。 */
 static BMS_ProtectXreadyRecoveryHook_t s_xready_recovery_hook;
+/* 任一安全可见状态改变时推进的 Protect 快照版本。 */
 static uint32_t s_publication_revision;
+/* 各硬件故障源首次出现时推进的事件身份。 */
 static uint32_t s_source_generation[BMS_PROTECT_SOURCE_COUNT];
+/* 上次成功读取的 SYS_STAT 字节，用于识别新边沿。 */
 static uint8_t s_last_sys_stat;
+/* Recovery 提交的当前世代单次 XREADY 清除授权。 */
 static BMS_ProtectXreadyClearAuthorization_t s_xready_clear_authorization;
+/* Protect 对该清除授权的执行结果及修订号。 */
 static BMS_ProtectXreadyClearAck_t s_xready_clear_ack;
+/* 启动期绑定的不可变保护策略。 */
 static const BMS_Policy_t *s_policy;
+/* State 提交、待 Protect 校验的硬件故障释放请求。 */
 static BMS_ProtectHwRecoveryRequest_t s_hw_recovery_request;
+/* Protect 对硬件故障释放请求的身份绑定应答。 */
 static BMS_ProtectHwRecoveryAck_t s_hw_recovery_ack;
+/* CAN 等服务入口提交、待 Protect 接纳的受限重置请求。 */
 static BMS_ServiceResetRequest_t s_service_reset_request;
+/* Protect 对受限服务重置请求的身份绑定应答。 */
 static BMS_ServiceResetAck_t s_service_reset_ack;
+/* 连续 AFE 通信失败次数，供策略门限判断。 */
 static uint8_t s_afe_consecutive_failures;
+/* 连续 AFE 通信成功次数，供故障恢复资格判断。 */
 static uint8_t s_afe_consecutive_successes;
+/* 最近一次成功访问 AFE 的毫秒时刻。 */
 static uint32_t s_afe_last_success_ms;
+/* 当前 AFE 通信故障持续窗口的起始毫秒时刻。 */
 static uint32_t s_afe_comm_active_started_ms;
+/* AFE 通信故障持续计时窗口已开启的标志。 */
 static bool s_afe_comm_active_timing;
+/* 当前策略窗口内已观察的 OCD 事件次数。 */
 static uint8_t s_ocd_event_count;
+/* OCD 升级计数窗口的起始毫秒时刻。 */
 static uint32_t s_ocd_window_started_ms;
+/* OCD 升级计数窗口已开启的标志。 */
 static bool s_ocd_window_active;
 
 /* legacy lower-phase decision output 仅供本模块事件映射使用，不是 runtime FET authority。 */
 static BQ76940_FetRequest_t s_legacy_fet_request;
 
+/* 安全可见状态变化时推进 Protect 发布修订号。 */
 static void BMS_Protect_AdvanceRevision(void)
 {
     s_publication_revision =
         (uint32_t)(s_publication_revision + 1UL);
 }
 
+/* 为新出现的硬件故障推进各自的 source generation。 */
 static void BMS_Protect_RecordNewSourceEvents(uint8_t stat,
                                               uint32_t now_ms)
 {
@@ -128,6 +159,7 @@ static void BMS_Protect_RecordNewSourceEvents(uint8_t stat,
     }
 }
 
+/* 建立 HW/AFE fault、事件身份和 W1C 隔离的 fail-safe 初值。 */
 void BMS_Protect_Init(void)
 {
     uint8_t source_index;
@@ -200,23 +232,27 @@ void BMS_Protect_Init(void)
     s_legacy_fet_request.dsg = BQ76940_FET_DESIRE_DISABLE;
 }
 
+/* 绑定启动期 AFE 句柄，供 Protect 独占读取 SYS_STAT。 */
 void BMS_Protect_SetDevice(BQ76940_t *device)
 {
     s_afe_device = device;
 }
 
+/* 绑定已验证的不可变硬件保护策略。 */
 void BMS_Protect_SetPolicy(const BMS_Policy_t *policy, uint32_t now_ms)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
     s_afe_last_success_ms = now_ms;
 }
 
+/* 绑定 XREADY 恢复通知回调，不交出 W1C 所有权。 */
 void BMS_Protect_SetXreadyRecoveryHook(
     BMS_ProtectXreadyRecoveryHook_t recovery_hook)
 {
     s_xready_recovery_hook = recovery_hook;
 }
 
+/* 合并硬件活动与锁存故障，供状态判断读取。 */
 BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void)
 {
     BMS_FaultSummary_t snapshot;
@@ -227,6 +263,7 @@ BMS_FaultSummary_t BMS_Protect_GetFaultSummary(void)
     return snapshot;
 }
 
+/* 把指定故障原因同时加入充电与放电禁止位图。 */
 static void BMS_Protect_AddBothInhibit(
     BMS_ProtectSafetySnapshot_t *snapshot,
     BMS_FaultId_t fault_id)
@@ -238,6 +275,7 @@ static void BMS_Protect_AddBothInhibit(
     snapshot->inhibit_dsg_reasons |= reason;
 }
 
+/* 从 Protect 独占状态合成方向性禁止快照，供 FET 仲裁。 */
 BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void)
 {
     BMS_ProtectSafetySnapshot_t snapshot;
@@ -328,6 +366,7 @@ BMS_ProtectSafetySnapshot_t BMS_Protect_GetSafetySnapshot(void)
     return snapshot;
 }
 
+/* 复制 ALERT、W1C 和 CC 交接的模块诊断计数。 */
 BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void)
 {
     BMS_ProtectDiagnostics_t snapshot;
@@ -340,6 +379,7 @@ BMS_ProtectDiagnostics_t BMS_Protect_GetDiagnostics(void)
     return snapshot;
 }
 
+/* 累计库仑计采样队列溢出，并保留待处理样本。 */
 static void BMS_Protect_RecordCcOverflow(bool oldest_was_dropped,
                                          bool replacement_failed)
 {
@@ -360,6 +400,7 @@ static void BMS_Protect_RecordCcOverflow(bool oldest_was_dropped,
     s_diagnostics.cc_queue_overflow_latched = true;
 }
 
+/* 累计 AFE 传输失败并更新通信故障资格。 */
 static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status,
                                          uint32_t now_ms)
 {
@@ -411,6 +452,7 @@ static void BMS_Protect_RecordAfeFailure(BQ76940_Status_t status,
     }
 }
 
+/* 隔离最终 STOP 未确认的 W1C 位并累加诊断，禁止盲目重放。 */
 static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
 {
     if (clear_mask == 0U)
@@ -439,6 +481,7 @@ static void BMS_Protect_RecordW1cFinalizationAmbiguity(uint8_t clear_mask)
     BMS_Runtime_CriticalExit();
 }
 
+/* 在读到寄存器位已低后退休对应的 W1C 未决隔离。 */
 static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
 {
     uint8_t resolved_mask;
@@ -477,6 +520,7 @@ static void BMS_Protect_ResolveObservedLowW1c(uint8_t stat)
     BMS_Runtime_CriticalExit();
 }
 
+/* 记录 AFE 成功读取，推进通信恢复资格。 */
 static void BMS_Protect_RecordAfeReadSuccess(uint32_t now_ms)
 {
     BMS_FaultBitmap_t previous_active;
@@ -506,6 +550,7 @@ static void BMS_Protect_RecordAfeReadSuccess(uint32_t now_ms)
     BMS_Runtime_CriticalExit();
 }
 
+/* 按连续失败和恢复窗口更新 AFE 通信故障状态。 */
 static void BMS_Protect_UpdateAfeCommPolicy(uint32_t now_ms)
 {
     BMS_FaultBitmap_t comm_mask;
@@ -554,6 +599,7 @@ static void BMS_Protect_UpdateAfeCommPolicy(uint32_t now_ms)
 }
 
 #if defined(TEST_PHASE7_IMAGE) || defined(TEST_PHASE9_IMAGE)
+/* 测试镜像直接推进 AFE 通信故障策略窗口。 */
 void BMS_Protect_TestUpdateAfeCommPolicy(uint32_t now_ms)
 {
     BMS_Protect_UpdateAfeCommPolicy(now_ms);
@@ -582,6 +628,7 @@ bool BMS_Protect_GetPendingCcSample(BMS_CcSample_t *sample)
     return available;
 }
 
+/* 接纳 APL 的队列交接结果，成功后才允许清除当前 CC_READY。 */
 bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
                                      bool inserted,
                                      bool overflowed,
@@ -624,6 +671,7 @@ bool BMS_Protect_CompleteCcTransport(uint32_t transport_id,
     return true;
 }
 
+/* 复制已交接的同世代 CC 样本供 Sample 关联测量帧。 */
 bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
 {
     bool available;
@@ -646,6 +694,7 @@ bool BMS_Protect_GetLatestCc(BMS_ProtectLatestCc_t *snapshot)
     return available;
 }
 
+/* 复制 Protect 持有的 XREADY active 与 generation 身份。 */
 bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot)
 {
     if (snapshot == NULL)
@@ -659,6 +708,7 @@ bool BMS_Protect_GetXreadyState(BMS_ProtectXreadyState_t *snapshot)
     return true;
 }
 
+/* 确认校准或样本绑定当前且非 active 的 XREADY 世代。 */
 bool BMS_Protect_XreadyBindingIsCurrent(
     const BMS_ProtectXreadyState_t *state,
     uint32_t bound_generation)
@@ -751,6 +801,7 @@ bool BMS_Protect_RecoverXready(BQ76940_t *device, uint32_t now_ms)
     return true;
 }
 
+/* 保存 Recovery 的同世代一次性清除授权，由 Protect 执行 W1C。 */
 bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
                                      uint32_t recovery_revision)
 {
@@ -773,6 +824,7 @@ bool BMS_Protect_AuthorizeXreadyClear(uint32_t xready_generation,
     return accepted;
 }
 
+/* 读取 Protect 对指定 XREADY 清除请求的身份绑定应答。 */
 bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack)
 {
     if (ack == NULL)
@@ -785,6 +837,7 @@ bool BMS_Protect_GetXreadyClearAck(BMS_ProtectXreadyClearAck_t *ack)
     return true;
 }
 
+/* 仅在同代恢复证据完整时释放 XREADY 的动作锁存。 */
 bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
                                          uint32_t recovery_revision)
 {
@@ -806,12 +859,14 @@ bool BMS_Protect_ReleaseXreadyActionLatch(uint32_t xready_generation,
     return released;
 }
 
+/* 按无符号回绕时间判断请求仍在有效期内。 */
 static bool BMS_Protect_TimeNotExpired(uint32_t now_ms,
                                        uint32_t expiry_ms)
 {
     return ((int32_t)(expiry_ms - now_ms) >= 0);
 }
 
+/* 把可恢复硬件 fault ID 映射为 Protect source identity。 */
 static bool BMS_Protect_SourceOfFault(
     BMS_FaultId_t fault_id,
     BMS_ProtectSourceId_t *source,
@@ -842,6 +897,7 @@ static bool BMS_Protect_SourceOfFault(
     return false;
 }
 
+/* 校验硬件恢复请求的 source generation、测量与资格身份。 */
 static bool BMS_Protect_HwRequestIsCurrent(
     const BMS_ProtectHwRecoveryRequest_t *request,
     uint32_t now_ms)
@@ -869,6 +925,7 @@ static bool BMS_Protect_HwRequestIsCurrent(
          request->evaluated_afe_generation);
 }
 
+/* 提交带 source generation 和测量身份的硬件故障释放请求。 */
 bool BMS_Protect_SubmitHwRecoveryRequest(
     const BMS_ProtectHwRecoveryRequest_t *request,
     uint32_t now_ms)
@@ -890,6 +947,7 @@ bool BMS_Protect_SubmitHwRecoveryRequest(
     return accepted;
 }
 
+/* 读取 Protect 对硬件故障释放请求的身份绑定应答。 */
 bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack)
 {
     if (ack == NULL)
@@ -902,6 +960,7 @@ bool BMS_Protect_GetHwRecoveryAck(BMS_ProtectHwRecoveryAck_t *ack)
     return true;
 }
 
+/* 提交带时效与测量身份的受限服务重置请求。 */
 bool BMS_Protect_SubmitServiceResetRequest(
     const BMS_ServiceResetRequest_t *request)
 {
@@ -928,6 +987,7 @@ bool BMS_Protect_SubmitServiceResetRequest(
     return accepted;
 }
 
+/* 读取 Protect 对服务重置请求的身份绑定应答。 */
 bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack)
 {
     if (ack == NULL)
@@ -940,6 +1000,7 @@ bool BMS_Protect_GetServiceResetAck(BMS_ServiceResetAck_t *ack)
     return true;
 }
 
+/* 验证请求身份与当前故障源后，由 Protect owner 释放可恢复硬件故障。 */
 static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
 {
     BMS_ProtectHwRecoveryRequest_t request;
@@ -1029,6 +1090,7 @@ static void BMS_Protect_ServiceHwRecovery(uint32_t now_ms)
     BMS_Runtime_CriticalExit();
 }
 
+/* 按服务重置来源映射可清除的故障范围。 */
 static bool BMS_Protect_ServiceResetMapping(
     BMS_ServiceResetSource_t source,
     BMS_FaultId_t *fault_id,
@@ -1059,6 +1121,7 @@ static bool BMS_Protect_ServiceResetMapping(
     return false;
 }
 
+/* 由 Protect owner 消费满足身份和策略约束的受限服务重置请求。 */
 static void BMS_Protect_ServiceReset(uint32_t now_ms)
 {
     BMS_ServiceResetRequest_t request;
@@ -1184,6 +1247,7 @@ static void BMS_Protect_HandleCcReady(BQ76940_t *device,
     }
 }
 
+/* 把 SYS_STAT 位映射为故障状态、FET 旧接口请求及可清位。 */
 void BMS_Protect_Decide(uint8_t stat,
                         BMS_FaultSummary_t *faults,
                         BQ76940_FetRequest_t *request,
@@ -1260,6 +1324,7 @@ void BMS_Protect_Decide(uint8_t stat,
     }
 }
 
+/* 检查 SYS_STAT 是否含会影响安全判断的硬件故障位。 */
 bool BMS_Protect_HasFaultBits(uint8_t stat)
 {
     return ((stat & (BMS_PROTECT_STAT_OV | BMS_PROTECT_STAT_UV |
@@ -1268,6 +1333,7 @@ bool BMS_Protect_HasFaultBits(uint8_t stat)
                      BMS_PROTECT_STAT_OVRD_ALERT)) != 0U);
 }
 
+/* 有界处理 SYS_STAT 事件、CC 交接和 W1C；未完成工作交由下一轮重试。 */
 BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
                                            uint32_t now_ms)
 {
@@ -1414,6 +1480,7 @@ BMS_ProtectDrainResult_t BMS_Protect_Drain(BQ76940_t *device,
     return BMS_PROTECT_DRAIN_RETRY_REQUIRED;
 }
 
+/* 在总线独占期间推进一次 ALERT drain，并向任务层报告是否仍需重试。 */
 BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device,
                                                       uint32_t now_ms)
 {
@@ -1438,6 +1505,7 @@ BMS_ProtectServiceResult_t BMS_Protect_ServicePending(BQ76940_t *device,
     return BMS_PROTECT_SERVICE_IDLE;
 }
 
+/* 在 ALERT 之外继续推进待决 W1C、通信资格和请求应答。 */
 void BMS_Protect_ServiceMaintenance(uint32_t now_ms)
 {
     BMS_Protect_UpdateAfeCommPolicy(now_ms);
@@ -1446,6 +1514,7 @@ void BMS_Protect_ServiceMaintenance(uint32_t now_ms)
 }
 
 #if defined(TEST_PHASE7_IMAGE)
+/* 测试镜像暂存一条 CC 样本以覆盖交接边界。 */
 bool BMS_Protect_TestStageCcSample(int16_t raw, uint32_t sample_ms)
 {
     bool staged;

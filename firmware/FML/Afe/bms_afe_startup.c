@@ -35,6 +35,7 @@ BMS_BUILD_ASSERT((BMS_AFE_STARTUP_REG_FINAL_CTRL2 + 1) ==
                      BMS_AFE_STARTUP_REGISTER_COUNT,
                  afe_startup_register_plan_matches_public_count);
 
+/* 保存启动失败原因并停在 fail-safe 阶段，不继续配置 AFE。 */
 static void BMS_AfeStartup_Fail(BMS_AfeStartup_t *startup,
                                 BMS_AfeStartupFailure_t failure,
                                 BQ76940_Status_t transport_status)
@@ -44,6 +45,7 @@ static void BMS_AfeStartup_Fail(BMS_AfeStartup_t *startup,
     startup->state = BMS_AFE_STARTUP_STATE_FAILED;
 }
 
+/* 按毫秒计数回绕语义判断当前启动阶段是否超时。 */
 static bool BMS_AfeStartup_TimeElapsed(uint32_t now_ms,
                                        uint32_t start_ms,
                                        uint32_t duration_ms)
@@ -51,16 +53,19 @@ static bool BMS_AfeStartup_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - start_ms) >= duration_ms);
 }
 
+/* 检查 SYS_STAT 是否仍有阻止启动的硬件状态位。 */
 static bool BMS_AfeStartup_HasBlockingStatus(uint8_t sys_stat)
 {
     return ((sys_stat & BMS_AFE_STARTUP_STAT_BLOCKING_MASK) != 0U);
 }
 
+/* 检查 SYS_CTRL2 回读中的 CHG/DSG 位均为关闭。 */
 static bool BMS_AfeStartup_HasFetsOff(uint8_t sys_ctrl2)
 {
     return ((sys_ctrl2 & BQ76940_SYS_CTRL2_FET_MASK) == 0U);
 }
 
+/* 拒绝不能按当前器件寄存器编码的启动配置。 */
 static bool BMS_AfeStartup_ValidateConfig(
     const BMS_AfeStartupConfig_t *config,
     uint8_t *protect1,
@@ -109,6 +114,7 @@ static bool BMS_AfeStartup_ValidateConfig(
     return (status == BQ76940_STATUS_OK);
 }
 
+/* 按启动顺序准备 CC 与 ADC 等早期配置寄存器的期望值。 */
 static void BMS_AfeStartup_StageEarlyRegisters(BMS_AfeStartup_t *startup)
 {
     /*
@@ -137,6 +143,7 @@ static void BMS_AfeStartup_StageEarlyRegisters(BMS_AfeStartup_t *startup)
     startup->register_count = BMS_AFE_STARTUP_EARLY_REGISTER_COUNT;
 }
 
+/* 把策略阈值与延时编码到保护寄存器的期望值。 */
 static bool BMS_AfeStartup_StageProtectionRegisters(
     BMS_AfeStartup_t *startup)
 {
@@ -192,6 +199,7 @@ static bool BMS_AfeStartup_StageProtectionRegisters(
     return true;
 }
 
+/* 创建带设备与策略身份的启动状态机，先保持 FET 安全初值。 */
 bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
                          BQ76940_t *device,
                          const BMS_AfeStartupConfig_t *config,
@@ -250,6 +258,7 @@ bool BMS_AfeStartup_Init(BMS_AfeStartup_t *startup,
     return true;
 }
 
+/* 执行当前启动阶段的单个寄存器写入并记录失败。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_WriteRegister(
     BMS_AfeStartup_t *startup)
 {
@@ -291,6 +300,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_WriteRegister(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 回读当前配置寄存器，只有与期望值一致才推进阶段。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
     BMS_AfeStartup_t *startup,
     uint32_t now_ms)
@@ -380,6 +390,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_VerifyRegister(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 逐步读取 ADC 校准寄存器，为后续测量换算提供证据。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_ReadCalibrationRegister(
     BMS_AfeStartup_t *startup,
     uint8_t register_address,
@@ -401,6 +412,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ReadCalibrationRegister(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 回读最终 SYS_STAT，确认启动清除及配置阶段未留下阻断位。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_ReadFinalStatus(
     BMS_AfeStartup_t *startup)
 {
@@ -453,6 +465,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ReadFinalStatus(
     return BMS_AFE_STARTUP_RESULT_COMPLETE;
 }
 
+/* 按启动期授权清除 XREADY，并确认写入结果。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_ClearXready(
     BMS_AfeStartup_t *startup)
 {
@@ -504,6 +517,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_ClearXready(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 在调度器启动前把 CHG/DSG 请求写为全关状态。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_SafeOffWrite(
     BMS_AfeStartup_t *startup)
 {
@@ -537,6 +551,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_SafeOffWrite(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 回读启动期安全关断结果，未证实时拒绝继续启动。 */
 static BMS_AfeStartupResult_t BMS_AfeStartup_SafeOffVerify(
     BMS_AfeStartup_t *startup,
     uint32_t now_ms)
@@ -575,6 +590,7 @@ static BMS_AfeStartupResult_t BMS_AfeStartup_SafeOffVerify(
     return BMS_AFE_STARTUP_RESULT_PENDING;
 }
 
+/* 在调度器启动前推进一个 AFE 初始化阶段，失败时保持安全初值。 */
 BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
                                            uint32_t now_ms)
 {
@@ -745,6 +761,7 @@ BMS_AfeStartupResult_t BMS_AfeStartup_Step(BMS_AfeStartup_t *startup,
     }
 }
 
+/* 复制启动状态机当前阶段及已确认的证据。 */
 BMS_AfeStartupState_t BMS_AfeStartup_GetState(
     const BMS_AfeStartup_t *startup)
 {
@@ -755,6 +772,7 @@ BMS_AfeStartupState_t BMS_AfeStartup_GetState(
     return startup->state;
 }
 
+/* 返回启动状态机保留的首个失败原因。 */
 BMS_AfeStartupFailure_t BMS_AfeStartup_GetFailure(
     const BMS_AfeStartup_t *startup)
 {
@@ -765,6 +783,7 @@ BMS_AfeStartupFailure_t BMS_AfeStartup_GetFailure(
     return startup->failure;
 }
 
+/* 仅在校准已验证后复制增益与偏移供 Sample 绑定。 */
 bool BMS_AfeStartup_GetCalibration(
     const BMS_AfeStartup_t *startup,
     BQ76940_Calibration_t *calibration)
@@ -779,6 +798,7 @@ bool BMS_AfeStartup_GetCalibration(
     return true;
 }
 
+/* 报告启动期 SYS_CTRL2 全关写入及回读是否均已证实。 */
 bool BMS_AfeStartup_IsFetOffConfirmed(
     const BMS_AfeStartup_t *startup)
 {

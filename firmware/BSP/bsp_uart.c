@@ -26,8 +26,10 @@ BSP_BUILD_ASSERT(BSP_BOARD_UART_RX_PIN == 10U,
 BSP_BUILD_ASSERT(BSP_BOARD_PCLK2_HZ == 72000000UL,
                  uart_pclk2_is_seventy_two_mhz);
 
+/* USART1 初始化并完成寄存器配置回读的标志。 */
 static bool s_initialized;
 
+/* 配置 USART1 引脚和 115200 波特率，供有界调试输出使用。 */
 bool BSP_UART1_Init115200(void)
 {
     GPIO_InitTypeDef gpio;
@@ -66,6 +68,7 @@ bool BSP_UART1_Init115200(void)
     return s_initialized;
 }
 
+/* 尝试向 USART1 写一个字节，不等待发送寄存器空闲。 */
 bool BSP_UART1_TryWriteByte(uint8_t value)
 {
     if (!s_initialized ||
@@ -78,6 +81,7 @@ bool BSP_UART1_TryWriteByte(uint8_t value)
     return true;
 }
 
+/* 非阻塞读取 USART1 的一个已到达字节；无数据时保持输出不变。 */
 bool BSP_UART1_TryReadByte(uint8_t *value)
 {
     if (!s_initialized || (value == NULL) ||
@@ -90,6 +94,7 @@ bool BSP_UART1_TryReadByte(uint8_t *value)
     return true;
 }
 
+/* 通过 USART1 有界写出缓冲区内容并返回实际写入字节数。 */
 uint16_t BSP_UART1_Write(const uint8_t *data, uint16_t length)
 {
     uint16_t written;

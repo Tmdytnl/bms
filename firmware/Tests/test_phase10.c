@@ -4,7 +4,9 @@
 #include <string.h>
 
 #include "bms_balance.h"
+#include "bms_balance_evaluate.h"
 #include "bms_can.h"
+#include "bms_can_codec.h"
 #include "bms_persistence.h"
 #include "bms_soc.h"
 #include "bq76940_regs.h"
@@ -299,13 +301,13 @@ static uint32_t TestContinuation_Can(void)
     count = BMS_Can_BuildTxFrames(
         &measurement, &state, &protect, &recovery, &fet, frames);
     TEST_CONT_CHECK(failures, count == BMS_CAN_TX_FRAME_COUNT);
-    TEST_CONT_CHECK(failures, frames[0].ext_id == 0x180UL &&
-                                frames[5].ext_id == 0x185UL);
+    TEST_CONT_CHECK(failures, frames[0].standard_id == 0x180UL &&
+                                frames[5].standard_id == 0x185UL);
     TEST_CONT_CHECK(failures, frames[1].data[0] == 0xE4U &&
                                 frames[1].data[1] == 0xBBU);
 
     (void)memset(&command, 0, sizeof(command));
-    command.ext_id = policy->can.service_rx_id;
+    command.standard_id = policy->can.service_rx_id;
     command.dlc = 8U;
     command.data[0] = BMS_CAN_SERVICE_MAGIC;
     command.data[1] = BMS_CAN_SERVICE_RESET_COMMAND;

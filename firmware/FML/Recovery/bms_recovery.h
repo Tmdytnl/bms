@@ -71,6 +71,7 @@ BMS_RecoverySnapshot_t BMS_Recovery_GetSnapshot(void);
 
 #if defined(TEST_PHASE9_IMAGE)
 typedef void (*BMS_RecoveryTestHook_t)(void);
+/* 测试镜像设置校准交接前的竞态注入点。 */
 void BMS_Recovery_TestSetPreHandoffHook(BMS_RecoveryTestHook_t hook);
 #endif
 

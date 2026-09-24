@@ -31,6 +31,7 @@ typedef struct
     uint32_t stale_task_bitmap;/* bit=1：对应 task generation 超时未推进。 */
 } BMS_HealthDecision_t;
 
+/* 初始化七任务 heartbeat generation 与只读健康快照。 */
 void BMS_Health_Init(void);
 
 /*
@@ -41,9 +42,12 @@ void BMS_Health_Init(void);
  */
 void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id);
 
+/* 在短临界区复制七任务进度与喂狗资格快照。 */
 BMS_HealthSnapshot_t BMS_Health_GetSnapshot(void);
+/* 捕获七任务初始 generation，建立健康比较窗口。 */
 void BMS_Health_MonitorInit(BMS_HealthMonitor_t *monitor,
                             uint32_t now_ms);
+/* 比较必需任务在连续窗口内是否推进，并形成 IWDG 喂狗决定。 */
 BMS_HealthDecision_t BMS_Health_Evaluate(
     BMS_HealthMonitor_t *monitor,
     const BMS_HealthPolicy_t *policy,

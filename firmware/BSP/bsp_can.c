@@ -26,10 +26,14 @@ BSP_BUILD_ASSERT((BSP_BOARD_PCLK1_HZ /
                      BSP_BOARD_CAN_BITRATE,
                  can_timing_is_five_hundred_kbit);
 
+/* bxCAN 配置全部完成后的可用标志。 */
 static bool s_initialized;
+/* RX FIFO0 中断已由 APL 显式开启的标志。 */
 static bool s_rx_interrupt_enabled;
+/* 当前硬件过滤器接纳的 11-bit 服务帧 ID。 */
 static uint16_t s_service_rx_id;
 
+/* 配置 CAN 所需的时钟与 PA11/PA12 引脚复用。 */
 static void BSP_CAN_ConfigurePins(void)
 {
     GPIO_InitTypeDef gpio;
@@ -48,6 +52,7 @@ static void BSP_CAN_ConfigurePins(void)
     GPIO_Init(GPIOA, &gpio);
 }
 
+/* 配置 bxCAN 接收过滤器，仅向上层交付允许的服务帧。 */
 static void BSP_CAN_ConfigureServiceFilter(uint16_t service_rx_id)
 {
     CAN_FilterInitTypeDef filter;
@@ -72,6 +77,7 @@ static void BSP_CAN_ConfigureServiceFilter(uint16_t service_rx_id)
     CAN_FilterInit(&filter);
 }
 
+/* 配置 bxCAN 位时序、工作模式及 FIFO 中断条件。 */
 static bool BSP_CAN_ConfigurePeripheral(void)
 {
     CAN_InitTypeDef can;
@@ -99,6 +105,7 @@ static bool BSP_CAN_ConfigurePeripheral(void)
     return true;
 }
 
+/* 初始化 500 kbit/s 的 CAN 外设并记录可用状态。 */
 bool BSP_CAN_Init500K(uint16_t service_rx_id)
 {
     if (service_rx_id > BSP_CAN_STD_ID_MAX)
@@ -119,6 +126,7 @@ bool BSP_CAN_Init500K(uint16_t service_rx_id)
     return true;
 }
 
+/* 仅在 CAN 已初始化后开启 FIFO0 接收中断。 */
 bool BSP_CAN_EnableRxInterrupt(void)
 {
     NVIC_InitTypeDef nvic;
@@ -142,11 +150,13 @@ bool BSP_CAN_EnableRxInterrupt(void)
     return true;
 }
 
+/* 读取 CAN 外设和过滤器配置完成标志。 */
 bool BSP_CAN_IsInitialized(void)
 {
     return s_initialized;
 }
 
+/* 尝试占用可用发送邮箱，不阻塞等待总线发送完成。 */
 BSP_CanTxResult_t BSP_CAN_TryTransmit(const BSP_CanFrame_t *frame)
 {
     CanTxMsg tx;
@@ -175,12 +185,14 @@ BSP_CanTxResult_t BSP_CAN_TryTransmit(const BSP_CanFrame_t *frame)
         BSP_CAN_TX_NO_MAILBOX : BSP_CAN_TX_ACCEPTED;
 }
 
+/* 读取 RX FIFO0 的待收报文数量。 */
 bool BSP_CAN_ReceivePending(void)
 {
     return s_initialized &&
         (CAN_MessagePending(CAN1, CAN_FIFO0) != 0U);
 }
 
+/* 从 RX FIFO0 取出一帧硬件报文并释放 FIFO 邮箱。 */
 bool BSP_CAN_Receive(BSP_CanFrame_t *frame)
 {
     CanRxMsg rx;
@@ -202,12 +214,14 @@ bool BSP_CAN_Receive(BSP_CanFrame_t *frame)
     return true;
 }
 
+/* 检查 RX FIFO0 是否曾溢出，供 APL 记录诊断。 */
 bool BSP_CAN_IsRxFifoOverrun(void)
 {
     return s_initialized &&
         (CAN_GetFlagStatus(CAN1, CAN_FLAG_FOV0) != RESET);
 }
 
+/* 清除 RX FIFO0 的硬件溢出标志。 */
 void BSP_CAN_ClearRxFifoOverrun(void)
 {
     if (s_initialized)
@@ -216,12 +230,14 @@ void BSP_CAN_ClearRxFifoOverrun(void)
     }
 }
 
+/* 读取 bxCAN bus-off 状态，供 APL 决定恢复时机。 */
 bool BSP_CAN_IsBusOff(void)
 {
     return s_initialized &&
         (CAN_GetFlagStatus(CAN1, CAN_FLAG_BOF) != RESET);
 }
 
+/* 按现有板级配置重新初始化 CAN 外设。 */
 bool BSP_CAN_Recover(void)
 {
     bool enable_rx;

@@ -16,16 +16,19 @@ static void APL_Rtos_FatalStop(void)
     }
 }
 
+/* 在断言失败时进入不可恢复的安全停机路径。 */
 void vApplicationAssertFailedHandler(void)
 {
     APL_Rtos_FatalStop();
 }
 
+/* 在 FreeRTOS 堆分配失败时进入安全停机路径。 */
 void vApplicationMallocFailedHook(void)
 {
     APL_Rtos_FatalStop();
 }
 
+/* 在任务栈溢出时进入安全停机路径。 */
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     (void)xTask;
@@ -33,6 +36,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     APL_Rtos_FatalStop();
 }
 
+/* 提供 FreeRTOS idle 钩子，不转移任务安全职责。 */
 void vApplicationIdleHook(void)
 {
     /* 已启用 Idle hook，但刻意不在 idle context 隐式执行任何业务。 */

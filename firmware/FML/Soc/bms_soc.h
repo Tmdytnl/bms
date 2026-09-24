@@ -35,12 +35,12 @@ typedef struct
     BMS_CapacityMah_t remaining_capacity_mah; /* clamp 后剩余容量。 */
     BMS_SocPermille_t soc_permille;           /* 0..1000 对应 0%..100%。 */
     uint32_t integrated_sample_count;
-    uint32_t queue_gap_count;
-    uint32_t generation_change_count;
-    uint32_t full_correction_count;
-    uint32_t empty_correction_count;
-    bool valid;
-    bool queue_gap_latched;
+    uint32_t queue_gap_count; /* CC newest-wins 造成的积分证据缺口次数。 */
+    uint32_t generation_change_count; /* AFE 世代切换导致积分基线重建次数。 */
+    uint32_t full_correction_count; /* 满端资格完成后的校正次数。 */
+    uint32_t empty_correction_count; /* 空端资格完成后的校正次数。 */
+    bool valid; /* 当前估计是否可作为有效诊断值。 */
+    bool queue_gap_latched; /* 缺样精度降级尚未由可信端点校正解除。 */
 } BMS_SocSnapshot_t;
 
 /*
@@ -55,27 +55,35 @@ bool BMS_Soc_EngineInit(BMS_SocEngine_t *engine,
                         const BMS_SocPolicy_t *policy,
                         const BMS_DataSnapshot_t *measurement,
                         uint32_t now_ms);
+/* 按样本时间差积分电流，并维护同代 CC 连续性。 */
 bool BMS_Soc_IntegrateCurrent(BMS_SocEngine_t *engine,
                               const BMS_SocPolicy_t *policy,
                               int32_t current_ma,
                               uint32_t sample_ms,
                               uint32_t afe_generation);
+/* 按静置或端点资格修正积分估计，并保留证据窗口。 */
 void BMS_Soc_ObserveCorrection(BMS_SocEngine_t *engine,
                                const BMS_SocPolicy_t *policy,
                                const BMS_DataSnapshot_t *measurement,
                                uint32_t now_ms);
+/* 标记 CC 样本序列断档，避免跨缺口积分。 */
 void BMS_Soc_MarkQueueGap(BMS_SocEngine_t *engine);
+/* 复制积分器内部证据供测试与诊断，不修改估计。 */
 BMS_SocSnapshot_t BMS_Soc_GetEngineSnapshot(
     const BMS_SocEngine_t *engine,
     const BMS_SocPolicy_t *policy);
 
+/* 绑定 SOC 策略并建立尚未取得有效容量证据的初始估计。 */
 void BMS_Soc_Init(const BMS_Policy_t *policy);
+/* 用合法持久化值恢复 SOC 估计，非法记录不覆盖现有状态。 */
 bool BMS_Soc_Restore(uint16_t soc_permille,
                      uint32_t remaining_capacity_mah);
+/* 消费本轮 CC 样本、更新 SOC 估计并发布只读诊断。 */
 void BMS_Soc_RunOnce(uint32_t now_ms,
                      const BMS_CcSample_t *samples,
                      uint8_t sample_count,
                      bool queue_gap);
+/* 复制 SOC owner 已发布的容量和证据状态。 */
 BMS_SocSnapshot_t BMS_Soc_GetSnapshot(void);
 
 #endif /* BMS_SOC_H：头文件防重复包含 */

@@ -16,10 +16,13 @@
  * 等待 UART hardware；因此“debug 可以延后，控制绝不等待 debug”。
  */
 void BMS_Debug_Init(void);
+/* 按周期生成只读 BMS1 诊断行，不阻塞等待 UART 发送。 */
 bool BMS_Debug_PrepareSnapshot(uint32_t now_ms,
                                uint32_t free_heap_bytes,
                                uint32_t minimum_heap_bytes);
+/* 读取当前诊断发送位置的字节而不推进偏移。 */
 bool BMS_Debug_PeekByte(uint8_t *value);
+/* 确认一个字节已由 UART 接收并推进发送偏移。 */
 void BMS_Debug_ConsumeByte(void);
 
 #endif /* BMS_DEBUG_H：头文件防重复包含 */

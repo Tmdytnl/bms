@@ -115,6 +115,7 @@ BMS_StateSafetySnapshot_t BMS_State_GetSafetySnapshot(void);
 
 #if defined(TEST_PHASE9_IMAGE)
 typedef void (*BMS_StatePrePublishHook_t)(void);
+/* 测试镜像设置发布前竞态注入点。 */
 void BMS_State_TestSetPrePublishHook(BMS_StatePrePublishHook_t hook);
 #endif
 

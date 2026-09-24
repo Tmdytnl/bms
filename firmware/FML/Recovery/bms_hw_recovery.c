@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 
+/* 按回绕安全的毫秒差判断硬件故障释放资格窗口结束。 */
 static bool BMS_HwRecovery_TimeElapsed(uint32_t now_ms,
                                        uint32_t started_ms,
                                        uint32_t duration_ms)
@@ -20,6 +21,7 @@ static bool BMS_HwRecovery_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) >= duration_ms);
 }
 
+/* 确认硬件故障释放所用测量与当前 AFE 世代匹配且新鲜。 */
 static bool BMS_HwRecovery_MeasurementFresh(
     const BMS_DataSnapshot_t *measurement)
 {
@@ -34,6 +36,7 @@ static bool BMS_HwRecovery_MeasurementFresh(
                          BMS_DATA_CURRENT_FRESH_MAX_MS);
 }
 
+/* 判断指定硬件故障源是否已经连续满足安全释放条件。 */
 static bool BMS_HwRecovery_SourceConditionSafe(
     BMS_ProtectSourceId_t source,
     const BMS_Policy_t *policy,
@@ -72,6 +75,7 @@ static bool BMS_HwRecovery_SourceConditionSafe(
     return false;
 }
 
+/* 把 Protect source ID 映射为对应的硬件故障位。 */
 static BMS_FaultId_t BMS_HwRecovery_FaultOfSource(
     BMS_ProtectSourceId_t source)
 {
@@ -86,6 +90,7 @@ static BMS_FaultId_t BMS_HwRecovery_FaultOfSource(
     return BMS_FAULT_ID_HW_OCD;
 }
 
+/* 清空硬件故障释放资格窗口与请求身份。 */
 void BMS_HwRecovery_Init(BMS_HwRecoveryEngine_t *engine)
 {
     uint8_t index;
@@ -104,6 +109,7 @@ void BMS_HwRecovery_Init(BMS_HwRecoveryEngine_t *engine)
     engine->qualification_revision = 0UL;
 }
 
+/* 累计硬件故障释放资格并生成带身份和有效期的请求。 */
 bool BMS_HwRecovery_Evaluate(
     BMS_HwRecoveryEngine_t *engine,
     const BMS_Policy_t *policy,

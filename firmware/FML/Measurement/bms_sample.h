@@ -32,18 +32,18 @@ typedef struct
     uint32_t transport_failure_count;       /* BQ transaction/CRC/ACK 等传输失败。 */
     uint32_t calibration_invalid_count;     /* calibration 数值或 provenance 不可用。 */
     uint32_t configuration_not_ready_count; /* device/config/generation 尚未形成闭环。 */
-    uint32_t cell_group_failure_count;
-    uint32_t pack_group_failure_count;
-    uint32_t current_group_failure_count;
-    uint32_t temperature_group_failure_count;
-    uint32_t temperature_conversion_unavailable_count;
-    uint32_t ntc_curve_unavailable_count;
-    uint32_t data_publish_failure_count;
-    uint32_t cc_mailbox_unavailable_count;
+    uint32_t cell_group_failure_count; /* 13 节单体电压组读取或换算失败次数。 */
+    uint32_t pack_group_failure_count; /* BAT 诊断通道采样失败次数。 */
+    uint32_t current_group_failure_count; /* CC 电流换算失败次数。 */
+    uint32_t temperature_group_failure_count; /* TS1 读取或电阻换算失败次数。 */
+    uint32_t temperature_conversion_unavailable_count; /* NTC 温度无法形成的次数。 */
+    uint32_t ntc_curve_unavailable_count; /* 未绑定有效 NTC 表的次数。 */
+    uint32_t data_publish_failure_count; /* 整帧发布被锁或校验拒绝的次数。 */
+    uint32_t cc_mailbox_unavailable_count; /* 本轮未取得同代 CC mailbox 的次数。 */
     /* stale 表示至少一个 valid 组超过 freshness 门限；invalid 不等于 stale。 */
     uint32_t stale_sample_count;
-    uint32_t stale_transition_count;
-    uint32_t stale_check_failure_count;
+    uint32_t stale_transition_count; /* 测量质量首次跨过 stale 门槛的次数。 */
+    uint32_t stale_check_failure_count; /* 无法读取一致 freshness 投影的次数。 */
     /* 首次 AFE 访问前，XREADY/calibration generation guard 已拒绝本轮。 */
     uint32_t xready_precheck_reject_count;
     /* staging 完成但发布前 generation 改变，本地测量必须整体作废。 */
@@ -79,14 +79,18 @@ void BMS_Sample_Init(void);
  * 与 recovery revision provenance 的 SetRecoveryCalibration 能恢复采样。
  */
 void BMS_Sample_SetDevice(BQ76940_t *device);
+/* 绑定启动期 ADC 校准及当前世代，失败时保持校准不可用。 */
 bool BMS_Sample_SetCalibration(
     const BQ76940_Calibration_t *calibration);
+/* 仅接纳带当前 XREADY 世代和恢复修订号的校准交接。 */
 bool BMS_Sample_SetRecoveryCalibration(
     const BMS_SampleCalibrationEvidence_t *evidence,
     uint32_t current_recovery_revision,
     bool handoff_permitted);
+/* 在新 XREADY 世代出现时使旧校准和电流证据失效。 */
 void BMS_Sample_InvalidateCalibrationForXready(
     uint32_t xready_generation);
+/* 绑定已验证 NTC 表并推进配置修订号，供下轮采样使用。 */
 bool BMS_Sample_SetNtcTable(const BMS_NtcPoint_t *points,
                              uint16_t point_count);
 

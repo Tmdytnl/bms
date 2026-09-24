@@ -2,11 +2,13 @@
 
 #include <stddef.h>
 
+/* 从前两个节点判定电阻排序方向，供整表单调性检查。 */
 static bool BMS_Ntc_IsAscendingResistance(const BMS_NtcPoint_t *points)
 {
     return points[1].resistance_ohm > points[0].resistance_ohm;
 }
 
+/* 验证节点数、单调性和温度范围，拒绝不可插值的表。 */
 bool BMS_Ntc_ValidateTable(const BMS_NtcPoint_t *points,
                            uint16_t point_count)
 {
@@ -45,6 +47,7 @@ bool BMS_Ntc_ValidateTable(const BMS_NtcPoint_t *points,
     return true;
 }
 
+/* 检查电阻是否落在 NTC 表的当前插值区间。 */
 static bool BMS_Ntc_ResistanceInSegment(const BMS_NtcPoint_t *left,
                                         const BMS_NtcPoint_t *right,
                                         uint32_t resistance_ohm)
@@ -58,6 +61,7 @@ static bool BMS_Ntc_ResistanceInSegment(const BMS_NtcPoint_t *left,
            (resistance_ohm >= right->resistance_ohm);
 }
 
+/* 在合法单调 NTC 表的相邻点之间插值温度，不外推范围。 */
 bool BMS_Ntc_Interpolate(const BMS_NtcPoint_t *points,
                          uint16_t point_count,
                          uint32_t resistance_ohm,

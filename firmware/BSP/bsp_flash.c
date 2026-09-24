@@ -16,6 +16,7 @@
 #include "bsp_board_config.h"
 #include "stm32f10x_flash.h"
 
+/* 检查读写地址完整落在保留的持久化页内。 */
 static bool BSP_Flash_RangeInsidePersistence(uint32_t address,
                                              uint16_t length)
 {
@@ -31,6 +32,7 @@ static bool BSP_Flash_RangeInsidePersistence(uint32_t address,
         (end <= BSP_BOARD_PERSISTENCE_END_EXCLUSIVE);
 }
 
+/* 从指定 Flash 地址复制字节，不改变持久化内容。 */
 bool BSP_Flash_Read(uint32_t address, uint8_t *destination, uint16_t length)
 {
     const volatile uint8_t *source;
@@ -49,6 +51,7 @@ bool BSP_Flash_Read(uint32_t address, uint8_t *destination, uint16_t length)
     return true;
 }
 
+/* 仅擦除预留的持久化页，拒绝应用代码区地址。 */
 bool BSP_Flash_ErasePersistencePage(uint32_t page_address)
 {
     FLASH_Status status;
@@ -83,6 +86,7 @@ bool BSP_Flash_ErasePersistencePage(uint32_t page_address)
     return true;
 }
 
+/* 仅向预留页写入一个 halfword 并回报硬件结果。 */
 bool BSP_Flash_ProgramPersistenceHalfWord(uint32_t address, uint16_t value)
 {
     FLASH_Status status;

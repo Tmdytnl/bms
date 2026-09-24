@@ -109,7 +109,9 @@ void vApplicationAssertFailedHandler(void);
 /* hook implementation 位于 App/app_rtos_hooks.c；stack-overflow prototype 由 task.h 提供。 */
 /* ------------------------------------------------------------------ */
 void vApplicationAssertFailedHandler(void);
+/* 在 FreeRTOS 堆分配失败时进入安全停机路径。 */
 void vApplicationMallocFailedHook(void);
+/* 提供 FreeRTOS idle 钩子，不转移任务安全职责。 */
 void vApplicationIdleHook(void);
 
 /* ------------------------------------------------------------------ */

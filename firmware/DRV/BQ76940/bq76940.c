@@ -11,6 +11,7 @@
 #include "bq76940_regs.h"
 #include "crc8_bq76940.h"
 
+/* 把 SoftI2C 结果映射为 BQ76940 驱动状态。 */
 static BQ76940_Status_t BQ76940_MapI2CStatus(SoftI2C_Status_t status)
 {
     switch (status)
@@ -35,6 +36,7 @@ static BQ76940_Status_t BQ76940_MapI2CStatus(SoftI2C_Status_t status)
     }
 }
 
+/* 在寄存器事务前确认器件句柄与总线已初始化。 */
 static BQ76940_Status_t BQ76940_RequireReady(const BQ76940_t *device)
 {
     if (device == NULL)
@@ -49,6 +51,7 @@ static BQ76940_Status_t BQ76940_RequireReady(const BQ76940_t *device)
     return BQ76940_STATUS_OK;
 }
 
+/* 传输阶段失败后尝试 STOP，保留原始失败及提交不明语义。 */
 static BQ76940_Status_t BQ76940_StopAfterFailure(BQ76940_t *device,
                                                   BQ76940_Status_t primary)
 {
@@ -71,6 +74,7 @@ static BQ76940_Status_t BQ76940_StopAfterFailure(BQ76940_t *device,
     return primary;
 }
 
+/* 绑定已初始化的软件 I2C 总线并建立器件句柄状态。 */
 BQ76940_Status_t BQ76940_Init(BQ76940_t *device, SoftI2C_t *bus)
 {
     if ((device == NULL) || (bus == NULL))
@@ -89,12 +93,14 @@ BQ76940_Status_t BQ76940_Init(BQ76940_t *device, SoftI2C_t *bus)
     return BQ76940_STATUS_OK;
 }
 
+/* 确认器件句柄和底层软件 I2C 均已初始化。 */
 bool BQ76940_IsInitialized(const BQ76940_t *device)
 {
     return (device != NULL) && device->initialized &&
            (device->bus != NULL) && SoftI2C_IsInitialized(device->bus);
 }
 
+/* 写入一个 AFE 寄存器，并保留 STOP 提交不明的状态。 */
 BQ76940_Status_t BQ76940_WriteByte(BQ76940_t *device,
                                     uint8_t register_address,
                                     uint8_t value)
@@ -102,6 +108,7 @@ BQ76940_Status_t BQ76940_WriteByte(BQ76940_t *device,
     return BQ76940_WriteBlock(device, register_address, &value, 1U);
 }
 
+/* 按器件 CRC 规则连续写寄存器数据并报告传输状态。 */
 BQ76940_Status_t BQ76940_WriteBlock(BQ76940_t *device,
                                      uint8_t start_register,
                                      const uint8_t *data,
@@ -187,6 +194,7 @@ failure:
     return BQ76940_StopAfterFailure(device, result);
 }
 
+/* 读取一个 AFE 寄存器，失败时不把输出当作有效证据。 */
 BQ76940_Status_t BQ76940_ReadByte(BQ76940_t *device,
                                    uint8_t register_address,
                                    uint8_t *value)
@@ -206,6 +214,7 @@ BQ76940_Status_t BQ76940_ReadByte(BQ76940_t *device,
     return result;
 }
 
+/* 连续读取 AFE 寄存器并校验每组 CRC。 */
 BQ76940_Status_t BQ76940_ReadBlock(BQ76940_t *device,
                                     uint8_t start_register,
                                     uint8_t *data,
@@ -332,6 +341,7 @@ failure:
     return BQ76940_StopAfterFailure(device, result);
 }
 
+/* 连续读取相邻的两个寄存器并按器件字节序组合 16 位原始值。 */
 BQ76940_Status_t BQ76940_ReadAdjacentU16(BQ76940_t *device,
                                          uint8_t high_register,
                                          uint16_t *value)
@@ -351,6 +361,7 @@ BQ76940_Status_t BQ76940_ReadAdjacentU16(BQ76940_t *device,
     return result;
 }
 
+/* 把器件校准寄存器解码为增益与偏移，并校验取值域。 */
 BQ76940_Status_t BQ76940_DecodeCalibration(uint8_t adc_gain1,
                                             uint8_t adc_offset,
                                             uint8_t adc_gain2,
@@ -386,6 +397,7 @@ BQ76940_Status_t BQ76940_DecodeCalibration(uint8_t adc_gain1,
     return BQ76940_STATUS_OK;
 }
 
+/* 读取并解码器件 ADC 校准寄存器，非法取值不发布。 */
 BQ76940_Status_t BQ76940_ReadCalibration(
     BQ76940_t *device,
     BQ76940_Calibration_t *calibration)
@@ -424,11 +436,13 @@ BQ76940_Status_t BQ76940_ReadCalibration(
     return result;
 }
 
+/* 屏蔽高字节保留位并组合 BQ 的 14 位 ADC 原始码。 */
 uint16_t BQ76940_DecodeRaw14(uint8_t high_byte, uint8_t low_byte)
 {
     return (uint16_t)(((uint16_t)(high_byte & 0x3FU) << 8) | low_byte);
 }
 
+/* 把两个器件字节按补码解释为有符号原始值。 */
 int16_t BQ76940_DecodeSigned16(uint8_t high_byte, uint8_t low_byte)
 {
     uint16_t raw;
@@ -438,6 +452,7 @@ int16_t BQ76940_DecodeSigned16(uint8_t high_byte, uint8_t low_byte)
            (int16_t)((int32_t)raw - 65536L) : (int16_t)raw;
 }
 
+/* 用当前校准把单体 ADC 原始码换算为 mV。 */
 BQ76940_Status_t BQ76940_ConvertCellRawToMv(
     uint16_t raw14,
     const BQ76940_Calibration_t *calibration,

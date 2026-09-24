@@ -4,6 +4,7 @@
 #include "stm32f10x.h"
 #include "stm32f10x_rcc.h"
 
+/* 核对目标时钟树是否满足本板 72 MHz 与外设分频要求。 */
 BSP_ClockStatus_t BSP_Clock_Verify(void)
 {
     RCC_ClocksTypeDef clocks;

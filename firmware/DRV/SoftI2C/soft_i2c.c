@@ -11,6 +11,7 @@
 #define SOFT_I2C_TIMEOUT_MAX_US     (32767U)
 #define SOFT_I2C_RECOVERY_PULSES    (9U)
 
+/* 确认调用方提供完整的开漏读写与微秒时基回调。 */
 static bool SoftI2C_OpsAreValid(const SoftI2C_LineOps_t *ops)
 {
     return (ops != NULL) &&
@@ -24,6 +25,7 @@ static bool SoftI2C_OpsAreValid(const SoftI2C_LineOps_t *ops)
            (ops->delay_us != NULL);
 }
 
+/* 确认半周期和超时配置落在软件 I2C 的合法范围。 */
 static bool SoftI2C_ConfigIsValid(const SoftI2C_Config_t *config)
 {
     return (config != NULL) &&
@@ -34,6 +36,7 @@ static bool SoftI2C_ConfigIsValid(const SoftI2C_Config_t *config)
            (config->bus_free_timeout_us <= SOFT_I2C_TIMEOUT_MAX_US);
 }
 
+/* 拒绝未完成初始化或缺失引脚回调的总线操作。 */
 static SoftI2C_Status_t SoftI2C_RequireReady(const SoftI2C_t *bus)
 {
     if (bus == NULL)
@@ -47,6 +50,7 @@ static SoftI2C_Status_t SoftI2C_RequireReady(const SoftI2C_t *bus)
     return SOFT_I2C_STATUS_OK;
 }
 
+/* 等待开漏 SCL 实际变高，超时表示时钟拉伸或总线故障。 */
 static SoftI2C_Status_t SoftI2C_WaitSclHigh(SoftI2C_t *bus)
 {
     uint16_t start;
@@ -77,6 +81,7 @@ static SoftI2C_Status_t SoftI2C_WaitSclHigh(SoftI2C_t *bus)
     return SOFT_I2C_STATUS_SCL_STUCK_LOW;
 }
 
+/* 通过板级回调等待指定微秒数，并传播时基失败。 */
 static SoftI2C_Status_t SoftI2C_Delay(const SoftI2C_t *bus,
                                       uint32_t delay_us)
 {
@@ -84,6 +89,7 @@ static SoftI2C_Status_t SoftI2C_Delay(const SoftI2C_t *bus,
                                         SOFT_I2C_STATUS_TIMEOUT;
 }
 
+/* 等待一次配置的 SCL 半周期，供位级事务复用。 */
 static SoftI2C_Status_t SoftI2C_HalfCycle(const SoftI2C_t *bus)
 {
     return SoftI2C_Delay(bus, (uint32_t)bus->config.half_cycle_us);
@@ -99,6 +105,7 @@ static SoftI2C_Status_t SoftI2C_HalfCycle(const SoftI2C_t *bus)
         }                                                            \
     } while (0)
 
+/* 绑定开漏操作与时序参数；总线不满足初始条件时返回具体状态。 */
 SoftI2C_Status_t SoftI2C_Init(SoftI2C_t *bus,
                               const SoftI2C_LineOps_t *ops,
                               const SoftI2C_Config_t *config)
@@ -120,11 +127,13 @@ SoftI2C_Status_t SoftI2C_Init(SoftI2C_t *bus,
     return SoftI2C_WaitBusIdle(bus);
 }
 
+/* 确认总线句柄已绑定引脚回调并完成初始化。 */
 bool SoftI2C_IsInitialized(const SoftI2C_t *bus)
 {
     return (bus != NULL) && bus->initialized;
 }
 
+/* 等待 SCL/SDA 同时释放，必要时尝试受限总线恢复。 */
 SoftI2C_Status_t SoftI2C_WaitBusIdle(SoftI2C_t *bus)
 {
     SoftI2C_Status_t status;
@@ -175,6 +184,7 @@ SoftI2C_Status_t SoftI2C_WaitBusIdle(SoftI2C_t *bus)
     return SOFT_I2C_STATUS_TIMEOUT;
 }
 
+/* 在总线空闲后产生 START 条件，保持事务独占前提。 */
 SoftI2C_Status_t SoftI2C_Start(SoftI2C_t *bus)
 {
     SoftI2C_Status_t status;
@@ -193,6 +203,7 @@ SoftI2C_Status_t SoftI2C_Start(SoftI2C_t *bus)
     return SOFT_I2C_STATUS_OK;
 }
 
+/* 在不释放总线的情况下产生重复 START 条件。 */
 SoftI2C_Status_t SoftI2C_RepeatedStart(SoftI2C_t *bus)
 {
     SoftI2C_Status_t status;
@@ -227,6 +238,7 @@ SoftI2C_Status_t SoftI2C_RepeatedStart(SoftI2C_t *bus)
     return SOFT_I2C_STATUS_OK;
 }
 
+/* 产生 STOP 条件并报告确认结果；不替上层猜测写提交点。 */
 SoftI2C_Status_t SoftI2C_Stop(SoftI2C_t *bus)
 {
     SoftI2C_Status_t status;
@@ -276,6 +288,7 @@ cleanup:
     return status;
 }
 
+/* 按 MSB 优先发送八位并采样从机 ACK。 */
 SoftI2C_Status_t SoftI2C_WriteByte(SoftI2C_t *bus, uint8_t value)
 {
     SoftI2C_Status_t status;
@@ -328,6 +341,7 @@ SoftI2C_Status_t SoftI2C_WriteByte(SoftI2C_t *bus, uint8_t value)
     return acknowledged ? SOFT_I2C_STATUS_OK : SOFT_I2C_STATUS_NACK_DATA;
 }
 
+/* 按读写方向发送七位设备地址并确认 ACK。 */
 SoftI2C_Status_t SoftI2C_WriteAddress(SoftI2C_t *bus, uint8_t address_byte)
 {
     SoftI2C_Status_t status;
@@ -340,6 +354,7 @@ SoftI2C_Status_t SoftI2C_WriteAddress(SoftI2C_t *bus, uint8_t address_byte)
     return status;
 }
 
+/* 按 MSB 优先采样八位数据，暂不发送 ACK/NACK。 */
 SoftI2C_Status_t SoftI2C_ReadByteBegin(SoftI2C_t *bus, uint8_t *value)
 {
     SoftI2C_Status_t status;
@@ -380,6 +395,7 @@ SoftI2C_Status_t SoftI2C_ReadByteBegin(SoftI2C_t *bus, uint8_t *value)
     return SOFT_I2C_STATUS_OK;
 }
 
+/* 发送读字节后的 ACK/NACK 应答并推进总线时序。 */
 SoftI2C_Status_t SoftI2C_SendReadResponse(SoftI2C_t *bus,
                                           SoftI2C_MasterResponse_t response)
 {
@@ -419,6 +435,7 @@ SoftI2C_Status_t SoftI2C_SendReadResponse(SoftI2C_t *bus,
     return SOFT_I2C_STATUS_OK;
 }
 
+/* 完成字节采样及调用者指定的 ACK/NACK 应答。 */
 SoftI2C_Status_t SoftI2C_ReadByte(SoftI2C_t *bus,
                                   uint8_t *value,
                                   SoftI2C_MasterResponse_t response)
@@ -433,6 +450,7 @@ SoftI2C_Status_t SoftI2C_ReadByte(SoftI2C_t *bus,
     return SoftI2C_SendReadResponse(bus, response);
 }
 
+/* 对明确的 SDA stuck-low 总线执行九个时钟恢复与 STOP。 */
 SoftI2C_Status_t SoftI2C_RecoverBus(SoftI2C_t *bus)
 {
     SoftI2C_Status_t status;

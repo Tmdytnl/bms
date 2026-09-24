@@ -8,8 +8,10 @@
  * health window 两端 snapshot 比较：全部任务至少推进一次后才 arm watchdog，
  * 任一必需任务超过 stale 窗口未推进就置 RTOS_HEALTH 并令 feed_allowed=false。
  */
+/* 各必需任务各自递增的 heartbeat generation；StateTask 只读比较。 */
 static volatile uint32_t s_generation[BMS_HEALTH_TASK_COUNT];
 
+/* 按回绕安全的毫秒差判断任务健康观察窗口结束。 */
 static bool BMS_Health_TimeElapsed(uint32_t now_ms,
                                    uint32_t started_ms,
                                    uint32_t duration_ms)
@@ -17,6 +19,7 @@ static bool BMS_Health_TimeElapsed(uint32_t now_ms,
     return ((uint32_t)(now_ms - started_ms) > duration_ms);
 }
 
+/* 初始化七任务 heartbeat generation 与只读健康快照。 */
 void BMS_Health_Init(void)
 {
     uint8_t index;
@@ -27,6 +30,7 @@ void BMS_Health_Init(void)
     }
 }
 
+/* 只推进调用任务自己的单调 heartbeat generation。 */
 void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id)
 {
     if ((uint32_t)task_id < (uint32_t)BMS_HEALTH_TASK_COUNT)
@@ -36,6 +40,7 @@ void BMS_Health_Heartbeat(BMS_HealthTaskId_t task_id)
     }
 }
 
+/* 在短临界区复制七任务进度与喂狗资格快照。 */
 BMS_HealthSnapshot_t BMS_Health_GetSnapshot(void)
 {
     BMS_HealthSnapshot_t snapshot;
@@ -50,6 +55,7 @@ BMS_HealthSnapshot_t BMS_Health_GetSnapshot(void)
     return snapshot;
 }
 
+/* 捕获七任务初始 generation，建立健康比较窗口。 */
 void BMS_Health_MonitorInit(BMS_HealthMonitor_t *monitor,
                             uint32_t now_ms)
 {
@@ -73,6 +79,7 @@ void BMS_Health_MonitorInit(BMS_HealthMonitor_t *monitor,
     monitor->rtos_health_fault = false;
 }
 
+/* 比较必需任务在连续窗口内是否推进，并形成 IWDG 喂狗决定。 */
 BMS_HealthDecision_t BMS_Health_Evaluate(
     BMS_HealthMonitor_t *monitor,
     const BMS_HealthPolicy_t *policy,

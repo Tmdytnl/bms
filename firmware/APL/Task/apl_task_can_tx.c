@@ -5,6 +5,7 @@
 #include "apl_rtos.h"
 #include "bms_health.h"
 
+/* 调度诊断帧发送、硬件重试和有界 UART 输出。 */
 void APL_TaskCanTx(void *argument)
 {
     const TickType_t period = pdMS_TO_TICKS(10U);

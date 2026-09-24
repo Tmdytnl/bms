@@ -1,4 +1,5 @@
 #include "bms_can.h"
+#include "bms_can_codec.h"
 #include "bms_runtime_port.h"
 
 /*
@@ -11,9 +12,12 @@
 #include <stddef.h>
 #include <string.h>
 
+/* 初始化时绑定的只读 CAN 协议策略。 */
 static const BMS_Policy_t *s_policy;
+/* CAN 编解码与服务请求的模块私有诊断计数。 */
 static BMS_CanDiagnostics_t s_diagnostics;
 
+/* 饱和递增一项 CAN 诊断计数，避免计数回绕误导观察者。 */
 static void BMS_Can_Increment(uint32_t *value)
 {
     BMS_Runtime_CriticalEnter();
@@ -24,12 +28,14 @@ static void BMS_Can_Increment(uint32_t *value)
     BMS_Runtime_CriticalExit();
 }
 
+/* 把 16 位值以协议规定的小端字节序写入载荷。 */
 static void BMS_Can_PutU16(uint8_t *destination, uint16_t value)
 {
     destination[0] = (uint8_t)(value & 0xFFU);
     destination[1] = (uint8_t)(value >> 8U);
 }
 
+/* 把 32 位值以协议规定的小端字节序写入载荷。 */
 static void BMS_Can_PutU32(uint8_t *destination, uint32_t value)
 {
     destination[0] = (uint8_t)(value & 0xFFUL);
@@ -38,6 +44,7 @@ static void BMS_Can_PutU32(uint8_t *destination, uint32_t value)
     destination[3] = (uint8_t)((value >> 24U) & 0xFFUL);
 }
 
+/* 从四个小端载荷字节恢复无符号 32 位字段。 */
 static uint32_t BMS_Can_GetU32(const uint8_t *source)
 {
     return (uint32_t)source[0] |
@@ -46,6 +53,7 @@ static uint32_t BMS_Can_GetU32(const uint8_t *source)
         ((uint32_t)source[3] << 24U);
 }
 
+/* 把电芯毫伏值压缩为协议字节，超界时饱和。 */
 static uint8_t BMS_Can_EncodeCellMv(uint16_t cell_mv)
 {
     uint32_t encoded;
@@ -58,14 +66,16 @@ static uint8_t BMS_Can_EncodeCellMv(uint16_t cell_mv)
     return encoded > 255UL ? 255U : (uint8_t)encoded;
 }
 
+/* 填入标准帧 ID 和固定 DLC，并清空全部载荷字节。 */
 static void BMS_Can_InitFrame(BMS_CanFrame_t *frame, uint16_t id)
 {
-    frame->ext_id = id;
+    frame->standard_id = id;
     frame->dlc = 8U;
     (void)memset(frame->data, 0, sizeof(frame->data));
     frame->received_ms = 0UL;
 }
 
+/* 把多位 owner 的只读快照编码为六帧诊断报文，不转移安全写权限。 */
 uint8_t BMS_Can_BuildTxFrames(
     const BMS_DataSnapshot_t *measurement,
     const BMS_StateSafetySnapshot_t *state,
@@ -176,6 +186,7 @@ uint8_t BMS_Can_BuildTxFrames(
     return BMS_CAN_TX_FRAME_COUNT;
 }
 
+/* 校验服务帧、时效与测量身份，只生成待 Protect 接纳的请求。 */
 bool BMS_Can_DecodeServiceReset(
     const BMS_CanFrame_t *frame,
     uint32_t received_ms,
@@ -193,8 +204,8 @@ bool BMS_Can_DecodeServiceReset(
      * measurement identity 写入 request；最终是否接受仍由 ProtectTask 决定。
      */
     if ((frame == NULL) || (policy == NULL) || (identity == NULL) ||
-        (request == NULL) || (frame->ext_id != policy->can.service_rx_id) ||
-        (frame->ext_id > 0x7FFUL) || (frame->dlc != 8U) ||
+        (request == NULL) || (frame->standard_id != policy->can.service_rx_id) ||
+        (frame->standard_id > 0x7FFUL) || (frame->dlc != 8U) ||
         (frame->data[0] != BMS_CAN_SERVICE_MAGIC) ||
         (frame->data[1] != BMS_CAN_SERVICE_RESET_COMMAND) ||
         (frame->data[2] >= (uint8_t)BMS_SERVICE_RESET_SOURCE_COUNT) ||
@@ -220,12 +231,14 @@ bool BMS_Can_DecodeServiceReset(
     return true;
 }
 
+/* 保存经校验的 CAN 策略并清空协议诊断计数。 */
 void BMS_Can_Init(const BMS_Policy_t *policy)
 {
     s_policy = BMS_Policy_Validate(policy) ? policy : NULL;
     (void)memset(&s_diagnostics, 0, sizeof(s_diagnostics));
 }
 
+/* 抓取最新只读诊断快照并构造六帧周期报文。 */
 uint8_t BMS_Can_BuildPeriodicFrames(
     uint32_t now_ms,
     BMS_CanFrame_t frames[BMS_CAN_TX_FRAME_COUNT])
@@ -252,6 +265,7 @@ uint8_t BMS_Can_BuildPeriodicFrames(
     return count;
 }
 
+/* 解码并暂存一帧服务请求；最终授权和执行由 Protect 后续应答决定。 */
 bool BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
                        uint32_t received_ms,
                        uint32_t now_ms)
@@ -286,11 +300,13 @@ bool BMS_Can_RxProcess(const BMS_CanFrame_t *frame,
     }
 }
 
+/* 对指定 CAN 目标事件饱和递增一次诊断计数。 */
 void BMS_Can_RecordDiagnostic(BMS_CanDiagnosticEvent_t event)
 {
     BMS_Can_RecordDiagnosticCount(event, 1UL);
 }
 
+/* 对指定 CAN 目标事件饱和累计多次诊断计数。 */
 void BMS_Can_RecordDiagnosticCount(BMS_CanDiagnosticEvent_t event,
                                    uint32_t count)
 {
@@ -341,6 +357,7 @@ void BMS_Can_RecordDiagnosticCount(BMS_CanDiagnosticEvent_t event,
     }
 }
 
+/* 在短临界区复制 CAN 协议与目标计数的一致快照。 */
 BMS_CanDiagnostics_t BMS_Can_GetDiagnostics(void)
 {
     BMS_CanDiagnostics_t snapshot;

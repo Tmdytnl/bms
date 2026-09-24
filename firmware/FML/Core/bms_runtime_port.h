@@ -12,8 +12,11 @@
  * Critical 只保护短小固定快照或 revision，不得包围 I/O、等待或 Flash 操作。
  */
 bool BMS_Runtime_BusLock(uint32_t timeout_ms);
+/* 释放 AFE 总线独占权；调用方必须已成功取锁。 */
 void BMS_Runtime_BusUnlock(void);
+/* 零等待尝试取得共享测量数据锁。 */
 bool BMS_Runtime_DataLock(void);
+/* 释放共享测量数据锁；调用方必须已成功取锁。 */
 void BMS_Runtime_DataUnlock(void);
 
 /*
@@ -22,9 +25,12 @@ void BMS_Runtime_DataUnlock(void);
  * GuardExit 的 ownership token；调用方不得自行猜测是否需要退出。
  */
 bool BMS_Runtime_ConcurrencyGuardEnter(void);
+/* 仅当 Enter 建立保护时结束配置更新保护。 */
 void BMS_Runtime_ConcurrencyGuardExit(bool guard_entered);
 
+/* 暂停调度以复制或更新短小共享状态，不包围硬件 I/O。 */
 void BMS_Runtime_CriticalEnter(void);
+/* 恢复前述短临界区的任务调度。 */
 void BMS_Runtime_CriticalExit(void);
 
 #endif /* BMS_RUNTIME_PORT_H */

@@ -11,6 +11,7 @@ static const uint16_t s_ocd_threshold_rsns1[BQ76940_CONTROL_OCD_THRESHOLD_COUNT]
     61U, 67U, 72U, 78U, 83U, 89U, 94U, 100U
 };
 
+/* RSNS=0 时 OCD 的离散阈值表，单位 mV。 */
 static const uint16_t s_ocd_threshold_rsns0[BQ76940_CONTROL_OCD_THRESHOLD_COUNT] =
 {
     8U, 11U, 14U, 17U, 19U, 22U, 25U, 28U,
@@ -29,6 +30,7 @@ static const uint16_t s_scd_threshold_rsns1[BQ76940_CONTROL_SCD_THRESHOLD_COUNT]
     44U, 67U, 89U, 111U, 133U, 155U, 178U, 200U
 };
 
+/* RSNS=0 时 SCD 的离散阈值表，单位 mV。 */
 static const uint16_t s_scd_threshold_rsns0[BQ76940_CONTROL_SCD_THRESHOLD_COUNT] =
 {
     22U, 33U, 44U, 56U, 67U, 78U, 89U, 100U
@@ -117,6 +119,7 @@ static BQ76940_Status_t BQ76940_Control_EncodeTrip(
     return BQ76940_STATUS_OK;
 }
 
+/* 按当前 ADC 校准把目标过压毫伏值量化为硬件比较器代码。 */
 BQ76940_Status_t BQ76940_Control_EncodeOvTrip(
     uint16_t target_mv,
     const BQ76940_Calibration_t *calibration,
@@ -127,6 +130,7 @@ BQ76940_Status_t BQ76940_Control_EncodeOvTrip(
                                       0x2U, 0x8U, trip_value);
 }
 
+/* 按当前 ADC 校准把目标欠压毫伏值量化为硬件比较器代码。 */
 BQ76940_Status_t BQ76940_Control_EncodeUvTrip(
     uint16_t target_mv,
     const BQ76940_Calibration_t *calibration,
@@ -137,6 +141,7 @@ BQ76940_Status_t BQ76940_Control_EncodeUvTrip(
                                       0x1U, 0x0U, trip_value);
 }
 
+/* 按寄存器位前缀和 ADC 校准还原硬件跳闸毫伏值。 */
 static uint16_t BQ76940_Control_DecodeTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration,
@@ -164,6 +169,7 @@ static uint16_t BQ76940_Control_DecodeTripMv(
     return (uint16_t)rounded_mv;
 }
 
+/* 按 OV 寄存器位布局和当前 ADC 校准还原实际跳闸毫伏值。 */
 uint16_t BQ76940_Control_DecodeOvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration)
@@ -177,6 +183,7 @@ uint16_t BQ76940_Control_DecodeOvTripMv(
                                         0x2U, 0x8U);
 }
 
+/* 按 UV 寄存器位布局和当前 ADC 校准还原实际跳闸毫伏值。 */
 uint16_t BQ76940_Control_DecodeUvTripMv(
     uint8_t trip_value,
     const BQ76940_Calibration_t *calibration)
@@ -221,6 +228,7 @@ static BQ76940_Status_t BQ76940_Control_SelectFromTable(
     return BQ76940_STATUS_RANGE_ERROR;
 }
 
+/* 从 OCD 离散阈值表选出可编码值并返回寄存器码。 */
 BQ76940_Status_t BQ76940_Control_SelectOcdThreshold(
     uint16_t requested_mv,
     bool rsns,
@@ -231,6 +239,7 @@ BQ76940_Status_t BQ76940_Control_SelectOcdThreshold(
         BQ76940_CONTROL_OCD_THRESHOLD_COUNT, requested_mv, code);
 }
 
+/* 从 OCD 离散延时表选出可编码毫秒值。 */
 BQ76940_Status_t BQ76940_Control_SelectOcdDelayMs(
     uint16_t requested_ms,
     uint8_t *code)
@@ -240,6 +249,7 @@ BQ76940_Status_t BQ76940_Control_SelectOcdDelayMs(
         requested_ms, code);
 }
 
+/* 从 SCD 离散阈值表选出可编码值并返回寄存器码。 */
 BQ76940_Status_t BQ76940_Control_SelectScdThreshold(
     uint16_t requested_mv,
     bool rsns,
@@ -250,6 +260,7 @@ BQ76940_Status_t BQ76940_Control_SelectScdThreshold(
         BQ76940_CONTROL_SCD_THRESHOLD_COUNT, requested_mv, code);
 }
 
+/* 从 SCD 离散延时表选出可编码微秒值。 */
 BQ76940_Status_t BQ76940_Control_SelectScdDelayUs(
     uint16_t requested_us,
     uint8_t *code)
@@ -259,6 +270,7 @@ BQ76940_Status_t BQ76940_Control_SelectScdDelayUs(
         requested_us, code);
 }
 
+/* 把秒单位过压延时映射到器件离散编码。 */
 BQ76940_Status_t BQ76940_Control_SelectOvDelayS(
     uint8_t requested_s,
     uint8_t *code)
@@ -280,6 +292,7 @@ BQ76940_Status_t BQ76940_Control_SelectOvDelayS(
     return BQ76940_STATUS_RANGE_ERROR;
 }
 
+/* 把秒单位欠压延时映射到器件离散编码。 */
 BQ76940_Status_t BQ76940_Control_SelectUvDelayS(
     uint8_t requested_s,
     uint8_t *code)
@@ -301,6 +314,7 @@ BQ76940_Status_t BQ76940_Control_SelectUvDelayS(
     return BQ76940_STATUS_RANGE_ERROR;
 }
 
+/* 合成保护寄存器 1 的 RSNS、SCD/OCD 延时和阈值位。 */
 BQ76940_Status_t BQ76940_Control_ComposeProtect1(
     bool rsns,
     uint8_t delay_code,
@@ -321,6 +335,7 @@ BQ76940_Status_t BQ76940_Control_ComposeProtect1(
     return BQ76940_STATUS_OK;
 }
 
+/* 合成保护寄存器 2 的保护延时与阈值位。 */
 BQ76940_Status_t BQ76940_Control_ComposeProtect2(
     uint8_t delay_code,
     uint8_t thresh_code,
@@ -339,6 +354,7 @@ BQ76940_Status_t BQ76940_Control_ComposeProtect2(
     return BQ76940_STATUS_OK;
 }
 
+/* 合成保护寄存器 3 的 UV/OV 延时与阈值位。 */
 BQ76940_Status_t BQ76940_Control_ComposeProtect3(
     uint8_t uv_delay_code,
     uint8_t ov_delay_code,
@@ -388,6 +404,7 @@ uint8_t BQ76940_Control_SysCtrl2WithFets(uint8_t current_ctrl2,
     return next;
 }
 
+/* 从 SYS_CTRL2 回读位提取 CHG/DSG 寄存器观察状态。 */
 void BQ76940_Control_ObserveFets(uint8_t ctrl2,
                                  BQ76940_FetObserved_t *observed)
 {
@@ -399,6 +416,7 @@ void BQ76940_Control_ObserveFets(uint8_t ctrl2,
     observed->dsg_on = ((ctrl2 & 0x02U) != 0U);
 }
 
+/* 对充放电两个方向分别应用安全禁止，形成可下发的有效请求。 */
 void BQ76940_Control_ApplyInhibits(const BQ76940_FetRequest_t *request,
                                    bool inhibit_chg,
                                    bool inhibit_dsg,
@@ -432,6 +450,7 @@ static const uint8_t s_logical_cell_to_cb[BQ76940_CONTROL_LOGICAL_CELL_COUNT] =
     10U, 11U, 12U, 13U, 15U
 };
 
+/* 把逻辑电芯序号映射到对应 CELLBAL 寄存器位。 */
 uint8_t BQ76940_Control_CellBalBitOfLogicalCell(uint8_t logical_cell_index)
 {
     if (logical_cell_index >= BQ76940_CONTROL_LOGICAL_CELL_COUNT)
@@ -475,6 +494,7 @@ static bool BQ76940_Control_CellBalSetBit(uint8_t *bal1,
     return true;
 }
 
+/* 把逻辑电芯位图映射为三个 CELLBAL 寄存器字节。 */
 bool BQ76940_Control_ComposeCellBal(
     uint16_t balance_bitmap,
     uint8_t *bal1,
@@ -521,6 +541,7 @@ bool BQ76940_Control_ComposeCellBal(
     return false;
 }
 
+/* 按并发数与相邻电芯限制筛选均衡位图后编码 CELLBAL。 */
 bool BQ76940_Control_ComposeCellBalPolicy(
     uint16_t balance_bitmap,
     uint8_t max_parallel_cells,
@@ -577,6 +598,7 @@ bool BQ76940_Control_ComposeCellBalPolicy(
     return true;
 }
 
+/* 将三个 CELLBAL 寄存器字节映射回 13 节逻辑电芯位图。 */
 uint16_t BQ76940_Control_DecodeCellBal(uint8_t bal1,
                                        uint8_t bal2,
                                        uint8_t bal3)

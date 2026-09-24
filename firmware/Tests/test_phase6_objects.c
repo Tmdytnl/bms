@@ -53,7 +53,7 @@ uint32_t Test_Phase6_Objects(void)
     TEST_CHECK(offsetof(BMS_CcSample_t, transport_id) == 12U);
     TEST_CHECK(sizeof(BMS_CcSample_t) == 16U);
 
-    TEST_CHECK(offsetof(BMS_CanFrame_t, ext_id) == 0);
+    TEST_CHECK(offsetof(BMS_CanFrame_t, standard_id) == 0);
     TEST_CHECK(offsetof(BMS_CanFrame_t, dlc) == sizeof(uint32_t));
     TEST_CHECK(offsetof(BMS_CanFrame_t, data) ==
                (sizeof(uint32_t) + sizeof(uint8_t)));

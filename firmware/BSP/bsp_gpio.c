@@ -7,6 +7,7 @@
 #define BSP_I2C_SDA_PIN    GPIO_Pin_9
 #define BSP_AFE_WAKE_PIN   GPIO_Pin_8
 
+/* 建立软件 I2C 开漏引脚和 AFE wake 引脚的板级初始状态。 */
 void BSP_GPIO_Init(void)
 {
     GPIO_InitTypeDef gpio;
@@ -28,36 +29,43 @@ void BSP_GPIO_Init(void)
     GPIO_Init(GPIOA, &gpio);
 }
 
+/* 主动拉低软件 I2C 的 SCL 开漏线。 */
 void BSP_I2C_SCL_DriveLow(void)
 {
     GPIO_ResetBits(GPIOB, BSP_I2C_SCL_PIN);
 }
 
+/* 释放软件 I2C 的 SCL 开漏线，由外部上拉形成高电平。 */
 void BSP_I2C_SCL_Release(void)
 {
     GPIO_SetBits(GPIOB, BSP_I2C_SCL_PIN);
 }
 
+/* 读取软件 I2C 的 SCL 实际输入电平。 */
 bool BSP_I2C_SCL_Read(void)
 {
     return GPIO_ReadInputDataBit(GPIOB, BSP_I2C_SCL_PIN) == Bit_SET;
 }
 
+/* 主动拉低软件 I2C 的 SDA 开漏线。 */
 void BSP_I2C_SDA_DriveLow(void)
 {
     GPIO_ResetBits(GPIOB, BSP_I2C_SDA_PIN);
 }
 
+/* 释放软件 I2C 的 SDA 开漏线，由外部上拉形成高电平。 */
 void BSP_I2C_SDA_Release(void)
 {
     GPIO_SetBits(GPIOB, BSP_I2C_SDA_PIN);
 }
 
+/* 读取软件 I2C 的 SDA 实际输入电平。 */
 bool BSP_I2C_SDA_Read(void)
 {
     return GPIO_ReadInputDataBit(GPIOB, BSP_I2C_SDA_PIN) == Bit_SET;
 }
 
+/* 在板级 AFE wake 引脚上产生唤醒脉冲。 */
 bool BSP_AFE_WakePulse(void)
 {
     GPIO_ResetBits(GPIOA, BSP_AFE_WAKE_PIN);

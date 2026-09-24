@@ -18,27 +18,43 @@
 #define BMS_DEBUG_PERIOD_MS                      (1000UL)
 #define BMS_DEBUG_LINE_CAPACITY                  (512U)
 
+/* 待 UART 输出的一整行 BMS1 只读诊断文本。 */
 static char s_line[BMS_DEBUG_LINE_CAPACITY];
+/* 当前已格式化的诊断文本长度，单位字节。 */
 static uint16_t s_line_length;
+/* 下次非阻塞发送开始的字节偏移。 */
 static uint16_t s_line_offset;
+/* 上次准备周期诊断行的毫秒时刻。 */
 static uint32_t s_last_output_ms;
+/* 尚未发送过首行诊断文本的标志。 */
 static bool s_first_output;
 
 /*
  * 大型诊断投影使用 static storage，避免挤占已审查的 CANTx task stack。
  * APL CAN Tx task 是 sole caller/writer，因此无需额外 mutex，也不会产生并发 torn data。
  */
+/* 静态存放的测量诊断副本，避免占用 CANTx 任务栈。 */
 static BMS_DataSnapshot_t s_measurement;
+/* 静态存放的 State 安全快照副本，只供格式化读取。 */
 static BMS_StateSafetySnapshot_t s_state;
+/* 静态存放的 Protect 安全快照副本，只供格式化读取。 */
 static BMS_ProtectSafetySnapshot_t s_protect;
+/* 静态存放的恢复状态副本，只供格式化读取。 */
 static BMS_RecoverySnapshot_t s_recovery;
+/* 静态存放的 FET 事务副本，只供格式化读取。 */
 static BMS_FetManagerSnapshot_t s_fet;
+/* 静态存放的七任务健康副本，只供格式化读取。 */
 static BMS_HealthSnapshot_t s_health;
+/* 静态存放的 SOC 估计副本，只供格式化读取。 */
 static BMS_SocSnapshot_t s_soc;
+/* 静态存放的均衡事务副本，只供格式化读取。 */
 static BMS_BalanceSnapshot_t s_balance;
+/* 静态存放的 CAN 诊断副本，只供格式化读取。 */
 static BMS_CanDiagnostics_t s_can;
+/* 静态存放的持久化诊断副本，只供格式化读取。 */
 static BMS_PersistenceDiagnostics_t s_flash;
 
+/* 在诊断行剩余容量内附加一个字符，避免越界写。 */
 static void BMS_Debug_AppendChar(char value)
 {
     if (s_line_length < (BMS_DEBUG_LINE_CAPACITY - 1U))
@@ -48,6 +64,7 @@ static void BMS_Debug_AppendChar(char value)
     }
 }
 
+/* 逐字节把非空文本附加到有界诊断行。 */
 static void BMS_Debug_AppendText(const char *text)
 {
     if (text == NULL)
@@ -61,6 +78,7 @@ static void BMS_Debug_AppendText(const char *text)
     }
 }
 
+/* 把无符号 32 位整数格式化为十进制诊断文本。 */
 static void BMS_Debug_AppendU32(uint32_t value)
 {
     char digits[10];
@@ -81,6 +99,7 @@ static void BMS_Debug_AppendU32(uint32_t value)
     }
 }
 
+/* 把有符号 32 位整数格式化为十进制诊断文本。 */
 static void BMS_Debug_AppendI32(int32_t value)
 {
     uint32_t magnitude;
@@ -97,6 +116,7 @@ static void BMS_Debug_AppendI32(int32_t value)
     BMS_Debug_AppendU32(magnitude);
 }
 
+/* 以固定宽度十六进制追加 32 位诊断值。 */
 static void BMS_Debug_AppendHex32(uint32_t value)
 {
     static const char hex[] = "0123456789ABCDEF";
@@ -110,6 +130,7 @@ static void BMS_Debug_AppendHex32(uint32_t value)
     }
 }
 
+/* 以固定宽度十六进制追加 16 位诊断值。 */
 static void BMS_Debug_AppendHex16(uint16_t value)
 {
     static const char hex[] = "0123456789ABCDEF";
@@ -123,6 +144,7 @@ static void BMS_Debug_AppendHex16(uint16_t value)
     }
 }
 
+/* 把请求的 CHG/DSG 方向编码为诊断位，不读取硬件。 */
 static uint8_t BMS_Debug_FetBits(const BQ76940_FetRequest_t *request)
 {
     uint8_t bits;
@@ -141,6 +163,7 @@ static uint8_t BMS_Debug_FetBits(const BQ76940_FetRequest_t *request)
     return bits;
 }
 
+/* 把 SYS_CTRL2 回读的 CHG/DSG 状态编码为诊断位。 */
 static uint8_t BMS_Debug_ObservedFetBits(
     const BQ76940_FetObserved_t *observed)
 {
@@ -158,6 +181,7 @@ static uint8_t BMS_Debug_ObservedFetBits(
     return bits;
 }
 
+/* 把测量有效性字段编码为紧凑诊断位。 */
 static uint8_t BMS_Debug_ValidityBits(const BMS_Policy_t *policy)
 {
     uint8_t bits;
@@ -200,6 +224,7 @@ static uint8_t BMS_Debug_ValidityBits(const BMS_Policy_t *policy)
     return bits;
 }
 
+/* 从完整快照中提取最低与最高电芯供诊断输出。 */
 static void BMS_Debug_CellRange(uint16_t *minimum_mv,
                                 uint16_t *maximum_mv)
 {
@@ -224,6 +249,7 @@ static void BMS_Debug_CellRange(uint16_t *minimum_mv,
     *maximum_mv = maximum;
 }
 
+/* 读取当前诊断发送位置的字节而不推进偏移。 */
 bool BMS_Debug_PeekByte(uint8_t *value)
 {
     if ((value == NULL) || (s_line_offset >= s_line_length))
@@ -234,6 +260,7 @@ bool BMS_Debug_PeekByte(uint8_t *value)
     return true;
 }
 
+/* 确认一个字节已由 UART 接收并推进发送偏移。 */
 void BMS_Debug_ConsumeByte(void)
 {
     if (s_line_offset < s_line_length)
@@ -242,6 +269,7 @@ void BMS_Debug_ConsumeByte(void)
     }
 }
 
+/* 清空串口诊断输出缓冲与发送位置。 */
 void BMS_Debug_Init(void)
 {
     s_line_length = 0U;
@@ -250,6 +278,7 @@ void BMS_Debug_Init(void)
     s_first_output = true;
 }
 
+/* 按周期生成只读 BMS1 诊断行，不阻塞等待 UART 发送。 */
 bool BMS_Debug_PrepareSnapshot(uint32_t now_ms,
                                uint32_t free_heap_bytes,
                                uint32_t minimum_heap_bytes)
