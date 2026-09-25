@@ -1,8 +1,0 @@
-LOAD ..\..\Tests\Build\Phase8\phase6_regression_tests.axf
-RESET
-G
-printf("PHASE6_REGRESSION_COMPLETED=%u\n", g_phase6_test_completed)
-PHASE6_REGRESSION_COMPLETED=1
-printf("PHASE6_REGRESSION_FAILURES=%u\n", g_phase6_test_failures)
-PHASE6_REGRESSION_FAILURES=0
-LOG OFF

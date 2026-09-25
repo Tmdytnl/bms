@@ -1,7 +1,0 @@
-PASS: Phase 1..6 input hashes + Phase 7 target diff
-PASS: SYS_STAT bit mapping oracle (SLUSBK2I 8.3.1.3)
-PASS: protect decision logic contract (H-01/H-02/H-03/H-05)
-PASS: ALERT EXTI boundary (ISR minimal, priority 6)
-PASS: Phase 7 boundary (no state/SOC/balance/CAN in protect)
-PASS: ARMCC5 Simulator actual-C execution (completed=1 failures=0)
-PHASE7_STATIC_AND_EXECUTION_CHECKS: PASS

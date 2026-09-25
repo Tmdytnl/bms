@@ -37,4 +37,4 @@ Only update the three active V2 memory files when the current task explicitly au
 
 - Treat `docs/` as read-only project input/reference material. Do not place generated reports, summaries, review outputs, or firmware source code under `docs/`.
 - Place generated human-facing documents under `deliverables/`, grouped by purpose (for example `deliverables/review/`).
-- Place future firmware source, project files, linker descriptions, and tests under `firmware/`. Keep generated code separate from both `docs/` and `deliverables/`.
+- Place distributable firmware source and the Keil project under `APP/`. Put test sources and runners under repository-root `tests/`. Keep generated output in `APP/keil/` or `tests/Build/`, ignored by Git.

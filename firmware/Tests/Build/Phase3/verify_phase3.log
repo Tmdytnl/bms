@@ -1,8 +1,0 @@
-﻿PASS: validated Phase2 input hashes
-PASS: project/toolchain/boundary
-PASS: official BQ register constants
-PASS: transport/atomicity/Phase4 boundary
-PASS: independent CRC/calibration/conversion oracles
-PHASE3_PROGRAM_SIZE: Code=3164 RO=268 RW=32 ZI=1896
-PASS: ARMCC5 actual-C simulator + target Rebuild
-PHASE3_STATIC_AND_EXECUTION_CHECKS: PASS

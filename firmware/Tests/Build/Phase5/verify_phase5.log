@@ -1,8 +1,0 @@
-PASS: Phase 1/2/3/4 validated input hashes + Phase 5 target diff
-PASS: OV/UV trip encoding oracle (TI 8.3.1.2.1)
-PASS: OCD/SCD/delay/PROTECT oracle (TI Tables 8-9..8-11)
-PASS: FET arbitration oracle (errata H-04 single-writer)
-PASS: CELLBAL mapping oracle (spec 5.1 / TI Tables 8-4..8-6)
-PASS: Phase 5 driver boundary (no RTOS/I2C/policy/CAN/ALERT)
-PASS: ARMCC5 Simulator actual-C execution (completed=1 failures=0)
-PHASE5_STATIC_AND_EXECUTION_CHECKS: PASS

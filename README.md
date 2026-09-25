@@ -60,40 +60,44 @@ ProtectTask 持有 HW/AFE fault 与运行期 XREADY W1C；StateTask 持有软件
 ## 仓库结构
 
 ```text
-firmware/App/                 应用任务、状态机、管理器和服务
-firmware/Driver/              BSP、软件 I2C、BQ 通信/测量/控制
-firmware/Config/              编译配置、集中策略和存储布局
-firmware/User/main.c          启动与集成入口
-firmware/Project/Keil/        ARMCC5 工程与构建证据
-firmware/Tests/               production-C 测试镜像、Simulator runner、verifier
+APP/apl/                      启动编排、七任务、协议交接和 IRQ 入口
+APP/fml/                      采样、保护、状态、恢复、SOC、均衡、协议与持久化
+APP/bsp/                      STM32 板级原语、软件 I2C 与 BQ76940 驱动
+APP/os/                       OS_* 接口、FreeRTOS 内核和 FreeRTOSConfig.h
+APP/RTD/                      原样复制的 ST 标准外设库与 CMSIS 源码
+APP/bms_main/main.c           唯一的 main 入口
+APP/keil/                     ARMCC5 工程及其生成输出
+tests/                        仿真镜像、构建脚本和架构验证
 docs/                         架构、配置、验证、调试与学习输入文档
+deliverables/architecture/    当前 APP 源码包架构决定
 deliverables/simulation/      仿真里程碑与回归报告
 deliverables/release/         正式 Release Baseline
+deliverables/refactor/        发布基线后的分层与可维护性重构证据
 tools/phase8/                 artifact trust-chain 工具与测试
 ```
 
-`docs/reference/` 与 `docs/FreeRTOS/` 是第三方/reference copies。仿真报告中的 Simulator 代表一种可重复测试方法，不是项目完成度标签。
+`APP/` 可单独复制并在 Keil 中构建；工程源文件和头文件都在包内。`docs/reference/` 与 `docs/FreeRTOS/` 保留为只读参考副本，不参与生产编译。仿真报告中的 Simulator 代表一种可重复测试方法，不是项目完成度标签。
+
+正式 Release Baseline 记录于 `dsh/project-finalization`；当前重构分支的目录、依赖关系与验证结论见 `deliverables/refactor/`。历史基线中的资源数字和 HEX 哈希属于当时的提交，不能直接当作当前分支的构建结果。
 
 ## 构建方法
 
 环境：Windows PowerShell、Python 3、ARMCC5 5.06u7（默认 `D:\Keil_v5\ARM\Version5.06\bin`）、Keil uVision（默认 `D:\Keil_v5\UV4\UV4.exe`）。
 
 ```powershell
-# Phase 9 core、continuation、race 与 50,000 次压力测试
-& firmware\Tests\build_phase9.ps1
+# 当前 Phase 9 core、continuation、race 与 50,000 次压力测试
+& tests\build_phase9.ps1
 
-# Phase 4/6/7/8 production-C 镜像与 production Clean/Rebuild
-& firmware\Tests\build_phase8.ps1 -SkipSimulator
-& firmware\Tests\run_phase8_split_simulators.ps1
+# 当前 APP 包边界与分层检查
+python tests\verify_architecture.py
 
-# trust-chain 与当前回归 verifier
+# release trust-chain 工具验证
 python tools\phase8\test_validate_blocker_artifact.py
-python firmware\Tests\verify_phase9.py
 ```
 
-`-SkipSimulator` 只跳过 `build_phase8.ps1` 内的单进程 Simulator 阶段；随后由 split runner 分别执行六个镜像，避开本机 uVision 连续 `LOAD` 挂起，不减少测试数量。构建证据位于 `firmware/Tests/Build/Phase8/`、`firmware/Tests/Build/Phase9/` 与 `firmware/Project/Keil/Build/`。
+当前回归证据由 `tests/Build/Phase9/` 和 `APP/keil/Build/` 生成，均不纳入 Git。`tests/build_phase8.ps1` 与旧 verifier 属于历史 Phase 8 门禁，其静态断言包含当时的目录布局和当时尚未接入的功能，不作为当前重构的验收入口。
 
-也可在 uVision 打开 `firmware/Project/Keil/BMS_V1.uvprojx`，选择 `BMS_V1` target 后执行 Clean/Rebuild。正式构建验收同时检查 0 errors / 0 warnings、Code/RO/RW/ZI、map/callgraph 与 HEX 一致性。
+也可在 uVision 打开 `APP/keil/BMS_V1.uvprojx`，选择 `BMS_V1` target 后执行 Clean/Rebuild。正式构建验收同时检查 0 errors / 0 warnings、Code/RO/RW/ZI、map/callgraph 与 HEX 一致性。
 
 ## 测试与验证
 
@@ -109,6 +113,7 @@ python firmware\Tests\verify_phase9.py
 
 ## 文档导航
 
+- [APP 独立源码包架构](deliverables/architecture/APP_Source_Package_Architecture.md)
 - [Architecture Overview](docs/architecture/BMS_V1_Architecture_Overview.md)
 - [Module Inventory](docs/architecture/BMS_V1_Module_Inventory.md)
 - [Task Ownership Matrix](docs/architecture/BMS_V1_Task_Ownership_Matrix.md)
@@ -121,6 +126,8 @@ python firmware\Tests\verify_phase9.py
 - [Engineering Development Story](docs/learning/BMS_V1_Engineering_Development_Story.md)
 - [Interview Review Guide](docs/learning/BMS_V1_Interview_Review_Guide.md)
 - [Release Baseline](deliverables/release/BMS_V1_Release_Baseline.md)
+- [Current Layered Architecture](docs/architecture/BMS_Layered_Architecture_Refactor.md)
+- [Readability and Maintainability Refactor](deliverables/refactor/BMS_Readability_Maintainability_Refactor_Report.md)
 
 ## Release Baseline
 

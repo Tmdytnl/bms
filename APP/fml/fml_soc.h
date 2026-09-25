@@ -1,0 +1,89 @@
+#ifndef FML_SOC_H
+#define FML_SOC_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "fml_data.h"
+#include "fml_policy.h"
+#include "fml_protect.h"
+
+#define BMS_SOC_MAX_CC_SAMPLES_PER_RUN           (8U)
+
+typedef struct
+{
+    int64_t remaining_mams;            /* mA·ms：整数库仑积分的内部高分辨率容量 */
+    uint32_t last_sample_ms;            /* 上一条已接受 CC sample 时间 */
+    uint32_t afe_generation;            /* 积分链绑定的 AFE 生命周期 */
+    uint32_t integrated_sample_count;   /* 成功连续积分的 sample 数 */
+    uint32_t queue_gap_count;           /* newest-wins 覆盖造成的不连续次数 */
+    uint32_t generation_change_count;   /* AFE epoch 切换次数 */
+    uint32_t full_correction_count;    /* 满端连续资格完成次数。 */
+    uint32_t empty_correction_count;   /* 空端连续资格完成次数。 */
+    uint32_t full_started_ms;          /* 当前满端资格窗口起点。 */
+    uint32_t empty_started_ms;         /* 当前空端资格窗口起点。 */
+    bool initialized;                  /* 已由 restore/OCV/默认值建立容量。 */
+    bool valid;                        /* 当前估计可作为有效诊断值。 */
+    bool have_sample_time;             /* 已有同 generation 的积分时间基线。 */
+    bool queue_gap_latched;            /* CC 丢样导致精度降级，端点校正后清除。 */
+    bool full_tracking;                /* 满端条件正在连续计时。 */
+    bool empty_tracking;               /* 空端条件正在连续计时。 */
+} BMS_SocEngine_t;
+
+typedef struct
+{
+    BMS_CapacityMah_t remaining_capacity_mah; /* clamp 后剩余容量。 */
+    BMS_SocPermille_t soc_permille;           /* 0..1000 对应 0%..100%。 */
+    uint32_t integrated_sample_count;
+    uint32_t queue_gap_count; /* CC newest-wins 造成的积分证据缺口次数。 */
+    uint32_t generation_change_count; /* AFE 世代切换导致积分基线重建次数。 */
+    uint32_t full_correction_count; /* 满端资格完成后的校正次数。 */
+    uint32_t empty_correction_count; /* 空端资格完成后的校正次数。 */
+    bool valid; /* 当前估计是否可作为有效诊断值。 */
+    bool queue_gap_latched; /* 缺样精度降级尚未由可信端点校正解除。 */
+} BMS_SocSnapshot_t;
+
+/*
+ * SOCTask 与 production-C tests 共用的纯整数 SOC engine。初值来自合法 Flash
+ * restore，否则由 fresh cell OCV 建立；CC sample 使用 ΔQ=I×Δt 的 mA·ms 整数
+ * 积分，并按 charge/discharge efficiency permille 修正，始终 clamp 在
+ * [0, capacity]。queue gap 会锁存精度降级诊断。AFE generation 改变时只重新
+ * 建立时间基线，绝不把旧 epoch current 与新 epoch 时间间隔连续积分。queue gap
+ * 表示时间区间内可能缺失电流证据，估计会标记无效，直到可信端点校正。
+ */
+bool FML_Soc_EngineInit(BMS_SocEngine_t *engine,
+                        const BMS_SocPolicy_t *policy,
+                        const BMS_DataSnapshot_t *measurement,
+                        uint32_t now_ms);
+/* 按样本时间差积分电流，并维护同代 CC 连续性。 */
+bool FML_Soc_IntegrateCurrent(BMS_SocEngine_t *engine,
+                              const BMS_SocPolicy_t *policy,
+                              int32_t current_ma,
+                              uint32_t sample_ms,
+                              uint32_t afe_generation);
+/* 按静置或端点资格修正积分估计，并保留证据窗口。 */
+void FML_Soc_ObserveCorrection(BMS_SocEngine_t *engine,
+                               const BMS_SocPolicy_t *policy,
+                               const BMS_DataSnapshot_t *measurement,
+                               uint32_t now_ms);
+/* 标记 CC 样本序列断档，避免跨缺口积分。 */
+void FML_Soc_MarkQueueGap(BMS_SocEngine_t *engine);
+/* 复制积分器内部证据供测试与诊断，不修改估计。 */
+BMS_SocSnapshot_t FML_Soc_GetEngineSnapshot(
+    const BMS_SocEngine_t *engine,
+    const BMS_SocPolicy_t *policy);
+
+/* 绑定 SOC 策略并建立尚未取得有效容量证据的初始估计。 */
+void FML_Soc_Init(const BMS_Policy_t *policy);
+/* 用合法持久化值恢复 SOC 估计，非法记录不覆盖现有状态。 */
+bool FML_Soc_Restore(uint16_t soc_permille,
+                     uint32_t remaining_capacity_mah);
+/* 消费本轮 CC 样本、更新 SOC 估计并发布只读诊断。 */
+void FML_Soc_RunOnce(uint32_t now_ms,
+                     const BMS_CcSample_t *samples,
+                     uint8_t sample_count,
+                     bool queue_gap);
+/* 复制 SOC owner 已发布的容量和证据状态。 */
+BMS_SocSnapshot_t FML_Soc_GetSnapshot(void);
+
+#endif /* FML_SOC_H：头文件防重复包含 */

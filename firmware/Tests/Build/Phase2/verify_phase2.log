@@ -1,6 +1,0 @@
-PASS: project/toolchain/boundary
-PASS: Phase1 public model hashes
-PASS: production source boundaries
-PASS: independent CRC oracle
-PASS: ARMCC5 simulator + target build
-PHASE2_STATIC_AND_EXECUTION_CHECKS: PASS
